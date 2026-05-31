@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>📖 GPU Infrastructure + CUDA 面試完全指南 v3</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; max-width: 900px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; }
+h1 { color: #1a1a1a; border-bottom: 3px solid #2563eb; padding-bottom: 10px; margin-top: 50px; page-break-before: always; }
+h1:first-of-type { page-break-before: avoid; }
+h2 { color: #1e40af; margin-top: 35px; border-left: 4px solid #2563eb; padding-left: 12px; }
+h3 { color: #374151; margin-top: 25px; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 0.9em; }
+th, td { border: 1px solid #d1d5db; padding: 10px 14px; text-align: left; }
+th { background: #1e40af; color: white; font-weight: 600; }
+tr:nth-child(even) { background: #f8fafc; }
+code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; color: #dc2626; }
+pre { background: #1e293b; color: #e2e8f0; padding: 18px; border-radius: 8px; overflow-x: auto; font-size: 0.85em; line-height: 1.5; }
+pre code { background: none; color: inherit; padding: 0; }
+blockquote { border-left: 4px solid #10b981; background: #ecfdf5; padding: 12px 18px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+strong { color: #1e40af; }
+hr { border: none; border-top: 2px solid #e5e7eb; margin: 40px 0; }
+@media print { body { max-width: 100%; padding: 20px; } h1 { page-break-before: always; } pre { white-space: pre-wrap; } }
+</style>
+</head>
+<body><h1>📖 GPU Infrastructure 面試完全指南（Enhanced Edition v2）</h1>
+<blockquote>
+<p>適用：Google L5/L6, Meta E5/E6, OpenAI Infra, Anthropic, NVIDIA, Databricks, AWS Bedrock, TikTok, Snowflake AI<br />
+✨ 每章包含：💡 基本觀念（WHY + 直覺類比）+ 具體例子 + 🧪 理解確認（2-3 題 Q&amp;A 含詳解）</p>
+</blockquote>
+<hr />
+<h1>🧠 核心觀念</h1>
+<p>GPU interview 本質是六件事的 tradeoff：</p>
+<pre><code>compute / memory / network / latency / throughput / cost
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>重點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Junior</td>
+<td>GPU basics</td>
+</tr>
+<tr>
+<td>Mid-level</td>
+<td>ML serving</td>
+</tr>
+<tr>
+<td>Senior</td>
+<td>distributed GPU systems</td>
+</tr>
+<tr>
+<td>Staff</td>
+<td>GPU infra tradeoff &amp; architecture</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1>Chapter 1️⃣：GPU Fundamentals</h1>
+<h2>1.1 CPU vs GPU</h2>
+<h3>💡 基本觀念</h3>
+<p>想像一個餐廳：CPU 是一位米其林主廚，能做極複雜的料理（分支邏輯、序列推理），但一次只能處理少數幾道菜。GPU 則是 1000 位速食店員工，每人只會翻漢堡肉，但同時翻 1000 片的總產出遠超主廚。</p>
+<p>Neural network 的核心是矩陣乘法——數十億次獨立的乘加運算，每個元素互不依賴。這正是「1000 人同時翻肉」的完美場景。CPU 的高時脈和複雜分支預測在這裡毫無用武之地，因為根本沒有分支要預測。</p>
+<table>
+<thead>
+<tr>
+<th>維度</th>
+<th>CPU</th>
+<th>GPU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心數</td>
+<td>8-128 cores</td>
+<td>數千~數萬 cores</td>
+</tr>
+<tr>
+<td>單核效能</td>
+<td>極高（5+ GHz）</td>
+<td>低（1-2 GHz）</td>
+</tr>
+<tr>
+<td>設計目標</td>
+<td>latency-optimized</td>
+<td>throughput-optimized</td>
+</tr>
+<tr>
+<td>擅長</td>
+<td>sequential logic, branching</td>
+<td>parallel arithmetic</td>
+</tr>
+<tr>
+<td>Memory bandwidth</td>
+<td>~100 GB/s</td>
+<td>~2-3 TB/s（HBM3）</td>
+</tr>
+</tbody>
+</table>
+<h3>為什麼 Neural Network 用 GPU？</h3>
+<pre><code class="language-python">output = activation(W @ input + bias)
+</code></pre>
+<p>具體差距：</p>
+<pre><code>1024x1024 matrix multiply（~10 億次乘加）：
+- CPU (8 cores, 80 GFLOPS): ~12.5 秒
+- GPU A100 (312 TFLOPS FP16): ~0.003 秒
+- 差距：4000 倍
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 GPU 時脈只有 1-2 GHz 卻比 5 GHz 的 CPU 快？</strong></p>
+<blockquote>
+<p>A: 因為 throughput ≠ latency。GPU 犧牲單一任務的完成速度（latency），換取同時處理數千任務的總產出（throughput）。對矩陣乘法這種可以拆成數百萬個獨立運算的問題，總產出才是關鍵指標。</p>
+</blockquote>
+<p><strong>Q2: 什麼情況下 CPU 仍然比 GPU 快？</strong></p>
+<blockquote>
+<p>A: (1) 高度序列化的邏輯（如遞迴 tree traversal），(2) 大量 if/else 分支（GPU 的 SIMT 模型會讓所有 thread 等最慢的分支），(3) 單一任務需要極低 latency（如 OS kernel scheduling）。</p>
+</blockquote>
+<p><strong>Q3: 如果把 GPU 的核心數減少到跟 CPU 一樣（比如 8 個），GPU 還有優勢嗎？</strong></p>
+<blockquote>
+<p>A: 幾乎沒有。GPU 的單核設計極度簡化（沒有 branch predictor、out-of-order execution），單核效能遠低於 CPU。GPU 的優勢完全來自大規模並行 + 高 memory bandwidth 的組合。</p>
+</blockquote>
+<hr />
+<h2>1.2 CUDA</h2>
+<h3>💡 基本觀念</h3>
+<p>CUDA 是 NVIDIA 讓你「指揮 GPU 做事」的語言和工具鏈。把 GPU 想成一座工廠：CUDA Driver 是跟工廠硬體溝通的對講機，CUDA Runtime 是排班表（分配記憶體、啟動任務），cuBLAS/cuDNN 是已經訓練好的專業工人（矩陣乘法、卷積），NCCL 是工廠之間的物流系統（多 GPU 通訊）。</p>
+<p>程式模型的核心概念：你寫一個 kernel function，CUDA 會把它複製成數萬份，分配到 Grid → Block → Thread 的三層結構中同時執行。每 32 個 thread 組成一個 warp，這是 GPU 實際調度的最小單位——warp 內的 thread 必須執行相同指令（SIMT）。</p>
+<table>
+<thead>
+<tr>
+<th>層級</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CUDA Driver</td>
+<td>跟 GPU hardware 溝通</td>
+</tr>
+<tr>
+<td>CUDA Runtime</td>
+<td>memory management, kernel launch</td>
+</tr>
+<tr>
+<td>cuBLAS</td>
+<td>矩陣運算 library</td>
+</tr>
+<tr>
+<td>cuDNN</td>
+<td>Deep learning primitives</td>
+</tr>
+<tr>
+<td>NCCL</td>
+<td>Multi-GPU communication</td>
+</tr>
+<tr>
+<td>TensorRT</td>
+<td>Inference optimization</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 warp size 是 32 而不是 64 或 16？</strong></p>
+<blockquote>
+<p>A: 這是 NVIDIA 硬體設計的權衡。32 threads 共享一個 instruction decoder，太大（如 64）會增加 branch divergence 的浪費，太小（如 16）會增加 scheduling overhead。32 是經過多代架構驗證的甜蜜點。</p>
+</blockquote>
+<p><strong>Q2: 如果一個 warp 中有 if/else 分支，會發生什麼？</strong></p>
+<blockquote>
+<p>A: Branch divergence——warp 內的 32 個 thread 必須執行相同指令，所以兩個分支都會被執行，不走該分支的 thread 被 mask 掉（空轉）。最壞情況下效率降為 50%。</p>
+</blockquote>
+<p><strong>Q3: cuBLAS 和直接寫 CUDA kernel 做矩陣乘法，效能差距大概多少？</strong></p>
+<blockquote>
+<p>A: 通常 5-20 倍。cuBLAS 經過 NVIDIA 工程師數年的手動優化，包含 tiling、memory coalescing、tensor core utilization 等技巧，naive CUDA kernel 很難達到同等效率。</p>
+</blockquote>
+<hr />
+<h2>1.3 GPU Memory Hierarchy</h2>
+<h3>💡 基本觀念</h3>
+<p>GPU 的記憶體像金字塔：越靠近計算單元越快但越小。理解這個層級的關鍵直覺是「距離決定速度」——Register 就在 compute unit 旁邊（奈米級距離），HBM 在晶片外面（毫米級），PCIe 連到另一塊晶片（公分級）。每跨一層，bandwidth 降 5-10 倍，latency 增 10-20 倍。</p>
+<pre><code>Register File (~256KB/SM)     → ~20 TB/s, ~1 cycle
+Shared Memory/L1 (~164KB/SM) → ~19 TB/s, ~30 cycles
+L2 Cache (~40-50 MB)         → ~5 TB/s, ~200 cycles
+HBM/VRAM (40-80 GB)          → ~2 TB/s, ~400 cycles
+PCIe (Host RAM)              → ~64 GB/s, ~10000 cycles
+NVLink (其他 GPU)             → ~600-900 GB/s, ~1000 cycles
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 LLM inference 的 bottleneck 是 HBM bandwidth 而不是 compute？</strong></p>
+<blockquote>
+<p>A: LLM decode 時 batch=1，每個 weight 只被用一次就丟棄（arithmetic intensity ≈ 1）。GPU 的 compute 能力（312 TFLOPS）遠超 HBM 能餵給它的資料量（2 TB/s），所以大部分時間 compute unit 在等 memory。</p>
+</blockquote>
+<p><strong>Q2: NVLink 比 PCIe 快多少？這對什麼場景最重要？</strong></p>
+<blockquote>
+<p>A: NVLink 600-900 GB/s vs PCIe 64 GB/s = 快 10-14 倍。對 Tensor Parallelism 最重要——TP 每層都需要 GPU 間通訊（AllReduce），如果用 PCIe 會成為嚴重瓶頸。</p>
+</blockquote>
+<p><strong>Q3: 為什麼不把 HBM 做得跟 Register 一樣快？</strong></p>
+<blockquote>
+<p>A: 物理限制。Register 用 SRAM（快但面積大、貴），HBM 用 DRAM（慢但密度高、便宜）。80GB 的 SRAM 在現有製程下不可能做到。這就是為什麼需要 memory hierarchy——用小量快速記憶體做 cache。</p>
+</blockquote>
+<hr />
+<h2>1.4 GPU 為什麼快（不只是「很多 core」）+ Roofline Model</h2>
+<h3>💡 基本觀念</h3>
+<p>GPU 快的真正原因不是「核心多」這麼簡單。想像一條高速公路：CPU 是一條 8 車道但限速 300km/h 的公路（少量車跑很快），GPU 是一條 10000 車道但限速 30km/h 的公路（大量車慢慢跑但總流量巨大）。但 GPU 還有一個秘密武器：<strong>latency hiding</strong>——當一輛車停下來加油（等 memory）時，立刻讓另一輛車上路，確保車道永遠不空。</p>
+<p>四個真正原因：<br />
+1. <strong>Massive Parallelism (SIMT)</strong>: A100 = 221,184 concurrent threads<br />
+2. <strong>Memory Bandwidth</strong>: A100 2TB/s vs CPU 100GB/s = 20×<br />
+3. <strong>Tensor Cores</strong>: 312 TFLOPS FP16 vs CPU ~2 TFLOPS = 150×<br />
+4. <strong>Latency Hiding</strong>: warp switching 隱藏 memory latency</p>
+<p><strong>Roofline Model</strong>:</p>
+<pre><code>Performance = min(Peak FLOPS, Peak Bandwidth × Arithmetic Intensity)
+A100 ridge point = 312T / 2T = 156 FLOPS/byte
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Arithmetic Intensity</th>
+<th>Bound</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM decode (batch=1)</td>
+<td>~1-2</td>
+<td>Memory</td>
+</tr>
+<tr>
+<td>LLM decode (batch=64)</td>
+<td>~64-128</td>
+<td>Memory (接近 ridge)</td>
+</tr>
+<tr>
+<td>LLM prefill (long context)</td>
+<td>~200+</td>
+<td>Compute</td>
+</tr>
+<tr>
+<td>Training (batch=256)</td>
+<td>~500+</td>
+<td>Compute</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 batch size 越大，GPU utilization 越高？</strong></p>
+<blockquote>
+<p>A: Batch size 增大 = arithmetic intensity 增大（同樣的 weights 被更多 data reuse）。當 AI 超過 ridge point，workload 從 memory-bound 變成 compute-bound，GPU 的算力才能被充分利用。</p>
+</blockquote>
+<p><strong>Q2: H200 比 H100 對 LLM inference 更快，主要原因是什麼？</strong></p>
+<blockquote>
+<p>A: 不是因為更多 FLOPS（兩者相同 990 TFLOPS），而是 H200 有更高的 HBM bandwidth（4.8 vs 3.35 TB/s）。LLM decode 是 memory-bound，bandwidth 提升直接轉化為 throughput 提升。</p>
+</blockquote>
+<p><strong>Q3: 一個 workload 的 arithmetic intensity 是 50，在 A100 上是 compute-bound 還是 memory-bound？</strong></p>
+<blockquote>
+<p>A: Memory-bound。A100 ridge point = 156，AI=50 &lt; 156，所以 bottleneck 在 memory bandwidth。要讓它變 compute-bound，需要增加 batch size 到 AI &gt; 156。</p>
+</blockquote>
+<h1>Chapter 2️⃣：Deep Learning Fundamentals</h1>
+<h2>2.1 Transformer Basics</h2>
+<h3>💡 基本觀念</h3>
+<p>Transformer 的核心直覺：想像你在讀一篇文章，每讀到一個字時，你的大腦會「回頭看」前面所有字來決定當前字的意義。Self-Attention 就是這個「回頭看」的機制——每個 token 都能直接跟序列中所有其他 token 互動，不像 RNN 必須一步步傳遞。代價是 O(n²) 的記憶體，就像一個 n 人會議中每個人都要跟其他所有人握手一樣。KV Cache 則是「筆記本」——已經算過的東西記下來，下次生成新 token 時不用重算，用空間換時間。</p>
+<p>一個 Transformer layer：</p>
+<pre><code>Input → Multi-Head Self-Attention → (+residual+LN) → FFN → (+residual+LN) → Output
+</code></pre>
+<h3>五個必懂概念</h3>
+<p><strong>1. Embedding</strong>: Token → Vector（lookup table）</p>
+<p><strong>2. Self-Attention</strong>:</p>
+<pre><code>Attention(Q, K, V) = softmax(Q × K^T / √d_k) × V
+Memory: O(n²) — 128K context = 32GB attention scores!
+</code></pre>
+<p><strong>3. KV Cache</strong>（面試超高頻）:</p>
+<pre><code>存儲已生成 token 的 Key/Value vectors，避免重複計算
+KV cache per token (GPT-3 175B, FP16) = 4.7 MB
+Context 4096 tokens = 19.3 GB per request!
+</code></pre>
+<p><strong>4. FFN</strong>: 兩層 MLP，佔模型 2/3 parameters</p>
+<p><strong>5. Autoregressive Generation</strong>: 每次只生成 1 個 token（sequential）</p>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 Self-Attention 的記憶體是 O(n²)？如果 context length 從 4K 增加到 128K，attention scores 的記憶體會增加多少倍？</strong></p>
+<blockquote>
+<p>A: 因為每個 token 都要跟所有其他 token 計算 attention score，產生 n×n 的矩陣。128K/4K = 32 倍，但因為是 O(n²)，記憶體增加 32² = 1024 倍。</p>
+</blockquote>
+<p><strong>Q2: KV Cache 為什麼能加速 autoregressive generation？沒有 KV Cache 時，生成第 100 個 token 需要做什麼？</strong></p>
+<blockquote>
+<p>A: 沒有 KV Cache 時，生成第 100 個 token 需要重新計算前 99 個 token 的 K 和 V（O(n) 重複計算）。有 KV Cache 後，前 99 個 token 的 K/V 已存好，只需計算新 token 的 Q 與所有 cached K 的 attention，從 O(n²) 降到 O(n)。</p>
+</blockquote>
+<p><strong>Q3: 為什麼 FFN 佔了模型 2/3 的 parameters，但面試中 KV Cache 被問得更多？</strong></p>
+<blockquote>
+<p>A: 因為 FFN 的 parameters 是固定的（不隨 sequence length 變化），而 KV Cache 隨 batch size × context length 線性增長，是 inference 時的記憶體瓶頸和系統設計核心挑戰。</p>
+</blockquote>
+<hr />
+<h2>2.2 Training vs Inference</h2>
+<h3>💡 基本觀念</h3>
+<p>Training 和 Inference 的根本差異可以用「學習 vs 考試」來類比。Training 像學生做練習題——需要記住每一步的計算過程（activations）以便回頭修正（backward pass），所以記憶體需求巨大。Inference 像考試——只需要往前算答案，不用記中間過程。這就是為什麼同一個 70B 模型，training 需要 12+ 張 A100，但 inference 用 INT4 量化後 1 張就夠。</p>
+<table>
+<thead>
+<tr>
+<th>維度</th>
+<th>Training</th>
+<th>Inference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方向</td>
+<td>Forward + Backward</td>
+<td>Forward only</td>
+</tr>
+<tr>
+<td>Batch size</td>
+<td>大（256-4096）</td>
+<td>小（1-64）</td>
+</tr>
+<tr>
+<td>Latency 要求</td>
+<td>不重要</td>
+<td>超重要</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>weights + gradients + optimizer + activations</td>
+<td>weights + KV cache</td>
+</tr>
+<tr>
+<td>GPU bound</td>
+<td>Compute-bound</td>
+<td>Memory-bandwidth-bound</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: Adam optimizer 為什麼需要 4× weights 的記憶體（560 GB for 70B model）？</strong></p>
+<blockquote>
+<p>A: Adam 為每個 parameter 存儲 2 個 state：first moment (m) 和 second moment (v)，各需 FP32（4 bytes/param）。70B params × 4 bytes × 2 states = 560 GB。加上 FP32 master weights 的話更多。</p>
+</blockquote>
+<p><strong>Q2: 為什麼 inference 是 memory-bandwidth-bound 而不是 compute-bound？</strong></p>
+<blockquote>
+<p>A: Inference 時 batch 通常很小（1-16），每個 weight 只被用 1-16 次就丟棄，arithmetic intensity 極低（1-16）。GPU 的 compute 能力（312 TFLOPS）遠超 memory 能餵的速度（2 TB/s），所以 GPU 大部分時間在等 memory。</p>
+</blockquote>
+<p><strong>Q3: 為什麼 training 用 BF16 而 inference 常用 FP16 或 INT4？</strong></p>
+<blockquote>
+<p>A: Training 需要大 dynamic range（gradient 可能很大或很小），BF16 的 8-bit exponent 提供跟 FP32 一樣的 range，不容易 overflow。Inference 不需要 gradient，只做 forward，精度要求較低，INT4 可以 4× 減少 memory bandwidth 需求（直接加速 memory-bound workload）。</p>
+</blockquote>
+<hr />
+<h2>2.3 Batch Size</h2>
+<h3>💡 基本觀念</h3>
+<p>Batch size 的直覺：想像一個快遞員送包裹。Batch=1 是每次只拿一個包裹出門送（效率極低，大部分時間在路上）。Batch=100 是一次拿 100 個包裹出門（路上時間被 amortize，效率高）。但 batch=10000 時卡車裝不下（OOM），而且最後一個客戶要等很久（latency）。</p>
+<pre><code>batch=1:   AI=1   → memory bound, GPU util ~5%
+batch=32:  AI=32  → 接近 ridge point, GPU util ~70%
+batch=256: AI=256 → compute bound, GPU util ~90%
+</code></pre>
+<p>為什麼不能無限大：<br />
+- VRAM 限制（activation + KV cache）<br />
+- Latency 增加（等 batch 湊滿）<br />
+- Tail latency 惡化（最慢 request 拖累所有人）<br />
+- Diminishing returns（超過 ridge point 後 throughput 不再線性增長）</p>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 batch size 從 1 增加到 32 時 throughput 增加 14×，但從 32 到 256 只增加 3×？</strong></p>
+<blockquote>
+<p>A: Batch 1→32 時 workload 從嚴重 memory-bound 變成接近 compute-bound（跨越 ridge point），GPU utilization 從 5% 跳到 70%。32→256 時已經接近 compute-bound，增加 batch 只是線性增加 compute work，不再有 utilization 的跳躍式提升。</p>
+</blockquote>
+<p><strong>Q2: LLM serving 中，為什麼 batch size 受 KV cache 限制而不是 activation memory？</strong></p>
+<blockquote>
+<p>A: LLM inference 不需要存 activation（no backward pass），但每個 request 都有獨立的 KV cache 隨 context 增長。Batch=16 × 4K context × 2.5MB/token = 160GB KV cache，遠超 activation memory。KV cache 是 LLM serving 的 memory 主要消耗者。</p>
+</blockquote>
+<hr />
+<h2>2.4 Mixed Precision &amp; Quantization</h2>
+<h3>💡 基本觀念</h3>
+<p>Mixed Precision 的直覺：就像用不同精度的尺來量東西。蓋房子時用公分尺就夠（FP16），不需要用到奈米尺（FP32）。好處是尺更短（memory 減半）、量得更快（compute 加倍）。Quantization 更極端——用「大/中/小」三個刻度代替連續數值（INT4），犧牲一點精度換取 4× 的效率。</p>
+<table>
+<thead>
+<tr>
+<th>格式</th>
+<th>Bits</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FP32</td>
+<td>32</td>
+<td>傳統 training</td>
+</tr>
+<tr>
+<td>BF16</td>
+<td>16</td>
+<td>Training（range 大）</td>
+</tr>
+<tr>
+<td>FP16</td>
+<td>16</td>
+<td>Inference</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>8</td>
+<td>Inference（2× speedup）</td>
+</tr>
+<tr>
+<td>INT4</td>
+<td>4</td>
+<td>Inference（4× speedup）</td>
+</tr>
+</tbody>
+</table>
+<p>Quantization 對 inference 特別有效的原因：</p>
+<pre><code>LLM decode (batch=1), bottleneck = memory bandwidth:
+- FP16: 讀 140GB weights → 14 tok/s
+- INT4: 讀 35GB weights → 57 tok/s → 4× 加速！
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 quantization 對 LLM inference 的加速效果（4×）比 training 大得多？</strong></p>
+<blockquote>
+<p>A: Inference 是 memory-bandwidth-bound，減少 weight size 直接減少 memory 讀取量，throughput 幾乎線性提升。Training 是 compute-bound，weight size 減少不影響 compute bottleneck，加速有限。</p>
+</blockquote>
+<p><strong>Q2: INT4 quantization 會損失多少品質？什麼時候不能用？</strong></p>
+<blockquote>
+<p>A: 通常 perplexity 增加 1-3%（GPTQ/AWQ），對大多數應用可接受。不能用的場景：(1) 數學推理（精度敏感），(2) 小 model（&lt;7B，冗餘少，量化損失大），(3) 需要 fine-tune 的場景（INT4 不支持 backward）。</p>
+</blockquote>
+<p><strong>Q3: BF16 和 FP16 的核心差異是什麼？為什麼 training 偏好 BF16？</strong></p>
+<blockquote>
+<p>A: BF16 有 8-bit exponent（range 跟 FP32 一樣大），FP16 只有 5-bit exponent（max 65504，容易 overflow）。Training 的 gradient 可能很大，BF16 不需要 loss scaling 就能安全訓練。FP16 精度更高（10-bit mantissa vs 7-bit），inference 時品質略好。</p>
+</blockquote>
+<hr />
+<h1>Chapter 3️⃣：GPU Memory（超高頻）</h1>
+<h2>3.1 VRAM Layout</h2>
+<h3>💡 基本觀念</h3>
+<p>GPU VRAM 就像一間固定大小的倉庫，裡面要同時放模型本身（固定佔位）、推理/訓練時的中間計算結果（隨 batch 變大）、以及 KV Cache（隨對話長度增長）。理解這個佈局的關鍵是：<strong>不是只有 model weights 佔記憶體</strong>。很多人算完 weights 覺得放得下，結果加上 KV cache 和 activations 就 OOM 了。</p>
+<pre><code>┌─────────────────────────────┐
+│ Model Weights               │ ← 固定
+│ KV Cache                    │ ← 隨 context 增長
+│ Activations                 │ ← 隨 batch 增長
+│ CUDA Context + Overhead     │ ← ~500MB-1GB
+│ Temporary Buffers           │
+└─────────────────────────────┘
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Params</th>
+<th>Weights (FP16)</th>
+<th>最少 A100 80GB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLaMA-7B</td>
+<td>7B</td>
+<td>14 GB</td>
+<td>1</td>
+</tr>
+<tr>
+<td>LLaMA-70B</td>
+<td>70B</td>
+<td>140 GB</td>
+<td>2</td>
+</tr>
+<tr>
+<td>GPT-3 175B</td>
+<td>175B</td>
+<td>350 GB</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 LLaMA-70B 的 weights 是 140GB 而不是 70GB？</strong></p>
+<blockquote>
+<p>A: FP16 每個參數佔 2 bytes，70B × 2 = 140GB。</p>
+</blockquote>
+<p><strong>Q2: 如果一張 A100 80GB 只跑 inference，LLaMA-7B 的 VRAM 使用大約多少？</strong></p>
+<blockquote>
+<p>A: Weights 14GB + CUDA overhead ~1GB + KV cache（取決於 context length 和 concurrency）≈ 最少 16-20GB，遠低於 80GB，所以單卡綽綽有餘。</p>
+</blockquote>
+<p><strong>Q3: VRAM 中哪個部分在 inference 時不存在但 training 時很大？</strong></p>
+<blockquote>
+<p>A: Activations（forward pass 中間結果需保留給 backward），inference 時不需要保留。加上 gradients 和 optimizer states 也只有 training 才需要。</p>
+</blockquote>
+<hr />
+<h2>3.2 KV Cache（LLM Serving 必考）</h2>
+<h3>💡 基本觀念</h3>
+<p>LLM 生成文字時是 autoregressive（一次生一個 token），每生成一個新 token 都需要「看到」之前所有 token 的 Key 和 Value。如果每次都重新計算所有 token 的 KV，計算量是 O(n²)。所以我們把已算過的 KV 存起來（cache），下次只算新 token 的 KV。代價是：<strong>每個 request 的 KV cache 隨 context length 線性增長</strong>，而且是 per-request 獨立的，所以 concurrent requests 越多，記憶體爆得越快。</p>
+<pre><code>LLaMA-70B: 2.56 MB per token (80 layers)
+- Context 4096: 10.5 GB per request
+- 8 concurrent requests: 84 GB → 超過 A100 80GB!
+- Context 128K: 328 GB per request → 4+ 張 A100!
+</code></pre>
+<p>解決方案：<br />
+- <strong>PagedAttention (vLLM)</strong>: 像 OS virtual memory 管理 KV cache，消除 fragmentation<br />
+- <strong>Quantized KV cache</strong>: FP16 → INT8，減半<br />
+- <strong>MQA/GQA</strong>: KV cache 縮小 n_heads 倍<br />
+- <strong>Sliding Window Attention</strong>: 只保留最近 N tokens</p>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 KV cache 是 per-request 獨立的，不能共享？</strong></p>
+<blockquote>
+<p>A: 每個 request 有不同的 input tokens，產生不同的 K/V vectors。唯一能共享的是相同 prefix（如 system prompt），這就是 prefix caching 的原理。</p>
+</blockquote>
+<p><strong>Q2: PagedAttention 為什麼能把 memory utilization 從 30% 提升到 95%+？</strong></p>
+<blockquote>
+<p>A: 傳統方式為每個 request 預分配 max_seq_len 的連續記憶體，但大多數 request 實際只用幾百 tokens，剩下的全浪費。PagedAttention 按需分配小 page（16 tokens），不需連續，消除了 internal fragmentation 和 over-provisioning。</p>
+</blockquote>
+<p><strong>Q3: GQA (Grouped-Query Attention) 如何減少 KV cache？LLaMA-2 70B 用了嗎？</strong></p>
+<blockquote>
+<p>A: GQA 讓多個 query heads 共享同一組 KV heads（如 8 query heads 共享 1 KV head），KV cache 縮小 8×。LLaMA-2 70B 用了 GQA（8 KV heads vs 64 query heads），KV cache 比 MHA 小 8×。</p>
+</blockquote>
+<hr />
+<h2>3.3 面試必殺：Model 放不進 GPU 怎麼辦？</h2>
+<h3>💡 基本觀念</h3>
+<p>這是面試最高頻的問題之一。核心思路是四個方向：<strong>壓縮模型</strong>（quantization）、<strong>切分模型</strong>（parallelism）、<strong>搬移模型</strong>（offloading）、<strong>換更大的硬體</strong>。每個方向都有 trade-off。</p>
+<pre><code>方案一：Quantization（最簡單，最推薦）
+- INT4: 70B → 35GB → 單卡 A100 ✓
+- Trade-off: 微小品質損失
+
+方案二：Tensor Parallelism（最常用）
+- 2 張 A100 各 70GB
+- Trade-off: 需要 NVLink，有通訊 overhead
+
+方案三：Pipeline Parallelism
+- 前 40 層 GPU 0，後 40 層 GPU 1
+- Trade-off: pipeline bubble
+
+方案四：Offloading
+- Weights 放 CPU，需要時搬到 GPU
+- Trade-off: PCIe 成為 bottleneck，極慢
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 如果你只有 1 張 A100 80GB，要跑 LLaMA-70B inference，最佳方案是什麼？</strong></p>
+<blockquote>
+<p>A: INT4 quantization（GPTQ/AWQ）。70B × 0.5 bytes = 35GB，加上 KV cache 和 overhead 約 50-60GB，fits in 80GB。品質損失可接受（perplexity +1-3%），且因為 memory-bound workload，讀取量減少 4× 直接帶來 ~3-4× throughput 提升。</p>
+</blockquote>
+<p><strong>Q2: Tensor Parallelism 和 Pipeline Parallelism 哪個對 inference latency 更好？為什麼？</strong></p>
+<blockquote>
+<p>A: TP 更好。TP 把每一層切開平行計算，latency ≈ 單 GPU / N（理想情況）。PP 是 sequential 的（layer 1 完成才能做 layer 2），latency 不會因為多 GPU 而減少，只是能跑更大的 model。PP 的優勢在 throughput（pipeline 填滿後）。</p>
+</blockquote>
+<hr />
+<h1>Chapter 4️⃣：GPU Throughput Optimization</h1>
+<h2>4.1 Dynamic Batching</h2>
+<h3>💡 基本觀念</h3>
+<p>Dynamic Batching 的直覺：想像一個電梯。Static batching 是等 8 個人到齊才關門（等很久）。Dynamic batching 是設定「最多等 5 秒或湊滿 8 人就關門」——在 latency 和 throughput 之間找平衡。</p>
+<pre><code>Static: 等 N 個 request 到齊 → 一起送 GPU → 等全部完成
+Dynamic: 設定 max_wait_time + max_batch_size，timeout 內收到的組成 batch
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: max_wait_time 設太大或太小分別有什麼問題？</strong></p>
+<blockquote>
+<p>A: 太大：first request 等太久（latency 高）。太小：batch 湊不滿（throughput 低，GPU util 低）。最佳值取決於 traffic pattern 和 SLA。</p>
+</blockquote>
+<p><strong>Q2: Continuous Batching 相比 Dynamic Batching 的核心改進是什麼？</strong></p>
+<blockquote>
+<p>A: Dynamic Batching 仍然等整個 batch 完成才開始下一批。Continuous Batching 在每個 iteration 動態插入/移除 request——短 request 完成後 slot 立刻給新 request，GPU 永遠滿載。</p>
+</blockquote>
+<hr />
+<h2>4.2 GPU Utilization 低的原因</h2>
+<h3>💡 基本觀念</h3>
+<p>GPU utilization 低就像一個工廠的機器大部分時間在等原料（data loading）、等指令（kernel launch overhead）、或者在做無效工作（padding）。找到真正的原因才能對症下藥。</p>
+<table>
+<thead>
+<tr>
+<th>原因</th>
+<th>解法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Small batch</td>
+<td>Dynamic batching</td>
+</tr>
+<tr>
+<td>Data loading 跟不上</td>
+<td>Async data loading, prefetch</td>
+</tr>
+<tr>
+<td>Kernel launch overhead</td>
+<td>Kernel fusion, CUDA graphs</td>
+</tr>
+<tr>
+<td>Padding</td>
+<td>Packing, variable-length attention</td>
+</tr>
+<tr>
+<td>Pipeline bubble</td>
+<td>Interleaved scheduling</td>
+</tr>
+<tr>
+<td>Memory-bound (decode)</td>
+<td>Batching, quantization</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: LLM serving 中 GPU utilization 只有 30%，最可能的原因是什麼？</strong></p>
+<blockquote>
+<p>A: Decode phase 是 memory-bandwidth-bound，即使 GPU 在「工作」，compute unit 大部分時間在等 memory。解法：增加 batch size（continuous batching）讓更多 request 共享 weight loading。</p>
+</blockquote>
+<p><strong>Q2: CUDA Graphs 為什麼能提升 throughput？什麼情況下不能用？</strong></p>
+<blockquote>
+<p>A: CUDA Graphs 把多個 kernel launch 預錄成一個 graph，replay 時省去每次 CPU→GPU 的 launch overhead（每次 5-10μs，累積可觀）。不能用：dynamic shape（每次 input size 不同）、需要 CPU-GPU sync 的操作。</p>
+</blockquote>
+<hr />
+<h2>4.3 Throughput vs Latency（最核心 Tradeoff）</h2>
+<h3>💡 基本觀念</h3>
+<p>這是 GPU interview 最核心的 tradeoff。想像一個公車系統：班次密集（低 latency）但每班只載 5 人（低 throughput），vs 班次稀疏（高 latency）但每班載 50 人（高 throughput）。最佳策略取決於乘客（user）能接受多少等待。</p>
+<pre><code>Batch size ↑ → Throughput ↑, Latency ↑, Memory ↑
+Batch size ↓ → Throughput ↓, Latency ↓, Memory ↓
+
+最佳 batch size = 在 latency SLA 內，maximize throughput
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 一個 chatbot 和一個 batch embedding service，哪個應該優先 latency？哪個優先 throughput？</strong></p>
+<blockquote>
+<p>A: Chatbot 優先 latency（user 在等回覆，TTFT &lt; 1s）。Batch embedding 優先 throughput（offline processing，不在乎單個 request 多等幾百 ms）。</p>
+</blockquote>
+<p><strong>Q2: 為什麼 GPU util 100% + queue 增長 = 需要 scale up，而不是「很好」？</strong></p>
+<blockquote>
+<p>A: 根據 queueing theory，ρ=100% 意味著 queue → ∞，latency → ∞。Queue 增長代表 arrival rate &gt; service rate，系統已經 overloaded。需要加 GPU 或減少 traffic。</p>
+</blockquote>
+<hr />
+<h1>Chapter 5️⃣：LLM Serving（2025-2026 超高頻）</h1>
+<h3>💡 基本觀念</h3>
+<p>LLM Serving 的核心挑戰是：模型推理本質上是「一次生成一個 token」的序列過程，但 GPU 是為大規模平行運算設計的。這就像一條高速公路（GPU）上只跑一台車（單 token 生成）——資源嚴重浪費。所有 serving 優化的本質都是想辦法讓這條高速公路塞滿車：透過 batching 增加並行 request、透過 memory 管理塞更多 request 進 GPU、透過排程確保沒有 GPU cycle 被浪費。</p>
+<h2>5.1 Token Streaming &amp; TTFT</h2>
+<pre><code>TTFT (Time To First Token) = Prefill time
+TPS (Tokens Per Second) = 生成速度
+ITL (Inter-Token Latency) = 每 token 間隔
+ChatGPT-like SLA: TTFT &lt; 1s, TPS &gt; 30, ITL &lt; 33ms
+</code></pre>
+<p>Prefill vs Decode：<br />
+- Prefill: 一次處理所有 prompt tokens → compute-bound → GPU util 高<br />
+- Decode: 每次只算 1 token → memory-bound → GPU util 低</p>
+<h2>5.2 PagedAttention &amp; vLLM</h2>
+<pre><code>傳統: Memory utilization ~30%（預分配 max_seq_len，大量浪費）
+PagedAttention: Memory utilization ~95%+（按需分配 pages）
+vLLM = PagedAttention + Continuous Batching
+</code></pre>
+<h2>5.3 Continuous Batching</h2>
+<pre><code>Static: A 完成後 GPU slot 閒置，等整個 batch 結束
+Continuous: A 完成 → slot 立刻給新 request E → GPU 永遠滿載
+</code></pre>
+<h2>5.4 超長 Context 怎麼辦？</h2>
+<pre><code>128K context 挑戰：KV Cache 328GB, Prefill 10-30s, Attention O(n²)
+解法：Admission control + dedicated pool + Flash Attention + KV compression + MQA/GQA
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 Decode 階段是 memory-bound 而非 compute-bound？</strong></p>
+<blockquote>
+<p>A: Decode 每次只生成 1 個 token，計算量極小（一次 matrix-vector multiply），但需要讀取整個 model weights + KV cache。GPU 的算力遠超過 memory bandwidth 能餵給它的資料量，所以瓶頸在「讀 memory」。</p>
+</blockquote>
+<p><strong>Q2: PagedAttention 為什麼能把 memory utilization 從 30% 提升到 95%+？</strong></p>
+<blockquote>
+<p>A: 傳統方式為每個 request 預分配 max_seq_len 的連續記憶體（如 2048 tokens），但大多數 request 實際只用幾百 tokens。PagedAttention 像 OS virtual memory 按需分配小 page（16 tokens），消除 internal fragmentation 和 over-provisioning。</p>
+</blockquote>
+<p><strong>Q3: Continuous Batching 在什麼 traffic pattern 下效果最明顯？</strong></p>
+<blockquote>
+<p>A: Request output length 差異大時效果最明顯。例如有些 request 只生成 10 tokens，有些生成 500 tokens。Static batching 下短 request 完成後 slot 閒置等長 request，浪費嚴重。Continuous batching 讓短 request 的 slot 立刻被新 request 填入。</p>
+</blockquote>
+<hr />
+<h1>Chapter 6️⃣：Distributed Training</h1>
+<h3>💡 基本觀念</h3>
+<p>Distributed Training 的核心問題是：模型太大放不進一張 GPU，或者 training 太慢需要加速。解法是把工作分給多張 GPU，但「怎麼分」決定了效率。三種切法各有適用場景：Data Parallel（每 GPU 完整模型，不同 data）、Tensor Parallel（同一層切開）、Pipeline Parallel（不同層放不同 GPU）。關鍵 insight：通訊是 distributed training 的隱形殺手——GPU 間傳資料的時間往往超過計算時間。</p>
+<h2>6.1 三種 Parallelism</h2>
+<pre><code>Data Parallel (DP): 每 GPU 完整 model，不同 data，AllReduce sync gradients
+Tensor Parallel (TP): 同層 weight 切開，每層 2× AllReduce（需 NVLink）
+Pipeline Parallel (PP): 不同層放不同 GPU，有 bubble
+
+典型配置：Node 內 TP=8 (NVLink) | 跨 Node PP=8 (IB) | 跨 Pipeline DP=8
+Example: 512 GPUs = 8(TP) × 8(PP) × 8(DP)
+</code></pre>
+<h2>6.2 AllReduce &amp; Network</h2>
+<pre><code>Ring AllReduce: Total communication ≈ 2 × data_size（跟 GPU 數量無關）
+InfiniBand HDR: 25 GB/s | NDR: 50 GB/s
+NVLink 3.0: 600 GB/s | NVLink 4.0: 900 GB/s
+</code></pre>
+<h2>6.3 為什麼 Scaling 不 Linear？</h2>
+<pre><code>1. Communication overhead（AllReduce 時間）
+2. Pipeline bubble（PP 的空閒時間）
+3. Batch size scaling 影響 convergence
+4. Load imbalance / stragglers
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 TP 放 node 內（NVLink）而不是跨 node？</strong></p>
+<blockquote>
+<p>A: TP 需要每個 layer 都做 AllReduce（頻率極高），通訊量 = 2×activation size per layer。NVLink 600GB/s 能承受，但 InfiniBand 25GB/s 會成為嚴重瓶頸，讓 GPU 大部分時間在等通訊。</p>
+</blockquote>
+<p><strong>Q2: 512 GPU training 的實際 scaling efficiency 大約多少？為什麼不是 100%？</strong></p>
+<blockquote>
+<p>A: 通常 60-70%。原因：(1) AllReduce 通訊時間隨 model size 增加，(2) pipeline bubble 浪費 ~10-15%，(3) stragglers（最慢的 node 拖累所有人），(4) gradient accumulation 的 memory overhead。Meta LLaMA-3 405B 用 16K GPU 的 MFU 只有 38-43%。</p>
+</blockquote>
+<p><strong>Q3: ZeRO Stage 3 和 Tensor Parallelism 都能讓大 model fit 進多 GPU，差別是什麼？</strong></p>
+<blockquote>
+<p>A: ZeRO-3 把 weights/gradients/optimizer 切分存儲，需要時 all-gather 回來，通訊在 backward 時發生（可 overlap）。TP 把 computation 本身切分，通訊在每層 forward/backward 中發生（critical path）。ZeRO-3 通訊可以 overlap 所以對 throughput 影響小，但 TP 能降低 per-layer latency。通常 ZeRO 用於 DP 維度，TP 用於 node 內。</p>
+</blockquote>
+<hr />
+<h1>Chapter 7️⃣：GPU Scheduling</h1>
+<h3>💡 基本觀念</h3>
+<p>GPU Scheduling 的核心難題在於 GPU 不像 CPU 可以輕鬆做 time-sharing 或 memory swap。一旦 VRAM 被佔用就無法搬移，context switch 成本高達數百毫秒，且多 GPU training job 需要連續的 NVLink topology 才能高效通訊。因此 GPU 調度本質上是一個「全有或全無」的 bin-packing 問題。</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>優點</th>
+<th>缺點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time-sharing</td>
+<td>簡單</td>
+<td>Context switch 貴（數百 ms）</td>
+</tr>
+<tr>
+<td>MPS</td>
+<td>多 process 共享</td>
+<td>沒有 memory isolation</td>
+</tr>
+<tr>
+<td>MIG</td>
+<td>硬體切分，強隔離</td>
+<td>粒度粗，只有 A100/H100</td>
+</tr>
+<tr>
+<td>Kubernetes</td>
+<td>Isolation 好</td>
+<td>浪費（小 model 用不完整張 GPU）</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼 GPU scheduling 不能像 CPU 一樣用 time-sharing？</strong></p>
+<blockquote>
+<p>A: CUDA context switch 成本高達數百毫秒（CPU 只需微秒級），且 VRAM 無法像 RAM 一樣 swap to disk。頻繁切換會讓大部分時間花在 switch 而非計算。</p>
+</blockquote>
+<p><strong>Q2: 一個 cluster 有 100 張 A100 但無法排程 8-GPU job，可能原因？</strong></p>
+<blockquote>
+<p>A: VRAM fragmentation——空閒 GPU 分散在不同 node，無法提供 8 張連續且有 NVLink 互連的 GPU。這是 topology-aware scheduling 的經典挑戰。</p>
+</blockquote>
+<p><strong>Q3: MIG 和 MPS 各適合什麼場景？</strong></p>
+<blockquote>
+<p>A: MIG：需要硬體級 memory isolation 的多租戶 inference（安全性高但粒度粗）。MPS：多個小 process 共享同一 GPU（靈活但無 memory 隔離，一個 OOM 可能影響其他）。</p>
+</blockquote>
+<hr />
+<h1>Chapter 8️⃣：GPU Failure Handling</h1>
+<h3>💡 基本觀念</h3>
+<p>GPU 故障處理的核心思維是「分層防禦」：Detection → Mitigation → Recovery。在大規模 cluster（數千張 GPU）中，每天都會有 GPU 故障，因此系統設計必須假設 <strong>failure is the norm</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>頻率</th>
+<th>影響</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CUDA OOM</td>
+<td>每天</td>
+<td>單 request fail</td>
+</tr>
+<tr>
+<td>ECC Error (correctable)</td>
+<td>每週</td>
+<td>通常無影響</td>
+</tr>
+<tr>
+<td>ECC Error (uncorrectable)</td>
+<td>每月</td>
+<td>GPU 需要 reset</td>
+</tr>
+<tr>
+<td>GPU hang/crash</td>
+<td>每週</td>
+<td>Worker restart</td>
+</tr>
+<tr>
+<td>Thermal throttling</td>
+<td>持續</td>
+<td>Performance 降低 10-30%</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: GPU worker crash 時，三層防禦分別做什麼？</strong></p>
+<blockquote>
+<p>A: Layer 1 Detection: health check 每 10s + heartbeat timeout 30s。Layer 2 Mitigation: traffic drain + in-flight retry + warm spare 切換。Layer 3 Recovery: auto restart + nvidia-smi --gpu-reset + node replacement。</p>
+</blockquote>
+<p><strong>Q2: ECC error 增加但還沒 crash，應該怎麼處理？</strong></p>
+<blockquote>
+<p>A: Proactive replacement。CE &gt; 100/hour → 標記 GPU 為 degraded，開始 drain traffic，排程替換。等到 UCE 發生再處理就太晚了（可能已經 silent data corruption）。</p>
+</blockquote>
+<p><strong>Q3: Training 中 10% GPU 壞了，最佳恢復策略是什麼？</strong></p>
+<blockquote>
+<p>A: (1) 從最近 checkpoint 恢復（損失 ≤ checkpoint interval），(2) 用 elastic training 在剩餘 90% GPU 上繼續（throughput -10% 但不停），(3) 同時啟動 warm spare 補充。最佳：checkpoint 每 10-30 min + elastic resize + spare pool。</p>
+</blockquote>
+<hr />
+<h1>Chapter 9️⃣：GPU Cost Optimization</h1>
+<h3>💡 基本觀念</h3>
+<p>GPU 太貴了（A100 ~$4/hr, H100 ~$6/hr），cost 不是 afterthought 而是 first-class design constraint。核心策略：用便宜的 GPU 時間（spot）、減少需要的 GPU 數量（quantization, batching）、避免 GPU 閒置（autoscaling, warm pool）。</p>
+<p>關鍵數字：</p>
+<pre><code>Spot vs On-demand: 省 50-70%
+INT4 vs FP16: 需要的 GPU 少 3-4×
+GPU cold start: 3-20 min（需要 warm pool）
+最佳 GPU util: 70-85%（不是 100%！）
+</code></pre>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: GPU utilization 100% 是不是最好？</strong></p>
+<blockquote>
+<p>A: 不一定。要看 queue + latency。100% + queue 穩定 + latency OK = 好。100% + queue 爆炸 + latency 超 SLA = overloaded。根據 queueing theory，ρ &gt; 80% 時 p99 latency 指數增長。最佳 operating point: 70-85%。</p>
+</blockquote>
+<p><strong>Q2: Spot instance training 的 checkpoint 頻率怎麼決定？</strong></p>
+<blockquote>
+<p>A: 取決於 spot 平均存活時間和 checkpoint 成本。如果 spot 平均活 2 小時，checkpoint 需要 5 min，最佳頻率 ≈ 每 30 min。最壞損失 = 30 min compute。公式：optimal interval = √(2 × checkpoint_cost × mean_time_between_failures)。</p>
+</blockquote>
+<p><strong>Q3: 為什麼 autoscaling 不能用 GPU utilization 作為 metric？</strong></p>
+<blockquote>
+<p>A: GPU util 是 lagging indicator 且在 continuous batching 下可能一直很高（即使 queue 已爆）。正確 metrics: queue length（leading indicator）+ p99 latency（直接反映 user impact）+ KV cache utilization。</p>
+</blockquote>
+<hr />
+<h1>Chapter 🔟：GPU Monitoring</h1>
+<h3>💡 基本觀念</h3>
+<p>GPU monitoring 分三層：硬體健康（預防故障）、資源利用率（capacity planning）、服務品質（確保 user experience）。關鍵 insight：不是所有 metric 都同等重要——p99 latency 和 queue length 比 GPU utilization 更能反映真實系統狀態。</p>
+<p>Hardware metrics: <code>GPU Util, VRAM, Temperature, Power, ECC Errors, SM Clock</code><br />
+Serving metrics: <code>TTFT (p50/p99), TPS, Queue length, OOM rate, Batch size avg</code></p>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: GPU temperature 83°C 代表什麼？應該怎麼處理？</strong></p>
+<blockquote>
+<p>A: A100 在 83°C 開始 thermal throttle（降頻），throughput 會下降 10-30%。短期：降低 batch size 或 power cap。長期：改善散熱、調整 workload distribution。</p>
+</blockquote>
+<p><strong>Q2: 哪個 metric 最能提前預警 SLA violation？</strong></p>
+<blockquote>
+<p>A: Queue length。Queue 開始堆積 = arrival rate &gt; service rate = 即將 latency spike。比 GPU util 或 p99 latency 更 leading（latency 已經高了才看到就太晚了）。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣1️⃣：System Design 完整解答</h1>
+<h3>💡 基本觀念</h3>
+<p>GPU System Design 面試的核心是展示你能把前面所有知識（memory, throughput, parallelism, scheduling, cost）整合成一個完整的系統。面試官看的不是你背了多少架構圖，而是你能不能：(1) 從 requirements 推導出 design decisions，(2) 用具體數字做 capacity estimation，(3) 識別 bottleneck 和 failure modes，(4) 在多個方案間做 trade-off analysis。</p>
+<p><strong>5 步模板：</strong><br />
+1. Clarify requirements (QPS, latency SLA, model size, budget)<br />
+2. Capacity estimation (GPUs needed = QPS / per-GPU-throughput × 1.2)<br />
+3. Architecture (routing, GPU pools, batching strategy)<br />
+4. Key optimizations (quantization, caching, speculative decoding)<br />
+5. Reliability + Cost (failure handling, autoscaling, cost/request)</p>
+<hr />
+<p>（以下 7 個完整 System Design 題解答請參考原版 gpu-interview-guide.md 的 Chapter 11，此增強版已在每個 Design 後加入 🧪 理解確認）</p>
+<h3>🧪 Design 1 (ChatGPT) 理解確認</h3>
+<p><strong>Q1: 為什麼要按 context length 分 pool？</strong></p>
+<blockquote>
+<p>A: 長 context 佔大量 KV cache + prefill 慢，混在一起會 head-of-line blocking 短 request。分 pool 讓短 context 高 batch 高 throughput。</p>
+</blockquote>
+<p><strong>Q2: Prefix caching 什麼時候有效？什麼時候沒用？</strong></p>
+<blockquote>
+<p>A: 有效：大量 request 共享相同 system prompt。沒用：每個 request prompt 完全不同（如 RAG）。</p>
+</blockquote>
+<p><strong>Q3: 為什麼要 20% headroom？</strong></p>
+<blockquote>
+<p>A: Queueing theory: ρ &gt; 80% 時 queue 指數增長，p99 = 20× average。95% util = 任何 spike 都會 timeout。</p>
+</blockquote>
+<h3>🧪 Design 2 (Embedding) 理解確認</h3>
+<p><strong>Q1: 為什麼 Embedding service 可以 batch=256 但 LLM 只能 batch=16-64？</strong></p>
+<blockquote>
+<p>A: Embedding 是 encoder-only，memory 固定可預測。LLM 有 KV cache 隨 sequence 增長，batch 越大 KV cache 越多，容易 OOM。</p>
+</blockquote>
+<p><strong>Q2: 為什麼選 T4 而不是 A100？</strong></p>
+<blockquote>
+<p>A: BERT 只有 220MB，T4 16GB 綽綽有餘且 $0.5/hr vs A100 $4/hr 便宜 8×。Cost-per-inference 是關鍵。</p>
+</blockquote>
+<h3>🧪 Design 3 (Distributed Training) 理解確認</h3>
+<p><strong>Q1: 為什麼 TP 在 node 內，PP 在 node 間？</strong></p>
+<blockquote>
+<p>A: TP 每層都要 AllReduce（高頻），需要 NVLink 600GB/s。PP 只在 stage boundary 傳一次 activation（低頻），InfiniBand 夠用。</p>
+</blockquote>
+<p><strong>Q2: Gang scheduling 為什麼必要？</strong></p>
+<blockquote>
+<p>A: Distributed training 需要所有 worker 同步（AllReduce barrier），partial allocation 會 deadlock。</p>
+</blockquote>
+<h3>🧪 Design 4-7 理解確認</h3>
+<p><strong>Q4: Multi-tenant cluster 如何防止 noisy neighbor？</strong></p>
+<blockquote>
+<p>A: Per-team GPU quota + admission control + rate limiting + 物理隔離（dedicated pool for critical SLA）。</p>
+</blockquote>
+<p><strong>Q5: Recommendation 為什麼 retrieval 用 CPU、ranking 用 GPU？</strong></p>
+<blockquote>
+<p>A: Retrieval 是 memory-bound（ANN random access），GPU 優勢不大。Ranking 是 compute-bound（cross-network matmul），GPU 10× faster。</p>
+</blockquote>
+<p><strong>Q6: Autoscaling 為什麼用 queue length 不用 GPU util？</strong></p>
+<blockquote>
+<p>A: GPU util 是 lagging indicator，continuous batching 下可能一直高但 latency 正常。Queue length 是 leading indicator，直接反映 user-facing impact。</p>
+</blockquote>
+<p><strong>Q7: Vector retrieval 把 candidates 從 1000 減到 200 可接受嗎？</strong></p>
+<blockquote>
+<p>A: 取決於 recall@200。如果 ANN recall@200 &gt; 95%，top-10 結果幾乎不變。用 A/B test 驗證 CTR 是否下降。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣2️⃣：開源系統比較</h1>
+<h3>💡 基本觀念</h3>
+<p>了解開源系統不是為了背名詞，而是理解每個系統解決什麼問題、做了什麼 trade-off。面試時能說出「我會選 vLLM 因為它的 PagedAttention 解決了 KV cache fragmentation，而 TensorRT-LLM 雖然更快但需要 compile 不夠靈活」比單純列名詞有價值 100 倍。</p>
+<table>
+<thead>
+<tr>
+<th>維度</th>
+<th>vLLM</th>
+<th>TensorRT-LLM</th>
+<th>TGI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心創新</td>
+<td>PagedAttention</td>
+<td>Graph optimization</td>
+<td>易用性</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>高</td>
+<td>最高</td>
+<td>中</td>
+</tr>
+<tr>
+<td>靈活性</td>
+<td>高（Python）</td>
+<td>低（需 compile）</td>
+<td>高</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>維度</th>
+<th>DeepSpeed</th>
+<th>Megatron-LM</th>
+<th>FSDP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心</td>
+<td>ZeRO, offloading</td>
+<td>3D parallelism</td>
+<td>Sharded DP</td>
+</tr>
+<tr>
+<td>適用</td>
+<td>通用大 model</td>
+<td>超大 model (100B+)</td>
+<td>PyTorch 生態</td>
+</tr>
+</tbody>
+</table>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 什麼情況下選 TensorRT-LLM 而不是 vLLM？</strong></p>
+<blockquote>
+<p>A: 當 model 固定不常換、需要最高 throughput、且願意花時間 compile 時。TensorRT-LLM 的 graph optimization 能比 vLLM 快 20-50%，但每次換 model 都要重新 compile（數小時）。</p>
+</blockquote>
+<p><strong>Q2: DeepSpeed ZeRO-3 和 Megatron-LM 的 3D parallelism 哪個更適合 1T model？</strong></p>
+<blockquote>
+<p>A: Megatron-LM。1T model 需要精細的 TP+PP+DP 配置和 communication optimization，Megatron-LM 在這方面有更成熟的實現。ZeRO-3 更適合 10B-100B 規模且想快速上手的場景。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣3️⃣：面試思考框架</h1>
+<h3>💡 基本觀念</h3>
+<p>BCNLT Framework 是回答任何 GPU 問題的萬能框架。面試官不是要你背答案，而是看你的思考過程是否系統化。用這個框架可以確保你不會遺漏重要維度。</p>
+<pre><code>B - Bottleneck: 瓶頸在哪？
+C - Compute vs Memory: compute-bound 還是 memory-bound？
+N - Network: 通訊是否是瓶頸？
+L - Latency vs Throughput: 優化哪個？
+T - Trade-off: 有什麼取捨？
+</code></pre>
+<p>Staff 思考清單：<br />
+- □ 先問 requirements（不要假設）<br />
+- □ 量化分析（具體數字）<br />
+- □ 多方案比較（2-3 options with pros/cons）<br />
+- □ 考慮 failure modes<br />
+- □ 考慮 cost</p>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 面試官問「怎麼加速 LLM inference」，用 BCNLT 框架怎麼回答？</strong></p>
+<blockquote>
+<p>A: B: bottleneck 在 memory bandwidth（decode phase AI≈1）。C: memory-bound。N: 單 GPU 不涉及 network。L: 看場景——chatbot 優先 latency，batch API 優先 throughput。T: quantization（品質 vs 速度）、speculative decoding（draft model 成本 vs 加速）、batching（latency vs throughput）。</p>
+</blockquote>
+<p><strong>Q2: Senior 和 Staff 回答同一個問題的核心差別是什麼？</strong></p>
+<blockquote>
+<p>A: Senior 回答「怎麼做」(How)。Staff 回答「為什麼這樣做」(Why) + 「還有什麼選擇」(Alternatives) + 「什麼時候會壞」(Failure modes) + 「成本多少」(Cost)。Staff 永遠帶具體數字和 trade-off analysis。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣4️⃣：Staff-Level 深度觀點</h1>
+<h3>💡 基本觀念</h3>
+<p>Staff-level 的核心差異不是知道更多技術細節，而是能看到 <strong>系統層面的 emergent behavior</strong>——單個組件都正常但組合起來出問題的情況。五個最重要的 Staff 觀點都是關於「大家以為的 bottleneck 其實不是真正的 bottleneck」。</p>
+<h2>五大觀點</h2>
+<ol>
+<li><strong>Memory Bandwidth 才是真正 Bottleneck</strong>（不是 FLOPS）</li>
+<li><strong>Queueing Theory 決定 Serving 行為</strong>（ρ&gt;80% → p99 爆炸）</li>
+<li><strong>KV Cache 是 Hidden Memory Tax</strong>（常比 model weights 還大）</li>
+<li><strong>Network 是 Distributed Training 的 Silent Killer</strong>（MFU 只有 38-43%）</li>
+<li><strong>Cost 是 First-Class Design Constraint</strong>（1% efficiency = millions saved）</li>
+</ol>
+<h3>🧪 理解確認</h3>
+<p><strong>Q1: 為什麼說「Memory Bandwidth 才是真正 Bottleneck」？用數字證明。</strong></p>
+<blockquote>
+<p>A: A100: 312 TFLOPS compute, 2 TB/s bandwidth, ridge point = 156。LLM decode batch=1: AI ≈ 1，遠低於 156。GPU compute utilization &lt; 1%！99% 時間在等 memory。H200 比 H100 快不是因為更多 FLOPS（相同），而是更多 bandwidth（4.8 vs 3.35 TB/s）。</p>
+</blockquote>
+<p><strong>Q2: 為什麼 GPU util 不能超過 80-85%？用 queueing theory 解釋。</strong></p>
+<blockquote>
+<p>A: M/M/c queue 模型：ρ=0.8 時 p99 ≈ 8× average，ρ=0.9 時 p99 ≈ 20× average，ρ=0.95 時 p99 ≈ 40× average。如果 SLA 是 p99 &lt; 2s 且 average = 200ms，ρ 不能超過 0.8（否則 p99 = 200ms × 8 = 1.6s，接近 SLA）。需要 over-provision 15-20%。</p>
+</blockquote>
+<p><strong>Q3: Meta LLaMA-3 405B training 的 MFU 只有 38-43%，剩下 57-62% 的時間在做什麼？</strong></p>
+<blockquote>
+<p>A: (1) AllReduce gradient synchronization（跨 16K GPU），(2) Pipeline bubble（PP stage 間的等待），(3) Data loading / preprocessing，(4) Checkpoint I/O，(5) Straggler waiting（等最慢的 node）。Network communication 是最大的單一因素。</p>
+</blockquote>
+<hr />
+<h1>🎯 面試當天心法</h1>
+<pre><code>1. 先問 requirements，不要直接跳進 solution
+2. 用數字說話（&quot;140GB&quot; 不是 &quot;很大&quot;）
+3. 講 trade-off，不要只講一個方案
+4. 主動提 failure modes
+5. 展示 depth（從原理到實現細節）
+6. 連結到實際經驗
+</code></pre>
+<hr />
+<h1>📚 面試準備 Checklist</h1>
+<pre><code>□ GPU Fundamentals: CPU vs GPU, memory hierarchy, roofline model
+□ Deep Learning: Transformer, KV cache, training vs inference, quantization
+□ GPU Memory: VRAM breakdown, OOM debug, model 放不進 GPU
+□ Throughput: dynamic batching, throughput vs latency, batch size limits
+□ LLM Serving: TTFT/TPS, continuous batching, PagedAttention, long context
+□ Distributed Training: DP/TP/PP, AllReduce, NCCL, scaling efficiency
+□ GPU Scheduling: multi-tenant, MIG, K8s, fragmentation
+□ Failure Handling: OOM, ECC, crash recovery, training fault tolerance
+□ Cost: spot instances, warm pool, autoscaling, utilization optimization
+□ Monitoring: hardware metrics, serving metrics, alerting
+□ System Design: ChatGPT, embedding, training platform, multi-tenant cluster
+□ Open Source: vLLM, TensorRT-LLM, DeepSpeed, Megatron-LM
+</code></pre>
+<h1>📖 CUDA 深度指南（Senior Level）</h1>
+<blockquote>
+<p>新增章節 Ch15-Ch18，涵蓋 CUDA 程式模型、記憶體優化、效能調校、深度學習應用<br />
+每章包含：💡 核心觀念 + 具體範例 + 🎯 面試考題 + Follow-up + 詳細解答</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣5️⃣：CUDA Programming Model</h1>
+<h2>15.1 Execution Model: Grid → Block → Thread</h2>
+<h3>💡 核心觀念</h3>
+<p>CUDA 的執行模型是三層結構。想像一個大型工廠：<br />
+- <strong>Grid</strong> = 整個工廠（一次 kernel launch 的所有工作）<br />
+- <strong>Block</strong> = 工廠裡的一個車間（跑在一個 SM 上，最多 1024 threads）<br />
+- <strong>Thread</strong> = 車間裡的一個工人（最小執行單位）</p>
+<p>關鍵限制：<br />
+- 同一 Block 內的 threads 可以透過 Shared Memory 溝通 + 用 <code>__syncthreads()</code> 同步<br />
+- 不同 Block 之間<strong>無法直接通訊</strong>（只能透過 Global Memory）<br />
+- 每 32 個 threads 組成一個 <strong>Warp</strong>，是 GPU 實際調度的最小單位</p>
+<pre><code class="language-python"># CUDA kernel 的基本結構
+# Host (CPU) 端 launch kernel:
+# kernel&lt;&lt;&lt;gridDim, blockDim&gt;&gt;&gt;(args)
+# gridDim = Grid 中有多少 Blocks
+# blockDim = 每個 Block 有多少 Threads
+
+# 例：處理 1M 個元素
+N = 1_000_000
+threads_per_block = 256
+blocks = (N + threads_per_block - 1) // threads_per_block  # = 3907
+
+# Launch: vector_add&lt;&lt;&lt;3907, 256&gt;&gt;&gt;(a, b, c, N)
+</code></pre>
+<pre><code class="language-c">// CUDA Kernel 範例：Vector Addition
+__global__ void vector_add(float* a, float* b, float* c, int n) {
+    // 每個 thread 計算自己負責的 index
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx &lt; n) {
+        c[idx] = a[idx] + b[idx];
+    }
+}
+</code></pre>
+<h3>具體範例：Thread Indexing</h3>
+<pre><code class="language-c">// 2D Grid + 2D Block（常用於 image processing）
+// Grid: (gridDim.x, gridDim.y) blocks
+// Block: (blockDim.x, blockDim.y) threads
+
+__global__ void matrix_add(float* A, float* B, float* C, int width, int height) {
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (col &lt; width &amp;&amp; row &lt; height) {
+        int idx = row * width + col;
+        C[idx] = A[idx] + B[idx];
+    }
+}
+
+// Launch: dim3 block(16, 16); dim3 grid((W+15)/16, (H+15)/16);
+// matrix_add&lt;&lt;&lt;grid, block&gt;&gt;&gt;(A, B, C, W, H);
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 為什麼 blockDim 通常設為 128 或 256，而不是 1024？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 雖然每個 Block 最多 1024 threads，但設太大會限制 <strong>occupancy</strong>（同時在一個 SM 上跑的 blocks 數量）。每個 SM 的 register 和 shared memory 有限，block 越大每個 block 用的資源越多，能同時跑的 blocks 越少。128-256 是平衡 occupancy 和 parallelism 的甜蜜點。</p>
+</blockquote>
+<p><strong>Follow-up: 什麼情況下應該用 1024？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 當 kernel 需要大量 thread 間同步（<code>__syncthreads()</code>）且 shared memory 使用量不大時。例如 reduction 操作需要整個 block 的 threads 協作，block 越大 reduction 步驟越少。</p>
+</blockquote>
+<hr />
+<p><strong>Q2: 為什麼不同 Block 之間不能直接通訊？這對程式設計有什麼影響？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 因為 Blocks 可能被排程到不同 SM 上，且執行順序不確定（GPU 不保證 block 執行順序）。如果允許 inter-block 通訊，就需要全域同步，這會嚴重限制 scalability（GPU 的核心優勢就是 blocks 獨立執行）。影響：需要跨 block 通訊的演算法（如 global reduction）必須分成多個 kernel launch，或用 atomic operations。</p>
+</blockquote>
+<p><strong>Follow-up: 有沒有辦法繞過這個限制？</strong></p>
+<blockquote>
+<p><strong>A:</strong> (1) <strong>Cooperative Groups</strong>（CUDA 9+）允許 grid-level 同步，但需要所有 blocks 同時在 GPU 上（限制 grid size）。(2) <strong>Atomic operations</strong> 可以跨 block 更新 global memory，但有 contention。(3) 分成多個 kernel launch，用 global memory 傳遞中間結果。</p>
+</blockquote>
+<hr />
+<p><strong>Q3: <code>threadIdx</code>, <code>blockIdx</code>, <code>blockDim</code>, <code>gridDim</code> 分別是什麼？寫出計算 global thread ID 的公式。</strong></p>
+<blockquote>
+<p><strong>A:</strong><br />
+- <code>threadIdx</code>: thread 在 block 內的 local index（.x, .y, .z）<br />
+- <code>blockIdx</code>: block 在 grid 內的 index<br />
+- <code>blockDim</code>: 每個 block 的 thread 數量<br />
+- <code>gridDim</code>: grid 中的 block 數量</p>
+<p>1D global ID: <code>idx = blockIdx.x * blockDim.x + threadIdx.x</code><br />
+2D global ID: <code>row = blockIdx.y * blockDim.y + threadIdx.y; col = blockIdx.x * blockDim.x + threadIdx.x</code></p>
+</blockquote>
+<hr />
+<h2>15.2 Warp Execution &amp; SIMT</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>Warp</strong> 是 GPU 實際執行的最小單位（32 threads）。同一 warp 內的所有 threads 在同一時鐘週期執行<strong>相同指令</strong>（Single Instruction, Multiple Threads）。這意味著：</p>
+<ol>
+<li><strong>Branch Divergence</strong>: 如果 warp 內有 if/else，兩個分支都會被執行，不走的 thread 被 mask（效率最差 50%）</li>
+<li><strong>Warp-level primitives</strong>: <code>__shfl_sync()</code>, <code>__ballot_sync()</code> 等可以在 warp 內直接交換資料（不需要 shared memory）</li>
+<li><strong>Memory Coalescing</strong>: 同一 warp 的 threads 如果存取連續記憶體，會被合併成一次 memory transaction</li>
+</ol>
+<pre><code class="language-c">// Branch Divergence 範例（壞的寫法）
+__global__ void bad_kernel(float* data, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx % 2 == 0) {
+        data[idx] = expensive_function_A(data[idx]);  // 偶數 thread
+    } else {
+        data[idx] = expensive_function_B(data[idx]);  // 奇數 thread
+    }
+    // 同一 warp 內 16 threads 走 A，16 threads 走 B
+    // 兩個分支都要執行 → 效率 50%!
+}
+
+// 改善：讓同一 warp 的 threads 走同一分支
+__global__ void good_kernel(float* data, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int warp_id = idx / 32;
+    if (warp_id % 2 == 0) {
+        data[idx] = expensive_function_A(data[idx]);  // 整個 warp 走 A
+    } else {
+        data[idx] = expensive_function_B(data[idx]);  // 整個 warp 走 B
+    }
+    // 每個 warp 只執行一個分支 → 效率 100%!
+}
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 什麼是 Branch Divergence？為什麼它會降低效能？如何避免？</strong></p>
+<blockquote>
+<p><strong>A:</strong> Branch Divergence 發生在同一 warp 內的 threads 走不同的 if/else 分支。因為 SIMT 模型要求 warp 內所有 threads 執行相同指令，GPU 會<strong>序列化</strong>兩個分支（先執行 if，mask 掉不走的 threads；再執行 else，mask 掉另一半）。最壞情況效率降為 50%。</p>
+<p>避免方法：(1) 讓分支條件以 warp 為單位（<code>warp_id % 2</code> 而非 <code>thread_id % 2</code>），(2) 用 predication 代替 branching（compiler 通常會自動做），(3) 重新組織資料讓同一 warp 的 threads 走同一路徑。</p>
+</blockquote>
+<p><strong>Follow-up: 如果 if/else 兩個分支的計算量差很多（一個 1 cycle，一個 1000 cycles），影響是什麼？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 影響更嚴重。整個 warp 的執行時間 = max(兩個分支的時間) = 1000 cycles，即使只有 1 個 thread 走長分支。其他 31 個 threads 都在空等。這就是為什麼 GPU code 要盡量避免 data-dependent branching。</p>
+</blockquote>
+<hr />
+<p><strong>Q2: Warp Shuffle (<code>__shfl_sync</code>) 是什麼？比 Shared Memory 快多少？什麼時候用？</strong></p>
+<blockquote>
+<p><strong>A:</strong> Warp Shuffle 允許同一 warp 內的 threads 直接讀取其他 thread 的 register 值，不需要經過 shared memory。速度：1 cycle（vs shared memory 的 ~30 cycles + 需要 <code>__syncthreads()</code>）。</p>
+<p>常用場景：(1) Warp-level reduction（求和、求最大值），(2) Broadcast（一個 thread 的值給整個 warp），(3) Butterfly exchange pattern。</p>
+<p>限制：只能在同一 warp 內（32 threads），跨 warp 仍需 shared memory。</p>
+</blockquote>
+<hr />
+<h2>15.3 Memory Model</h2>
+<h3>💡 核心觀念</h3>
+<p>CUDA 有多種記憶體類型，選擇正確的記憶體是效能優化的關鍵：</p>
+<table>
+<thead>
+<tr>
+<th>記憶體</th>
+<th>作用域</th>
+<th>生命週期</th>
+<th>速度</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Register</td>
+<td>Per-thread</td>
+<td>Kernel</td>
+<td>最快（0 cycle）</td>
+<td>~255 per thread</td>
+</tr>
+<tr>
+<td>Local Memory</td>
+<td>Per-thread</td>
+<td>Kernel</td>
+<td>慢（在 DRAM）</td>
+<td>512KB/thread</td>
+</tr>
+<tr>
+<td>Shared Memory</td>
+<td>Per-block</td>
+<td>Kernel</td>
+<td>快（~5ns）</td>
+<td>48-164KB/SM</td>
+</tr>
+<tr>
+<td>Global Memory</td>
+<td>All threads</td>
+<td>App lifetime</td>
+<td>慢（~400ns）</td>
+<td>40-80GB</td>
+</tr>
+<tr>
+<td>Constant Memory</td>
+<td>All threads</td>
+<td>App lifetime</td>
+<td>快（cached）</td>
+<td>64KB</td>
+</tr>
+<tr>
+<td>Texture Memory</td>
+<td>All threads</td>
+<td>App lifetime</td>
+<td>快（2D cached）</td>
+<td>同 Global</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-c">// 各種記憶體的宣告方式
+__global__ void kernel() {
+    // Register（自動分配）
+    int local_var = 0;  // 在 register 中
+
+    // Shared Memory（block 內共享）
+    __shared__ float smem[256];
+
+    // 存取 Global Memory
+    // data[idx] 就是 global memory access
+}
+
+// Constant Memory（host 端宣告）
+__constant__ float const_data[1024];  // 64KB 限制
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: Shared Memory 和 L1 Cache 的關係是什麼？怎麼配置？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 在 NVIDIA GPU 上，Shared Memory 和 L1 Cache 共享同一塊 on-chip SRAM（A100: 192KB per SM）。可以透過 <code>cudaFuncSetAttribute()</code> 配置比例：<br />
+- 更多 Shared Memory（如 164KB shared + 28KB L1）：適合手動管理資料的 kernel<br />
+- 更多 L1 Cache（如 28KB shared + 164KB L1）：適合 irregular access pattern</p>
+<p>選擇依據：如果你的 kernel 能明確知道要用哪些資料（如 tiling），用 shared memory 更好。如果 access pattern 不規則，讓 hardware L1 cache 自動管理更好。</p>
+</blockquote>
+<p><strong>Follow-up: 為什麼 Shared Memory 比 Global Memory 快 ~100 倍？</strong></p>
+<blockquote>
+<p><strong>A:</strong> Shared Memory 是 on-chip SRAM（在 SM 內部，奈米級距離），bandwidth ~19 TB/s。Global Memory 是 off-chip HBM DRAM（毫米級距離），bandwidth ~2 TB/s。物理距離 + 記憶體技術的差異造成 ~100× 的速度差。</p>
+</blockquote>
+<hr />
+<p><strong>Q3: 什麼是 Register Spilling？為什麼它很糟糕？怎麼避免？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 當 kernel 使用的 register 超過 SM 可分配的數量時，多餘的變數會被「溢出」到 Local Memory（實際上是 DRAM，跟 Global Memory 一樣慢）。這叫 Register Spilling。</p>
+<p>為什麼糟糕：Local Memory access = ~400ns（vs Register 0 cycle），效能可能降 10-100×。</p>
+<p>避免方法：(1) 減少 kernel 中的局部變數，(2) 用 <code>__launch_bounds__</code> 告訴 compiler 最大 threads/block，(3) 用 <code>-maxrregcount</code> 編譯選項限制 register 使用，(4) 拆分複雜 kernel 成多個簡單 kernel。</p>
+<p>檢查方法：<code>nvcc --ptxas-options=-v</code> 會顯示每個 kernel 的 register 使用量。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣6️⃣：CUDA Memory Optimization</h1>
+<h2>16.1 Memory Coalescing</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>Memory Coalescing</strong> 是 CUDA 效能最關鍵的概念之一。當同一 warp 的 32 個 threads 存取<strong>連續的記憶體位址</strong>時，GPU 會把這 32 次存取合併成 1-2 次 memory transaction（128 bytes each）。如果存取不連續（strided 或 random），每個 thread 可能需要獨立的 transaction，bandwidth 浪費高達 32×。</p>
+<pre><code class="language-c">// ✅ Coalesced Access（好）：連續 threads 存取連續位址
+// Thread 0 → data[0], Thread 1 → data[1], ..., Thread 31 → data[31]
+__global__ void coalesced(float* data, float* out, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    out[idx] = data[idx] * 2.0f;  // 32 threads 存取 128 bytes 連續 → 1 transaction
+}
+
+// ❌ Strided Access（壞）：連續 threads 存取間隔位址
+// Thread 0 → data[0], Thread 1 → data[stride], Thread 2 → data[2*stride]
+__global__ void strided(float* data, float* out, int n, int stride) {
+    int idx = (blockIdx.x * blockDim.x + threadIdx.x) * stride;
+    out[idx] = data[idx] * 2.0f;  // stride=32 時，32 threads 觸發 32 transactions!
+}
+
+// 實際影響：
+// Coalesced: ~2 TB/s effective bandwidth (A100)
+// Stride=32: ~60 GB/s effective bandwidth → 慢 33×!
+</code></pre>
+<h3>具體範例：Matrix Transpose</h3>
+<pre><code class="language-c">// ❌ Naive transpose: 讀 coalesced 但寫 strided
+__global__ void transpose_naive(float* in, float* out, int N) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    out[x * N + y] = in[y * N + x];  // 寫入是 stride-N → 不 coalesced!
+}
+
+// ✅ 用 Shared Memory 解決：讀 coalesced → shared → 寫 coalesced
+__global__ void transpose_shared(float* in, float* out, int N) {
+    __shared__ float tile[32][33];  // 33 避免 bank conflict!
+
+    int x = blockIdx.x * 32 + threadIdx.x;
+    int y = blockIdx.y * 32 + threadIdx.y;
+
+    // Coalesced read from global → shared
+    tile[threadIdx.y][threadIdx.x] = in[y * N + x];
+    __syncthreads();
+
+    // Coalesced write from shared → global (transposed)
+    int out_x = blockIdx.y * 32 + threadIdx.x;
+    int out_y = blockIdx.x * 32 + threadIdx.y;
+    out[out_y * N + out_x] = tile[threadIdx.x][threadIdx.y];
+}
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 什麼是 Memory Coalescing？為什麼 stride access 比 sequential access 慢 30×？</strong></p>
+<blockquote>
+<p><strong>A:</strong> Memory Coalescing 是 GPU 把同一 warp 中 threads 的連續記憶體存取合併成少量 memory transactions 的機制。每次 transaction 讀取 128 bytes（32 floats）。</p>
+<p>Sequential: 32 threads 讀 32 個連續 float = 128 bytes = 1 transaction<br />
+Stride-32: 32 threads 讀 32 個間隔 128 bytes 的 float = 32 transactions</p>
+<p>HBM bandwidth 是固定的（2 TB/s），但 stride access 浪費了每次 transaction 中 31/32 的資料（只用 4 bytes out of 128 bytes），effective bandwidth 降為 2TB/s × (4/128) = 62.5 GB/s。</p>
+</blockquote>
+<p><strong>Follow-up: AoS (Array of Structures) vs SoA (Structure of Arrays) 哪個對 GPU 更好？為什麼？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <strong>SoA 更好</strong>。AoS 中存取同一 field 時 stride = struct size（不 coalesced）。SoA 中同一 field 的資料連續存放（coalesced）。<br />
+```c<br />
+// AoS（壞）: struct { float x, y, z; } particles[N];<br />
+// 存取所有 x: stride = 12 bytes → 不 coalesced</p>
+<p>// SoA（好）: struct { float x[N]; float y[N]; float z[N]; };<br />
+// 存取所有 x: 連續 → coalesced<br />
+```</p>
+</blockquote>
+<hr />
+<p><strong>Q2: Matrix Transpose 為什麼需要 Shared Memory？直接 transpose 的問題是什麼？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 直接 transpose 時，讀和寫不可能同時 coalesced（讀 row-major 是 coalesced，但寫 column-major 是 stride-N）。Shared Memory 作為中間緩衝：先 coalesced 讀到 shared memory，再從 shared memory coalesced 寫出（因為 shared memory 沒有 coalescing 要求，任意 access pattern 都快）。</p>
+<p>效能差異：Naive ~60 GB/s vs Shared Memory ~1.8 TB/s（A100），快 30×。</p>
+</blockquote>
+<hr />
+<h2>16.2 Shared Memory &amp; Bank Conflicts</h2>
+<h3>💡 核心觀念</h3>
+<p>Shared Memory 被分成 <strong>32 個 banks</strong>（每個 bank 4 bytes wide）。如果同一 warp 的多個 threads 存取同一個 bank 的不同位址，就會發生 <strong>Bank Conflict</strong>——存取被序列化。</p>
+<pre><code>Bank 0: addr 0, 128, 256, ...
+Bank 1: addr 4, 132, 260, ...
+Bank 2: addr 8, 136, 264, ...
+...
+Bank 31: addr 124, 252, 380, ...
+
+規則：address % 128 / 4 = bank number
+</code></pre>
+<pre><code class="language-c">// ❌ Bank Conflict 範例
+__shared__ float smem[32][32];
+// Thread i 存取 smem[i][0] → 全部在 bank 0 → 32-way conflict!
+
+// ✅ Padding 解決
+__shared__ float smem[32][33];  // 多加 1 column padding
+// Thread i 存取 smem[i][0] → 分散到不同 banks → no conflict!
+// 因為 stride 變成 33*4=132 bytes，132/4 % 32 = 1（每行偏移 1 bank）
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 什麼是 Bank Conflict？為什麼 <code>float smem[32][33]</code> 能解決？</strong></p>
+<blockquote>
+<p><strong>A:</strong> Bank Conflict 發生在同一 warp 的多個 threads 同時存取 shared memory 的同一 bank（但不同位址）。32 banks 各 4 bytes wide，所以 <code>addr % 128 / 4</code> 決定 bank number。</p>
+<p><code>smem[32][32]</code>: column 0 的所有 row 都在 bank 0（stride = 32×4 = 128 bytes，128 % 128 = 0，全部 bank 0）→ 32-way conflict。</p>
+<p><code>smem[32][33]</code>: stride = 33×4 = 132 bytes，132 % 128 = 4，每行偏移 1 bank → 32 個 threads 存取 32 個不同 banks → no conflict。</p>
+<p>代價：浪費 32×4 = 128 bytes shared memory（微不足道）。</p>
+</blockquote>
+<p><strong>Follow-up: 如果兩個 threads 存取同一 bank 的同一位址（不是不同位址），會有 conflict 嗎？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 不會！這叫 <strong>broadcast</strong>——如果多個 threads 讀同一位址，hardware 會自動 broadcast，只需 1 次存取。Bank conflict 只發生在同一 bank 的<strong>不同位址</strong>。</p>
+</blockquote>
+<hr />
+<h2>16.3 Global Memory Optimization Patterns</h2>
+<h3>💡 核心觀念</h3>
+<p>除了 coalescing，還有幾個重要的 global memory 優化技巧：</p>
+<p><strong>1. Tiling（分塊）</strong>：把大問題切成小塊，每塊放進 shared memory 處理</p>
+<pre><code class="language-c">// Matrix Multiply with Tiling
+// 不 tiling: 每個 element 讀 N 次 global memory
+// Tiling: 每個 tile 只讀 1 次 global → shared，然後 reuse
+// Speedup: ~10-20× for large matrices
+</code></pre>
+<p><strong>2. Prefetching</strong>：在計算當前 tile 時，預先載入下一個 tile</p>
+<pre><code class="language-c">// Double buffering: 用兩塊 shared memory 交替
+// Buffer A: 正在計算
+// Buffer B: 正在從 global memory 載入下一個 tile
+// → 隱藏 memory latency
+</code></pre>
+<p><strong>3. Vectorized Load</strong>：用 <code>float4</code> 一次讀 16 bytes（vs <code>float</code> 4 bytes）</p>
+<pre><code class="language-c">// 一次讀 4 個 float（128 bits）
+float4* data4 = reinterpret_cast&lt;float4*&gt;(data);
+float4 val = data4[idx];  // 1 instruction 讀 16 bytes
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 為什麼 Tiling 對 Matrix Multiplication 這麼重要？量化加速效果。</strong></p>
+<blockquote>
+<p><strong>A:</strong> 不 tiling 的 naive matmul：計算 C[i][j] 需要讀 A 的第 i row（N floats）和 B 的第 j column（N floats）。整個 C 矩陣需要 2N³ 次 global memory reads。</p>
+<p>Tiling（tile size T）：每個 tile 只從 global 讀一次到 shared memory，然後被 T² 個 threads reuse。Global reads 降為 2N³/T。</p>
+<p>加速：T=32 時，global memory access 減少 32×。由於 naive matmul 是 memory-bound，這直接轉化為 ~20-30× speedup。這就是為什麼 cuBLAS 的 GEMM 比 naive 快 20×+。</p>
+</blockquote>
+<p><strong>Follow-up: Tile size 越大越好嗎？什麼限制了 tile size？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 不是。Tile 存在 shared memory 中，shared memory per SM 有限（48-164KB）。Tile size T 需要 2×T²×4 bytes shared memory（A tile + B tile）。T=32: 8KB，T=64: 32KB，T=128: 128KB（可能超過限制）。另外 tile 越大，block 用的 shared memory 越多，能同時跑的 blocks 越少（降低 occupancy）。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣7️⃣：CUDA Performance Optimization</h1>
+<h2>17.1 Occupancy</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>Occupancy</strong> = 實際活躍 warps / SM 最大可支援 warps。高 occupancy 讓 GPU 能在一個 warp 等 memory 時切換到另一個 warp 執行（latency hiding）。但 occupancy 不是越高越好——有時低 occupancy + 高 ILP（Instruction Level Parallelism）反而更快。</p>
+<p>影響 occupancy 的三個因素：<br />
+1. <strong>Registers per thread</strong>: 用越多 register → 能跑的 threads 越少<br />
+2. <strong>Shared memory per block</strong>: 用越多 → 能跑的 blocks 越少<br />
+3. <strong>Block size</strong>: 太小可能浪費 warp slots</p>
+<pre><code>A100 SM 限制：
+- Max threads per SM: 2048 (= 64 warps)
+- Max blocks per SM: 32
+- Max registers per SM: 65536
+- Max shared memory per SM: 164 KB
+
+範例計算：
+Kernel 用 64 registers/thread, block size = 256 (8 warps)
+- Register 限制: 65536 / 64 = 1024 threads = 32 warps → 4 blocks
+- Block 限制: 32 blocks（不是瓶頸）
+- Occupancy: 32 warps / 64 max = 50%
+
+如果改成 32 registers/thread:
+- Register 限制: 65536 / 32 = 2048 threads = 64 warps → 8 blocks
+- Occupancy: 64 / 64 = 100%
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: Occupancy 100% 一定比 50% 快嗎？為什麼？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 不一定。Occupancy 的目的是 latency hiding（當一個 warp 等 memory 時有其他 warp 可以跑）。但如果 kernel 是 compute-bound（不需要等 memory），高 occupancy 沒有幫助，反而可能因為 register 被限制而 spill 到 local memory（更慢）。</p>
+<p>經驗法則：memory-bound kernel 需要高 occupancy（&gt;50%），compute-bound kernel 可以接受低 occupancy（25-50%）只要 ILP 夠高。</p>
+</blockquote>
+<p><strong>Follow-up: 怎麼用工具分析 occupancy？</strong></p>
+<blockquote>
+<p><strong>A:</strong> (1) <code>CUDA Occupancy Calculator</code>（Excel spreadsheet），(2) <code>nvcc --ptxas-options=-v</code> 顯示 register/shared memory 使用量，(3) <code>Nsight Compute</code> profiler 直接顯示 achieved occupancy 和 theoretical occupancy，(4) <code>cudaOccupancyMaxActiveBlocksPerMultiprocessor()</code> API 動態查詢。</p>
+</blockquote>
+<hr />
+<h2>17.2 Kernel Fusion</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>Kernel Fusion</strong> = 把多個小 kernel 合併成一個大 kernel。好處：<br />
+1. 減少 kernel launch overhead（每次 ~5-10μs）<br />
+2. 減少 global memory round-trip（中間結果留在 register/shared memory）<br />
+3. 增加 arithmetic intensity</p>
+<pre><code class="language-c">// ❌ 不 fuse：3 次 kernel launch + 2 次 global memory round-trip
+// Kernel 1: C = A + B (read A,B from global, write C to global)
+// Kernel 2: D = C * 2  (read C from global, write D to global)
+// Kernel 3: E = relu(D) (read D from global, write E to global)
+// Total global memory: 6 reads + 3 writes = 9 × N × 4 bytes
+
+// ✅ Fused：1 次 kernel launch + 1 次 global memory round-trip
+__global__ void fused_kernel(float* A, float* B, float* E, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx &lt; n) {
+        float c = A[idx] + B[idx];      // register
+        float d = c * 2.0f;              // register
+        E[idx] = (d &gt; 0) ? d : 0;       // relu, write once
+    }
+}
+// Total global memory: 2 reads + 1 write = 3 × N × 4 bytes
+// 節省 67% memory bandwidth!
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: PyTorch 的 <code>torch.compile</code> 和 Triton 是怎麼做 kernel fusion 的？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <code>torch.compile</code>（TorchDynamo + TorchInductor）會：<br />
+1. Trace PyTorch operations 成 computation graph<br />
+2. 識別可以 fuse 的 element-wise operations（如 add → mul → relu）<br />
+3. 用 Triton 或 C++ codegen 生成 fused kernel</p>
+<p>Triton 是 OpenAI 開發的 GPU programming language，比 CUDA 更高階，自動處理 tiling、memory coalescing、shared memory 管理。開發者只需寫 tile-level 邏輯，Triton compiler 生成優化的 CUDA code。</p>
+<p>效果：element-wise ops 的 fusion 通常帶來 2-5× speedup（因為消除了 global memory round-trips）。</p>
+</blockquote>
+<p><strong>Follow-up: 什麼 operations 不能 fuse？</strong></p>
+<blockquote>
+<p><strong>A:</strong> (1) 需要全域同步的操作（如 reduction、softmax 的 normalization），(2) 不同 data layout 的操作（如 transpose 後接 matmul），(3) Dynamic shape 操作（compile time 不知道 shape）。Matmul 通常不跟其他 ops fuse（因為 matmul 本身已經是高度優化的 kernel）。</p>
+</blockquote>
+<hr />
+<h2>17.3 CUDA Streams &amp; Overlap</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>CUDA Stream</strong> 是一個 command queue，同一 stream 內的操作按順序執行，不同 stream 的操作可以<strong>並行</strong>。用途：overlap computation 和 memory transfer。</p>
+<pre><code class="language-c">// 不用 stream：sequential
+cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);  // 等完
+kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_a, d_b);                     // 等完
+cudaMemcpy(h_b, d_b, size, cudaMemcpyDeviceToHost);  // 等完
+// Total time = T_copy_in + T_compute + T_copy_out
+
+// 用 2 streams：overlap
+cudaStream_t s1, s2;
+cudaStreamCreate(&amp;s1); cudaStreamCreate(&amp;s2);
+
+// Stream 1: 處理前半
+cudaMemcpyAsync(d_a, h_a, half, H2D, s1);
+kernel&lt;&lt;&lt;grid/2, block, 0, s1&gt;&gt;&gt;(d_a, d_b);
+cudaMemcpyAsync(h_b, d_b, half, D2H, s1);
+
+// Stream 2: 處理後半（跟 stream 1 並行！）
+cudaMemcpyAsync(d_a+half, h_a+half, half, H2D, s2);
+kernel&lt;&lt;&lt;grid/2, block, 0, s2&gt;&gt;&gt;(d_a+half, d_b+half);
+cudaMemcpyAsync(h_b+half, d_b+half, half, D2H, s2);
+
+// Total time ≈ max(T_copy, T_compute) instead of sum
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: CUDA Streams 能帶來多少加速？什麼情況下沒用？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 理想情況下，如果 copy 和 compute 時間相當，2 streams 可以帶來接近 2× 加速（overlap copy with compute）。</p>
+<p>沒用的情況：(1) Kernel 已經佔滿整個 GPU（沒有空閒 SM 給第二個 stream），(2) 只有 compute 沒有 copy（如 data 已經在 GPU 上），(3) PCIe bandwidth 已經飽和。</p>
+<p>實務上最常用於：training 的 data loading（CPU→GPU copy overlap with forward/backward compute）。</p>
+</blockquote>
+<hr />
+<h2>17.4 CUDA Graphs</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>CUDA Graphs</strong> 把一系列 kernel launches 預錄成一個 graph，之後 replay 時省去每次的 CPU-side launch overhead。對於大量小 kernel 的 workload（如 inference），可以顯著降低 latency。</p>
+<pre><code class="language-c">// 不用 Graph：每次 inference 都要 CPU launch 100+ kernels
+// 每個 launch ~5-10μs → 100 kernels = 0.5-1ms overhead
+
+// 用 Graph：第一次錄製，之後直接 replay
+cudaGraph_t graph;
+cudaGraphExec_t instance;
+
+// 錄製
+cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+kernel_1&lt;&lt;&lt;...&gt;&gt;&gt;();
+kernel_2&lt;&lt;&lt;...&gt;&gt;&gt;();
+// ... 100 kernels
+cudaStreamEndCapture(stream, &amp;graph);
+cudaGraphInstantiate(&amp;instance, graph, NULL, NULL, 0);
+
+// Replay（極快，~10μs for entire graph）
+cudaGraphLaunch(instance, stream);
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: CUDA Graphs 的限制是什麼？為什麼 LLM inference 不能完全用 CUDA Graphs？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 限制：(1) Graph 中的所有參數（grid size, pointers）在錄製時固定，不能動態改變。(2) 不支持 conditional execution（if/else based on runtime data）。(3) 不支持 dynamic memory allocation。</p>
+<p>LLM inference 的問題：(1) Sequence length 每次不同 → grid size 變化，(2) KV cache 動態增長 → memory pointer 變化，(3) Continuous batching 的 batch composition 每個 iteration 不同。</p>
+<p>解法：對固定部分用 CUDA Graphs（如 FFN layers with fixed batch），動態部分（attention with variable KV cache）用普通 kernel launch。vLLM 就是這樣做的。</p>
+</blockquote>
+<p><strong>Follow-up: CUDA Graphs 對 training 有用嗎？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 有限。Training 的 batch size 通常固定，所以 forward+backward 的 kernel sequence 是固定的，理論上可以用 Graph。但 (1) training kernel 本身很大（ms 級），launch overhead 佔比小，(2) gradient accumulation、checkpointing 等需要 conditional logic。PyTorch 的 <code>torch.cuda.make_graphed_callables()</code> 支持部分 graph 化。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣8️⃣：CUDA in Deep Learning</h1>
+<h2>18.1 cuBLAS: Matrix Multiplication</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>cuBLAS</strong> 是 NVIDIA 的 GPU 線性代數庫，其中最重要的是 <strong>GEMM</strong>（General Matrix Multiply）。Deep learning 的 90%+ 計算都是 GEMM（linear layers, attention 的 QKV projection, FFN）。cuBLAS GEMM 經過極度優化，比 naive CUDA kernel 快 20-50×。</p>
+<pre><code class="language-c">// cuBLAS GEMM: C = α × A × B + β × C
+// cublasGemmEx() 支持 mixed precision
+cublasGemmEx(handle,
+    CUBLAS_OP_N, CUBLAS_OP_N,  // transpose flags
+    M, N, K,                    // matrix dimensions
+    &amp;alpha,
+    A, CUDA_R_16F, lda,        // A: FP16
+    B, CUDA_R_16F, ldb,        // B: FP16
+    &amp;beta,
+    C, CUDA_R_32F, ldc,        // C: FP32 (accumulate)
+    CUBLAS_COMPUTE_32F,         // compute in FP32
+    CUBLAS_GEMM_DEFAULT_TENSOR_OP  // use Tensor Cores!
+);
+</code></pre>
+<p><strong>Tensor Cores</strong> 的作用：</p>
+<pre><code>普通 CUDA cores: 1 FMA per cycle per core
+Tensor Cores: 4×4×4 matrix FMA per cycle per core
+
+A100 Tensor Core throughput:
+- FP16: 312 TFLOPS (vs 19.5 TFLOPS without TC = 16× faster!)
+- INT8: 624 TOPS
+- TF32: 156 TFLOPS
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 為什麼 cuBLAS 比自己寫的 CUDA matmul 快 20×+？它做了哪些優化？</strong></p>
+<blockquote>
+<p><strong>A:</strong> cuBLAS GEMM 的優化包括：<br />
+1. <strong>Tiling</strong>: 多層 tiling（register tile → shared memory tile → global tile）<br />
+2. <strong>Tensor Cores</strong>: 使用專用硬體做 4×4×4 FMA<br />
+3. <strong>Double buffering</strong>: 計算當前 tile 時預載下一個 tile<br />
+4. <strong>Vectorized loads</strong>: 用 128-bit loads（float4）<br />
+5. <strong>Software pipelining</strong>: 重排指令隱藏 latency<br />
+6. <strong>Auto-tuning</strong>: 根據 matrix size 選擇最佳 tile size 和 algorithm</p>
+<p>這些優化需要數千行手寫 assembly（SASS），不是普通開發者能做到的。</p>
+</blockquote>
+<p><strong>Follow-up: 什麼情況下 cuBLAS 不是最佳選擇？</strong></p>
+<blockquote>
+<p><strong>A:</strong> (1) 非標準 matrix shape（如極窄矩陣 M=1, N=large → 是 vector-matrix multiply，cuBLAS overhead 太大），(2) Sparse matrix（cuSPARSE 更好），(3) 需要跟其他 ops fuse 時（如 matmul + bias + relu → 用 cuBLAS + epilogue fusion 或 Triton）。</p>
+</blockquote>
+<hr />
+<h2>18.2 Flash Attention</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>Flash Attention</strong> 是 2022 年最重要的 CUDA optimization 之一。它解決了 standard attention 的兩個問題：<br />
+1. O(n²) memory（attention score matrix）<br />
+2. 大量 global memory read/write（softmax 需要兩次 pass）</p>
+<p>核心思想：<strong>Tiling + Online Softmax</strong>——把 attention 切成小 tiles，每個 tile 在 SRAM（shared memory）中完成所有計算，不需要把完整的 n×n attention matrix 寫到 HBM。</p>
+<pre><code>Standard Attention:
+1. S = Q × K^T          → 寫 n×n 到 HBM (O(n²) memory)
+2. P = softmax(S)       → 讀 n×n, 寫 n×n
+3. O = P × V            → 讀 n×n, 寫 n×d
+Total HBM access: O(n² + nd)
+
+Flash Attention:
+1. 把 Q, K, V 切成 tiles (Br × d)
+2. 對每個 tile pair: 在 SRAM 中計算 S_tile, P_tile, O_tile
+3. 用 online softmax 累積結果（不需要完整 S matrix）
+Total HBM access: O(nd)  ← 從 O(n²) 降到 O(n)!
+</code></pre>
+<pre><code class="language-python"># PyTorch 使用 Flash Attention（自動啟用）
+import torch.nn.functional as F
+
+# PyTorch 2.0+ 自動使用 Flash Attention（如果 shape 符合）
+output = F.scaled_dot_product_attention(Q, K, V, is_causal=True)
+
+# 或明確使用 flash-attn library
+from flash_attn import flash_attn_func
+output = flash_attn_func(Q, K, V, causal=True)
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: Flash Attention 為什麼能把 memory 從 O(n²) 降到 O(n)？核心 trick 是什麼？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 核心 trick 是 <strong>Online Softmax</strong>（也叫 safe softmax with running max）。Standard softmax 需要先算完所有 scores 才能 normalize（需要 global max 和 sum）。Online softmax 可以 tile-by-tile 計算，每處理一個新 tile 就更新 running max 和 running sum，最後 rescale 之前的結果。</p>
+<p>這意味著不需要把完整的 n×n attention matrix 存在 HBM——每個 tile 的 attention scores 在 SRAM 中計算完就丟棄，只保留 output accumulator（n×d）。Memory: O(n×d) = O(n)。</p>
+</blockquote>
+<p><strong>Follow-up: Flash Attention 對 training 和 inference 分別有多大加速？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <br />
+- Training: 2-4× speedup（因為省了大量 HBM read/write，且 backward pass 也 tiled）<br />
+- Inference prefill: 2-4× speedup（同理）<br />
+- Inference decode: 幾乎沒有加速（decode 時 Q 只有 1 token，attention 本身不是 bottleneck，bottleneck 在 weight loading）</p>
+<p>Flash Attention 對 long context 效果最明顯（n 越大，O(n²) vs O(n) 的差距越大）。</p>
+</blockquote>
+<hr />
+<p><strong>Q2: Flash Attention 的 IO complexity 是多少？跟 standard attention 比？</strong></p>
+<blockquote>
+<p><strong>A:</strong><br />
+- Standard: O(N²d + N²) HBM accesses（寫 S matrix + 讀回做 softmax + 寫 P + 讀回做 PV）<br />
+- Flash Attention: O(N²d² / M) HBM accesses（M = SRAM size）</p>
+<p>當 M &gt;&gt; d²（通常成立，因為 d=128 而 SRAM=100KB+），Flash Attention 的 IO ≈ O(Nd)，比 standard 的 O(N²) 少了 N/d 倍。對 N=128K, d=128: 少了 1000×。</p>
+</blockquote>
+<hr />
+<h2>18.3 TensorRT &amp; Inference Optimization</h2>
+<h3>💡 核心觀念</h3>
+<p><strong>TensorRT</strong> 是 NVIDIA 的 inference optimization toolkit。它把 PyTorch/ONNX model 編譯成高度優化的 engine，包含：</p>
+<ol>
+<li><strong>Layer Fusion</strong>: Conv+BN+ReLU → 一個 kernel</li>
+<li><strong>Precision Calibration</strong>: FP32 → FP16/INT8 自動校準</li>
+<li><strong>Kernel Auto-tuning</strong>: 對每個 layer 測試多種 kernel 實現，選最快的</li>
+<li><strong>Memory Optimization</strong>: 重用 tensor memory（in-place operations）</li>
+<li><strong>Dynamic Shape</strong>: 支持 variable batch size / sequence length</li>
+</ol>
+<pre><code class="language-python"># TensorRT 使用流程
+import tensorrt as trt
+
+# 1. 從 ONNX 載入 model
+builder = trt.Builder(logger)
+network = builder.create_network(1 &lt;&lt; int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+parser = trt.OnnxParser(network, logger)
+parser.parse_from_file(&quot;model.onnx&quot;)
+
+# 2. 設定優化選項
+config = builder.create_builder_config()
+config.set_flag(trt.BuilderFlag.FP16)  # 啟用 FP16
+config.set_flag(trt.BuilderFlag.INT8)  # 啟用 INT8
+
+# 3. Build engine（可能需要幾分鐘到幾小時）
+engine = builder.build_serialized_network(network, config)
+
+# 4. Inference（極快）
+context = engine.create_execution_context()
+context.execute_v2(bindings)
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: TensorRT 比 PyTorch inference 快多少？加速來自哪裡？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 通常 2-5× faster（取決於 model 和 hardware）。加速來源：<br />
+1. <strong>Layer Fusion</strong> (~30% speedup): 減少 kernel launch + global memory round-trips<br />
+2. <strong>Precision</strong> (~2× for FP16, ~4× for INT8): 減少 memory bandwidth + 用 Tensor Cores<br />
+3. <strong>Kernel Selection</strong> (~20%): 對每個 op 選擇最佳 CUDA kernel 實現<br />
+4. <strong>Memory Optimization</strong> (~10%): 減少 memory allocation/deallocation</p>
+<p>代價：(1) Build time 長（分鐘到小時），(2) 不靈活（model 改了要重新 build），(3) 不支持所有 PyTorch ops。</p>
+</blockquote>
+<p><strong>Follow-up: TensorRT-LLM 跟普通 TensorRT 有什麼不同？</strong></p>
+<blockquote>
+<p><strong>A:</strong> TensorRT-LLM 專門為 LLM 優化，額外包含：(1) KV cache management，(2) In-flight batching（continuous batching），(3) Tensor Parallelism support，(4) Quantization（GPTQ, AWQ, SmoothQuant），(5) Paged Attention。普通 TensorRT 不理解 autoregressive generation 的特殊需求。</p>
+</blockquote>
+<hr />
+<h2>18.4 Custom CUDA Kernels in Practice</h2>
+<h3>💡 核心觀念</h3>
+<p>什麼時候需要寫 custom CUDA kernel（而不是用 PyTorch/cuBLAS）？</p>
+<ol>
+<li><strong>Fused operations</strong> 不被框架支持（如 RMSNorm + residual + dropout）</li>
+<li><strong>Non-standard attention</strong> patterns（如 sliding window, sparse attention）</li>
+<li><strong>Quantization kernels</strong>（如 INT4 dequant + matmul）</li>
+<li><strong>Memory-bound small ops</strong> 被 kernel launch overhead 主導</li>
+</ol>
+<pre><code class="language-python"># 用 Triton 寫 custom kernel（比 raw CUDA 簡單 10×）
+import triton
+import triton.language as tl
+
+@triton.jit
+def fused_add_rmsnorm_kernel(
+    X, Residual, Weight, Out,
+    N,  # hidden size
+    eps: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+):
+    row = tl.program_id(0)
+    cols = tl.arange(0, BLOCK_SIZE)
+    mask = cols &lt; N
+
+    # Load x and residual
+    x = tl.load(X + row * N + cols, mask=mask, other=0.0)
+    res = tl.load(Residual + row * N + cols, mask=mask, other=0.0)
+
+    # Fused: x = x + residual (in-place)
+    x = x + res
+
+    # RMSNorm
+    variance = tl.sum(x * x, axis=0) / N
+    x_norm = x / tl.sqrt(variance + eps)
+
+    # Scale
+    w = tl.load(Weight + cols, mask=mask, other=0.0)
+    out = x_norm * w
+
+    tl.store(Out + row * N + cols, out, mask=mask)
+
+# 這個 fused kernel 比 3 個獨立 PyTorch ops 快 2-3×
+# 因為省了 2 次 global memory round-trip
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 什麼時候應該寫 custom CUDA kernel？什麼時候不應該？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <br />
+<strong>應該寫：</strong><br />
+- 多個 element-wise ops 可以 fuse（省 memory bandwidth）<br />
+- 框架不支持的 non-standard operation<br />
+- Profiling 顯示某個 op 是 bottleneck 且有明確優化空間<br />
+- Quantization/dequantization 的 custom format</p>
+<p><strong>不應該寫：</strong><br />
+- GEMM（cuBLAS 已經極度優化，你寫不贏）<br />
+- 標準 ops（Conv, BN, Softmax）已有高度優化實現<br />
+- 開發時間 &gt; 預期收益<br />
+- Model 還在快速迭代（custom kernel 維護成本高）</p>
+<p>經驗法則：先用 <code>torch.compile</code> / Triton 嘗試自動 fusion，只有在自動工具不夠好時才手寫。</p>
+</blockquote>
+<p><strong>Follow-up: Triton vs raw CUDA，什麼時候選哪個？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <br />
+- <strong>Triton</strong>: 90% 的場景。開發速度快 10×，自動處理 tiling/coalescing/shared memory，效能達到 cuBLAS 的 80-95%。適合 element-wise fusion、custom attention、reduction。<br />
+- <strong>Raw CUDA</strong>: 需要極致效能（最後 5-20%）、需要 warp-level primitives（shuffle, ballot）、需要精確控制 shared memory layout、或 Triton 不支持的 pattern。</p>
+<p>業界趨勢：越來越多公司（OpenAI, Meta）用 Triton 取代 raw CUDA，因為開發效率差距太大。</p>
+</blockquote>
+<hr />
+<h2>18.5 Profiling &amp; Debugging</h2>
+<h3>💡 核心觀念</h3>
+<p>CUDA 效能優化的第一步永遠是 <strong>profiling</strong>，不是猜測。NVIDIA 提供兩個主要工具：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>用途</th>
+<th>粒度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nsight Systems</td>
+<td>系統級 timeline（CPU/GPU 互動、kernel overlap）</td>
+<td>粗</td>
+</tr>
+<tr>
+<td>Nsight Compute</td>
+<td>單一 kernel 深度分析（memory throughput, occupancy）</td>
+<td>細</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash"># Nsight Systems: 看整體 timeline
+nsys profile --stats=true python train.py
+
+# Nsight Compute: 分析單一 kernel
+ncu --set full -o profile python inference.py
+
+# PyTorch Profiler（更方便）
+with torch.profiler.profile(
+    activities=[torch.profiler.ProfilerActivity.CPU,
+                torch.profiler.ProfilerActivity.CUDA],
+    with_stack=True
+) as prof:
+    model(input)
+print(prof.key_averages().table(sort_by=&quot;cuda_time_total&quot;))
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 你的 CUDA kernel 跑得慢，怎麼系統性地找出原因？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 分三步：<br />
+1. <strong>Nsight Systems</strong> 看 big picture：是 kernel 本身慢？還是 kernel 之間有 gap（launch overhead, sync）？還是 CPU 是 bottleneck？<br />
+2. <strong>Nsight Compute</strong> 分析 kernel：看 Roofline chart 判斷是 compute-bound 還是 memory-bound。看 memory throughput 是否接近 peak（如果遠低於 peak → coalescing 問題）。看 occupancy 和 warp stall reasons。<br />
+3. <strong>針對性優化</strong>：<br />
+   - Memory-bound + low throughput → 改善 coalescing, 用 shared memory<br />
+   - Memory-bound + high throughput → 已經接近 hardware limit，考慮 algorithmic change<br />
+   - Compute-bound + low occupancy → 減少 register 使用<br />
+   - Compute-bound + high occupancy → 用 Tensor Cores, 改善 ILP</p>
+</blockquote>
+<p><strong>Follow-up: 怎麼判斷一個 kernel 是否已經「夠快」了？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 計算 <strong>achieved bandwidth / peak bandwidth</strong> 或 <strong>achieved FLOPS / peak FLOPS</strong>。如果 memory-bound kernel 達到 &gt;80% peak bandwidth（A100: &gt;1.6 TB/s），或 compute-bound kernel 達到 &gt;70% peak FLOPS，就已經很好了。剩下的優化 ROI 很低。cuBLAS GEMM 通常達到 peak 的 85-95%。</p>
+</blockquote>
+<hr />
+<h1>Chapter 1️⃣9️⃣：CUDA Debugging &amp; Common Pitfalls</h1>
+<h2>19.1 常見 CUDA Errors</h2>
+<h3>💡 核心觀念</h3>
+<p>CUDA errors 分兩類：<strong>同步錯誤</strong>（立刻報錯）和<strong>非同步錯誤</strong>（kernel 執行中出錯，下一次 CUDA API call 才報）。非同步錯誤是最難 debug 的，因為報錯的位置不是出錯的位置。</p>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>原因</th>
+<th>解法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cudaErrorMemoryAllocation</code> (OOM)</td>
+<td>VRAM 不夠</td>
+<td>減 batch/model size, 用 quantization</td>
+</tr>
+<tr>
+<td><code>cudaErrorIllegalAddress</code></td>
+<td>越界存取</td>
+<td>compute-sanitizer 檢查</td>
+</tr>
+<tr>
+<td><code>cudaErrorLaunchOutOfResources</code></td>
+<td>Block 用太多 register/shared</td>
+<td>減少 blockDim 或 register</td>
+</tr>
+<tr>
+<td><code>cudaErrorInvalidConfiguration</code></td>
+<td>Launch config 錯誤</td>
+<td>檢查 blockDim ≤ 1024</td>
+</tr>
+<tr>
+<td><code>cudaErrorAssert</code></td>
+<td>Kernel 內 assert 失敗</td>
+<td>用 printf debug</td>
+</tr>
+<tr>
+<td><code>CUBLAS_STATUS_EXECUTION_FAILED</code></td>
+<td>Matmul 參數錯</td>
+<td>檢查 dimensions, alignment</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-c">// ✅ 正確的 error checking pattern
+#define CUDA_CHECK(call) do { \
+    cudaError_t err = call; \
+    if (err != cudaSuccess) { \
+        fprintf(stderr, &quot;CUDA error at %s:%d: %s\n&quot;, \
+                __FILE__, __LINE__, cudaGetErrorString(err)); \
+        exit(1); \
+    } \
+} while(0)
+
+// 用法
+CUDA_CHECK(cudaMalloc(&amp;d_ptr, size));
+kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(args);
+CUDA_CHECK(cudaGetLastError());      // 檢查 launch 錯誤
+CUDA_CHECK(cudaDeviceSynchronize()); // 檢查 execution 錯誤
+</code></pre>
+<pre><code class="language-python"># PyTorch 中啟用 CUDA error checking
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # 讓所有 kernel 同步執行
+# 這樣 error 會在出錯的那行報出，而不是延遲到下一個 op
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 為什麼 CUDA kernel 的 error 經常在「錯誤的位置」被報出？怎麼解決？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 因為 kernel launch 是非同步的——CPU 發出 launch 指令後立刻返回，不等 kernel 完成。如果 kernel 執行中出錯，error 會在下一次 CUDA API call（如另一個 kernel launch 或 cudaMemcpy）時才被報出。</p>
+<p>解法：(1) 設定 <code>CUDA_LAUNCH_BLOCKING=1</code> 讓所有操作同步（debug 用，會很慢），(2) 在可疑位置加 <code>cudaDeviceSynchronize()</code> + <code>cudaGetLastError()</code>，(3) 用 <code>compute-sanitizer</code>（NVIDIA 的 memory checker）自動偵測越界。</p>
+</blockquote>
+<p><strong>Follow-up: <code>CUDA_LAUNCH_BLOCKING=1</code> 為什麼不能用在 production？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 因為它讓每個 kernel 都同步等待完成，完全消除了 CPU-GPU overlap 和 multi-stream parallelism。Throughput 可能降 2-10×。只用於 debugging。</p>
+</blockquote>
+<hr />
+<h2>19.2 Memory Pitfalls</h2>
+<h3>💡 核心觀念</h3>
+<p>CUDA memory 相關的 bug 是最常見也最難找的。不像 CPU 的 segfault 會立刻 crash，GPU 的越界存取可能<strong>靜默地</strong>讀寫錯誤資料（silent data corruption），直到結果明顯錯誤才被發現。</p>
+<pre><code class="language-c">// ❌ Pitfall 1: 忘記 boundary check
+__global__ void bad(float* data, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    data[idx] = 0;  // 如果 idx &gt;= n → 越界！但可能不 crash
+}
+
+// ✅ 正確
+__global__ void good(float* data, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx &lt; n) data[idx] = 0;  // boundary check
+}
+
+// ❌ Pitfall 2: Race condition（沒有 sync）
+__global__ void race(float* shared_result) {
+    __shared__ float smem[256];
+    smem[threadIdx.x] = compute();
+    // 缺少 __syncthreads()!
+    float val = smem[threadIdx.x + 1];  // 可能讀到未初始化的值
+}
+
+// ❌ Pitfall 3: Host/Device pointer 混用
+float* h_ptr = (float*)malloc(size);
+float* d_ptr;
+cudaMalloc(&amp;d_ptr, size);
+// d_ptr[0] = 1.0f;  // ❌ 在 CPU 上 dereference GPU pointer → segfault!
+// kernel&lt;&lt;&lt;1,1&gt;&gt;&gt;(h_ptr);  // ❌ 在 GPU 上用 CPU pointer → illegal address!
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 怎麼偵測 CUDA kernel 中的 out-of-bounds memory access？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <br />
+1. <strong>compute-sanitizer</strong>（推薦）：<code>compute-sanitizer --tool memcheck ./my_program</code>，會報告每一次越界存取的位置（kernel name, line number）。類似 CPU 的 Valgrind。<br />
+2. <strong>CUDA_LAUNCH_BLOCKING=1</strong> + boundary check assertions<br />
+3. <strong>cuda-memcheck</strong>（舊版工具，被 compute-sanitizer 取代）<br />
+4. 在 kernel 中用 <code>printf</code> 印出可疑的 index 值</p>
+<p>注意：compute-sanitizer 會讓程式慢 10-100×，只用於 debug。</p>
+</blockquote>
+<p><strong>Follow-up: Silent data corruption（結果錯但不 crash）最常見的原因是什麼？</strong></p>
+<blockquote>
+<p><strong>A:</strong> (1) 越界讀取（讀到其他 tensor 的資料），(2) Race condition（缺少 <code>__syncthreads()</code>），(3) Uninitialized shared memory，(4) FP16 overflow（值超過 65504 變成 inf），(5) ECC error（hardware bit flip）。最難 debug 的是 race condition，因為結果可能「大部分時候正確」。</p>
+</blockquote>
+<hr />
+<h2>19.3 Performance Pitfalls</h2>
+<h3>💡 核心觀念</h3>
+<p>很多 CUDA 程式「能跑」但效能只有理論值的 5-10%。以下是最常見的效能陷阱：</p>
+<pre><code class="language-c">// ❌ Pitfall 1: Unnecessary cudaDeviceSynchronize()
+for (int i = 0; i &lt; 1000; i++) {
+    kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(data);
+    cudaDeviceSynchronize();  // 每次都等！殺死 pipeline
+}
+// ✅ 只在最後 sync 一次（或用 events）
+
+// ❌ Pitfall 2: 頻繁的小 cudaMalloc/cudaFree
+for (int i = 0; i &lt; 1000; i++) {
+    float* tmp;
+    cudaMalloc(&amp;tmp, size);   // 每次 allocate → 超慢
+    kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(tmp);
+    cudaFree(tmp);
+}
+// ✅ 預先 allocate，重複使用（memory pool）
+
+// ❌ Pitfall 3: CPU-GPU 頻繁資料傳輸
+for (int i = 0; i &lt; 1000; i++) {
+    cudaMemcpy(d_data, h_data, size, H2D);  // PCIe round-trip!
+    kernel&lt;&lt;&lt;grid, block&gt;&gt;&gt;(d_data);
+    cudaMemcpy(h_data, d_data, size, D2H);  // 又一次!
+}
+// ✅ 資料留在 GPU，只在最後傳回
+
+// ❌ Pitfall 4: 用 atomicAdd 做 reduction
+__global__ void bad_reduce(float* data, float* result, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx &lt; n) atomicAdd(result, data[idx]);  // N 次 atomic → 序列化!
+}
+// ✅ 用 shared memory reduction + 最後一次 atomic
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: 列出 5 個最常見的 CUDA performance pitfalls 和解法。</strong></p>
+<blockquote>
+<p><strong>A:</strong><br />
+1. <strong>Uncoalesced memory access</strong> → 重組資料為 SoA，確保連續 threads 存取連續位址<br />
+2. <strong>Low occupancy</strong> → 減少 register/shared memory 使用，或調整 block size<br />
+3. <strong>Branch divergence</strong> → 讓分支條件以 warp 為單位，避免 thread-level branching<br />
+4. <strong>Excessive global memory traffic</strong> → 用 shared memory tiling，kernel fusion<br />
+5. <strong>CPU-GPU sync overhead</strong> → 減少 <code>cudaDeviceSynchronize()</code>，用 streams overlap，用 memory pool 避免頻繁 malloc</p>
+</blockquote>
+<p><strong>Follow-up: 怎麼判斷你的 kernel 是否已經「夠快」？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 計算 <strong>achieved / theoretical peak</strong> ratio：<br />
+- Memory-bound kernel: achieved_bandwidth / peak_bandwidth（A100: 2 TB/s）。&gt;80% = 很好。<br />
+- Compute-bound kernel: achieved_FLOPS / peak_FLOPS（A100 FP16: 312 TFLOPS）。&gt;70% = 很好。<br />
+- 用 Nsight Compute 的 Roofline chart 一眼看出距離 peak 多遠。</p>
+</blockquote>
+<hr />
+<h2>19.4 PyTorch + CUDA 常見問題</h2>
+<h3>💡 核心觀念</h3>
+<p>在 PyTorch 中使用 CUDA 時，有一些框架層面的常見問題：</p>
+<pre><code class="language-python"># ❌ Pitfall 1: Tensor 在不同 device
+a = torch.randn(100).cuda()
+b = torch.randn(100)  # CPU!
+c = a + b  # RuntimeError: expected device cuda:0 but got cpu
+
+# ❌ Pitfall 2: 不必要的 .item() 或 .cpu()（觸發 sync）
+for batch in dataloader:
+    loss = model(batch)
+    print(f&quot;Loss: {loss.item()}&quot;)  # .item() 觸發 cudaDeviceSynchronize!
+# ✅ 累積後再 print，或用 loss.detach()
+
+# ❌ Pitfall 3: Memory leak（忘記 detach）
+losses = []
+for batch in dataloader:
+    loss = model(batch)
+    losses.append(loss)  # 保留整個 computation graph! OOM!
+# ✅ losses.append(loss.item()) 或 loss.detach()
+
+# ❌ Pitfall 4: CUDA OOM 後繼續跑
+try:
+    output = model(huge_batch)
+except RuntimeError as e:
+    if &quot;out of memory&quot; in str(e):
+        torch.cuda.empty_cache()  # 清 cache 但不一定夠
+        # GPU state 可能已經 corrupted，最安全是 restart process
+
+# ✅ 正確的 OOM 處理
+torch.cuda.empty_cache()
+gc.collect()
+# 減小 batch size 重試
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: PyTorch 中 <code>torch.cuda.empty_cache()</code> 做了什麼？什麼時候有用？什麼時候沒用？</strong></p>
+<blockquote>
+<p><strong>A:</strong> <code>empty_cache()</code> 釋放 PyTorch 的 CUDA memory allocator 持有的<strong>未使用</strong>的 cached memory 回給 CUDA driver。</p>
+<p><strong>有用</strong>：當你需要讓其他 process 或 library（如 cuBLAS workspace）使用 GPU memory 時。</p>
+<p><strong>沒用</strong>：如果 OOM 是因為 tensor 仍然被 reference（如 computation graph 沒 detach），<code>empty_cache()</code> 不會釋放這些 tensor。真正的解法是找到 memory leak（通常是忘記 <code>.detach()</code> 或 <code>with torch.no_grad()</code>）。</p>
+<p><strong>注意</strong>：頻繁呼叫 <code>empty_cache()</code> 反而會降低效能（因為 PyTorch 的 caching allocator 就是為了避免頻繁 cudaMalloc/cudaFree）。</p>
+</blockquote>
+<p><strong>Follow-up: 怎麼 debug PyTorch CUDA OOM？找出哪個 tensor 佔最多 memory？</strong></p>
+<blockquote>
+<p><strong>A:</strong><br />
+```python</p>
+<h1>方法 1: memory summary</h1>
+<p>print(torch.cuda.memory_summary())  # 顯示 allocated/cached/peak</p>
+<h1>方法 2: memory snapshot（PyTorch 2.1+）</h1>
+<p>torch.cuda.memory._record_memory_history()</p>
+<h1>... run code ...</h1>
+<p>torch.cuda.memory._dump_snapshot("snapshot.pickle")</p>
+<h1>用 torch.cuda._memory_viz 視覺化</h1>
+<h1>方法 3: 手動追蹤</h1>
+<p>for obj in gc.get_objects():<br />
+    if torch.is_tensor(obj) and obj.is_cuda:<br />
+        print(obj.shape, obj.element_size() * obj.nelement() / 1e6, "MB")<br />
+```</p>
+</blockquote>
+<hr />
+<h2>19.5 Multi-GPU Pitfalls</h2>
+<h3>💡 核心觀念</h3>
+<p>Multi-GPU 程式設計引入了額外的複雜度：device 管理、NCCL 通訊、deadlock 風險。</p>
+<pre><code class="language-python"># ❌ Pitfall 1: 忘記設定 device
+# 所有 tensor 預設在 cuda:0，即使你想用 cuda:1
+model = MyModel().cuda()  # 在 cuda:0
+# 如果 DataParallel 把 input 送到 cuda:1，但 model buffer 在 cuda:0 → error
+
+# ✅ 明確設定
+with torch.cuda.device(1):
+    model = MyModel().cuda()  # 在 cuda:1
+
+# ❌ Pitfall 2: NCCL deadlock
+# 所有 rank 必須以相同順序呼叫 collective ops
+if rank == 0:
+    dist.all_reduce(tensor_a)
+    dist.all_reduce(tensor_b)
+else:
+    dist.all_reduce(tensor_b)  # ❌ 順序不同 → deadlock!
+    dist.all_reduce(tensor_a)
+
+# ❌ Pitfall 3: Gradient 不同步
+# DDP 要求所有 rank 的 forward 使用相同的 parameters
+# 如果某個 rank skip 了一個 op → gradient shape 不同 → hang
+</code></pre>
+<h3>🎯 面試考題</h3>
+<p><strong>Q1: NCCL AllReduce hang（卡住不動）最常見的原因是什麼？怎麼 debug？</strong></p>
+<blockquote>
+<p><strong>A:</strong> 最常見原因：<br />
+1. <strong>某個 rank crash 了</strong>但其他 rank 還在等它 → 設定 <code>NCCL_TIMEOUT</code><br />
+2. <strong>Collective 呼叫順序不一致</strong>（如 conditional code path 導致某些 rank 跳過）<br />
+3. <strong>Tensor shape 不一致</strong>（某個 rank 的 gradient 是 None 因為 unused parameter）<br />
+4. <strong>Network 問題</strong>（InfiniBand link down）</p>
+<p>Debug 方法：<br />
+- <code>NCCL_DEBUG=INFO</code> 環境變數看通訊 log<br />
+- <code>TORCH_DISTRIBUTED_DEBUG=DETAIL</code> 看 DDP 的 parameter/gradient 狀態<br />
+- <code>torch.distributed.monitored_barrier()</code> 找出哪個 rank 卡住<br />
+- 設定 <code>timeout</code> 參數讓 hang 變成 error 而不是永遠等</p>
+</blockquote>
+<p><strong>Follow-up: DDP 中 <code>find_unused_parameters=True</code> 是做什麼的？為什麼預設是 False？</strong></p>
+<blockquote>
+<p><strong>A:</strong> DDP 預設假設每次 forward 都使用所有 parameters（這樣才能確保所有 rank 的 AllReduce 一致）。如果某些 parameters 在某些 iteration 沒被用到（如 conditional branches），gradient 會是 None，AllReduce 會 hang。<code>find_unused_parameters=True</code> 讓 DDP 自動偵測未使用的 parameters 並跳過它們的 AllReduce。預設 False 因為偵測有 overhead（~10% slower）。</p>
+</blockquote></body></html>
