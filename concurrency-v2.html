@@ -1,0 +1,2662 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>Concurrency 面試完全攻略 v2 — 30+ 題 Python/Go 雙語（加強版）</title>
+<style>
+body { font-family: -apple-system, 'Noto Sans CJK TC', sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; line-height: 1.8; background: #fff; color: #333; }
+h1 { color: #1a5276; border-bottom: 3px solid #2980b9; padding-bottom: 10px; }
+h2 { color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 6px; page-break-before: always; }
+h3 { color: #34495e; }
+h4 { color: #7f8c8d; }
+pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 13px; }
+code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+th { background: #f1f3f5; }
+.seedling { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.qa { background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.followup { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.go-code { background: #e0f2f1; border: 1px solid #80cbc4; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 13px; }
+.glossary { background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.quiz { background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.real-world { background: #e8eaf6; border-left: 4px solid #3f51b5; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.prereq { background: #fff8e1; border-left: 4px solid #ffc107; padding: 16px; margin: 16px 0; border-radius: 4px; }
+details { margin: 12px 0; }
+details summary { cursor: pointer; font-weight: bold; color: #2980b9; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+</head>
+<body>
+
+<h1>📘 Concurrency 面試完全攻略 v2：30+ 題 Python + Go 雙語解法（加強版）</h1>
+
+<p><strong>目標：</strong>覆蓋 Google/Meta L5-L6 所有 concurrency 面試考點<br>
+<strong>格式：</strong>每題包含 概念直覺 → Python 解法 → Go 解法 → 複雜度 → Follow-up → 理解確認<br>
+<strong>v2 加強：</strong>每章自成體系（Self-Contained）、術語表、驗證測驗、真實世界案例</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2>Chapter 1：Concurrency 基礎與核心概念</h2>
+<!-- ============================================================ -->
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>Concurrency</strong></td><td>結構上能同時處理多件事（不一定真的同時執行）</td><td>一個廚師在煮湯、切菜、烤麵包之間快速切換</td><td>Node.js event loop 用單執行緒處理上萬連線</td></tr>
+<tr><td><strong>Parallelism</strong></td><td>物理上真的同時執行多件事（需要多個 CPU core）</td><td>三個廚師各自獨立做一道菜</td><td>MapReduce 在 1000 台機器上同時處理資料</td></tr>
+<tr><td><strong>Thread</strong></td><td>程式內的輕量執行單位，共享同一程式的記憶體</td><td>同一間辦公室的同事，共用白板和文件櫃</td><td>Java Web Server 每個 HTTP request 一個 thread</td></tr>
+<tr><td><strong>Process</strong></td><td>獨立的程式實例，有自己的記憶體空間</td><td>不同棟辦公大樓，必須透過快遞（IPC）溝通</td><td>Chrome 每個 tab 是獨立 process（一個 crash 不影響其他）</td></tr>
+<tr><td><strong>GIL (Global Interpreter Lock)</strong></td><td>Python 的全域鎖，同時只讓一個 thread 執行 Python bytecode</td><td>整間辦公室只有一台影印機，大家排隊用</td><td>CPython 的 reference counting 需要 GIL 保護</td></tr>
+<tr><td><strong>Race Condition</strong></td><td>多個 thread 同時讀寫同一資源，結果取決於誰先誰後</td><td>兩人同時編輯同一份 Google Doc，最後存的人覆蓋前一人的修改</td><td>銀行轉帳：兩個 ATM 同時讀餘額 → 一個扣款消失</td></tr>
+<tr><td><strong>Critical Section</strong></td><td>一次只能一個 thread 進入的程式碼區段</td><td>廁所門鎖 — 裡面有人時其他人只能排隊</td><td>資料庫 transaction 的 SERIALIZABLE isolation level</td></tr>
+<tr><td><strong>Deadlock</strong></td><td>兩個以上 thread 互相等待對方釋放資源，永遠卡住</td><td>兩輛車在單線道對向行駛，都不肯後退</td><td>兩個 DB transaction 各持有一個 row lock 且互相等對方的 row</td></tr>
+<tr><td><strong>Livelock</strong></td><td>Thread 們持續在動，但沒有進展（不是停住，是白忙）</td><td>走廊上兩人不斷同方向讓路，永遠走不過去</td><td>兩個 router 互相 reroute packet 給對方</td></tr>
+<tr><td><strong>Starvation</strong></td><td>某個 thread 永遠拿不到資源（被其他 thread 霸佔）</td><td>排隊買飯但一直被插隊的人</td><td>Writer-preference RWLock 中 reader 永遠等不到</td></tr>
+<tr><td><strong>Event</strong></td><td>一次性信號旗：「某件事已完成」</td><td>起跑線的槍聲 — 聽到就跑</td><td>Python threading.Event / Go close(channel)</td></tr>
+<tr><td><strong>Semaphore</strong></td><td>計數器：同時最多 N 個可以進入</td><td>停車場入口顯示剩餘車位數</td><td>DB Connection Pool 限制最多 10 個連線</td></tr>
+<tr><td><strong>Condition Variable</strong></td><td>等待某個條件變為真才繼續</td><td>餐廳叫號系統 — 叫到你的號碼才能入座</td><td>Bounded Queue：滿了等、空了等</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例：Concurrency 在業界的應用</h4>
+<ul>
+<li><strong>Netflix (700M+ 串流)：</strong>每個影片播放 session 是獨立 thread/goroutine。使用 Zuul gateway 處理 200K+ RPS，每個 request 一個 thread（Netty event loop + worker threads）。</li>
+<li><strong>Google Search：</strong>單次搜尋 fan-out 到 1000+ 台伺服器 parallel 查詢，然後 fan-in merge 結果。有嚴格 timeout（200ms），慢的 shard 直接拋棄。</li>
+<li><strong>Discord (6M+ concurrent voice)：</strong>使用 Rust + Tokio async runtime，百萬級 concurrent WebSocket 連線。每個 voice channel 用 lock-free ring buffer 混音。</li>
+<li><strong>Amazon DynamoDB：</strong>每個 partition leader 用 Paxos consensus（本質是分散式鎖），同時內部用 lock-free data structures 處理高吞吐讀寫。</li>
+<li><strong>Uber 即時定位：</strong>每秒數百萬 GPS 更新寫入 ringpop（一致性 hash ring），使用 CAS atomic 更新 driver location，避免 lock contention。</li>
+</ul>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解：什麼是 Concurrency？</h4>
+<p><strong>生活比喻：</strong>一個廚師同時煮湯、切菜、烤麵包 — 他在三個任務之間切換（concurrency）。三個廚師各做一道菜 — 他們真的同時在做（parallelism）。</p>
+<p><strong>Concurrency ≠ Parallelism：</strong></p>
+<ul>
+<li><strong>Concurrency</strong>：結構上能處理多件事（interleaving），即使只有一個 CPU core</li>
+<li><strong>Parallelism</strong>：物理上同時執行多件事，需要多個 CPU core</li>
+</ul>
+<p><strong>為什麼面試考：</strong>L5+ 工程師要能設計多執行緒系統、避免 race condition、保證 correctness。</p>
+</div>
+
+<h3>1.1 Thread vs Process</h3>
+
+<table>
+<tr><th>比較</th><th>Process</th><th>Thread</th></tr>
+<tr><td>記憶體</td><td>獨立地址空間</td><td>共享 process 的記憶體</td></tr>
+<tr><td>建立成本</td><td>高（fork/exec）</td><td>低（只需 stack + register）</td></tr>
+<tr><td>通訊</td><td>IPC（pipe, socket, shared memory）</td><td>直接共享變數</td></tr>
+<tr><td>隔離性</td><td>高（一個 crash 不影響另一個）</td><td>低（一個 segfault 全部死）</td></tr>
+<tr><td>適用</td><td>需要隔離（Chrome tab, microservice）</td><td>需要共享資料（同一程式內）</td></tr>
+</table>
+
+<h3>1.2 Python GIL (Global Interpreter Lock)</h3>
+
+<pre><code class="language-python"># Python GIL：同一時間只有一個 thread 執行 Python bytecode
+# 影響：CPU-bound 任務用 threading 沒有加速（因為只有一個 thread 跑）
+# 解法：CPU-bound 用 multiprocessing；I/O-bound 用 threading 或 asyncio
+
+import threading, time
+
+counter = 0
+
+def increment():
+    global counter
+    for _ in range(1_000_000):
+        counter += 1  # NOT thread-safe! counter += 1 is NOT atomic
+
+threads = [threading.Thread(target=increment) for _ in range(2)]
+for t in threads: t.start()
+for t in threads: t.join()
+print(f"Expected: 2000000, Got: {counter}")  # 通常 < 2000000 (race condition!)
+</code></pre>
+
+<h3>1.3 Race Condition & Critical Section</h3>
+
+<pre><code class="language-python"># Race Condition: 多個 thread 同時讀寫共享資源，結果取決於執行順序
+# Critical Section: 一次只能有一個 thread 進入的程式碼區段
+
+# 修正上面的 race condition:
+import threading
+
+counter = 0
+lock = threading.Lock()
+
+def safe_increment():
+    global counter
+    for _ in range(1_000_000):
+        with lock:  # Critical section
+            counter += 1
+
+threads = [threading.Thread(target=safe_increment) for _ in range(2)]
+for t in threads: t.start()
+for t in threads: t.join()
+print(f"Result: {counter}")  # Always 2000000 ✓
+</code></pre>
+
+<h3>1.4 Deadlock 四個條件（Coffman Conditions）</h3>
+
+<pre><code># 四個條件同時滿足才會 deadlock：
+# 1. Mutual Exclusion: 資源不能共享
+# 2. Hold and Wait: 持有資源的同時等待其他資源
+# 3. No Preemption: 不能強制搶走別人的資源
+# 4. Circular Wait: A 等 B、B 等 A 形成環
+
+# 打破任一條件就能避免 deadlock：
+# - 打破 Circular Wait: 所有 thread 按固定順序取鎖（最常用！）
+# - 打破 Hold and Wait: 一次取得所有需要的鎖（try-lock with timeout）
+</code></pre>
+
+<h3>1.5 Livelock & Starvation</h3>
+
+<pre><code># Livelock: 兩個人在走廊相遇，都讓路但都往同一邊讓 → 永遠走不過去
+# 不是 deadlock（沒有阻塞），但也沒有進展
+
+# Starvation: 低優先權的 thread 永遠等不到資源
+# 例：Writer-preference RWLock 中 reader 永遠拿不到鎖
+# 解法：Fairness — FIFO ordering, aging (提升等待久的 thread 優先權)
+</code></pre>
+
+<hr>
+
+<h3>題目 1：LC 1115 - Print in Order</h3>
+
+<p><strong>題意：</strong>三個 thread 分別印 first(), second(), third()，保證印出 "firstsecondthird"。</p>
+
+<pre><code class="language-python"># Python 解法：用 Event (signal)
+import threading
+
+class Foo:
+    def __init__(self):
+        self.event1 = threading.Event()
+        self.event2 = threading.Event()
+
+    def first(self, printFirst):
+        printFirst()
+        self.event1.set()  # Signal: first is done
+
+    def second(self, printSecond):
+        self.event1.wait()  # Wait until first is done
+        printSecond()
+        self.event2.set()  # Signal: second is done
+
+    def third(self, printThird):
+        self.event2.wait()  # Wait until second is done
+        printThird()
+</code></pre>
+
+<div class="go-code"><pre><code>// Go 解法：用 channel
+type Foo struct {
+    ch1 chan struct{}
+    ch2 chan struct{}
+}
+
+func NewFoo() *Foo {
+    return &Foo{ch1: make(chan struct{}), ch2: make(chan struct{})}
+}
+
+func (f *Foo) First(printFirst func()) {
+    printFirst()
+    close(f.ch1) // Signal first done
+}
+
+func (f *Foo) Second(printSecond func()) {
+    &lt;-f.ch1 // Wait for first
+    printSecond()
+    close(f.ch2) // Signal second done
+}
+
+func (f *Foo) Third(printThird func()) {
+    &lt;-f.ch2 // Wait for second
+    printThird()
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 2：LC 1116 - Print Zero Even Odd</h3>
+
+<p><strong>題意：</strong>三個 thread (zero, even, odd) 交替印出 0102030405。</p>
+
+<pre><code class="language-python">import threading
+
+class ZeroEvenOdd:
+    def __init__(self, n: int):
+        self.n = n
+        self.zero_sem = threading.Semaphore(1)
+        self.odd_sem = threading.Semaphore(0)
+        self.even_sem = threading.Semaphore(0)
+
+    def zero(self, printNumber):
+        for i in range(1, self.n + 1):
+            self.zero_sem.acquire()
+            printNumber(0)
+            if i % 2 == 1:
+                self.odd_sem.release()
+            else:
+                self.even_sem.release()
+
+    def odd(self, printNumber):
+        for i in range(1, self.n + 1, 2):
+            self.odd_sem.acquire()
+            printNumber(i)
+            self.zero_sem.release()
+
+    def even(self, printNumber):
+        for i in range(2, self.n + 1, 2):
+            self.even_sem.acquire()
+            printNumber(i)
+            self.zero_sem.release()
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: channel-based coordination
+func zeroEvenOdd(n int) {
+    zeroCh := make(chan struct{}, 1)
+    oddCh := make(chan struct{})
+    evenCh := make(chan struct{})
+    done := make(chan struct{})
+
+    zeroCh &lt;- struct{}{} // Start with zero
+
+    go func() { // zero
+        for i := 1; i &lt;= n; i++ {
+            &lt;-zeroCh
+            fmt.Print(0)
+            if i%2 == 1 { oddCh &lt;- struct{}{} } else { evenCh &lt;- struct{}{} }
+        }
+    }()
+    go func() { // odd
+        for i := 1; i &lt;= n; i += 2 {
+            &lt;-oddCh
+            fmt.Print(i)
+            zeroCh &lt;- struct{}{}
+        }
+    }()
+    go func() { // even
+        for i := 2; i &lt;= n; i += 2 {
+            &lt;-evenCh
+            fmt.Print(i)
+            zeroCh &lt;- struct{}{}
+        }
+        close(done)
+    }()
+    &lt;-done
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 3：LC 1117 - Building H2O</h3>
+
+<p><strong>題意：</strong>多個 hydrogen/oxygen thread，每次必須湊齊 2H + 1O 才能一起通過 barrier。</p>
+
+<pre><code class="language-python">import threading
+
+class H2O:
+    def __init__(self):
+        self.h_sem = threading.Semaphore(2)  # Allow 2 H
+        self.o_sem = threading.Semaphore(1)  # Allow 1 O
+        self.barrier = threading.Barrier(3)  # Wait for 3 threads
+
+    def hydrogen(self, releaseHydrogen):
+        self.h_sem.acquire()
+        self.barrier.wait()      # Wait until 2H + 1O gathered
+        releaseHydrogen()
+        self.h_sem.release()
+
+    def oxygen(self, releaseOxygen):
+        self.o_sem.acquire()
+        self.barrier.wait()
+        releaseOxygen()
+        self.o_sem.release()
+</code></pre>
+
+<hr>
+
+<h3>題目 4：LC 1188 - Design Bounded Blocking Queue</h3>
+
+<p><strong>題意：</strong>實作一個 thread-safe 的有界佇列，滿了就 block enqueue，空了就 block dequeue。</p>
+
+<pre><code class="language-python">import threading
+from collections import deque
+
+class BoundedBlockingQueue:
+    def __init__(self, capacity: int):
+        self.queue = deque()
+        self.capacity = capacity
+        self.lock = threading.Lock()
+        self.not_full = threading.Condition(self.lock)
+        self.not_empty = threading.Condition(self.lock)
+
+    def enqueue(self, element: int) -> None:
+        with self.not_full:
+            while len(self.queue) >= self.capacity:
+                self.not_full.wait()  # Block until not full
+            self.queue.append(element)
+            self.not_empty.notify()   # Signal: queue not empty
+
+    def dequeue(self) -> int:
+        with self.not_empty:
+            while len(self.queue) == 0:
+                self.not_empty.wait()  # Block until not empty
+            val = self.queue.popleft()
+            self.not_full.notify()    # Signal: queue not full
+            return val
+
+    def size(self) -> int:
+        with self.lock:
+            return len(self.queue)
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Naturally fits with buffered channels!
+type BoundedBlockingQueue struct {
+    ch chan int
+}
+
+func NewBBQ(capacity int) *BoundedBlockingQueue {
+    return &amp;BoundedBlockingQueue{ch: make(chan int, capacity)}
+}
+
+func (q *BoundedBlockingQueue) Enqueue(val int) {
+    q.ch &lt;- val // Blocks if channel full
+}
+
+func (q *BoundedBlockingQueue) Dequeue() int {
+    return &lt;-q.ch // Blocks if channel empty
+}
+
+func (q *BoundedBlockingQueue) Size() int {
+    return len(q.ch)
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 5：LC 1195 - Fizz Buzz Multithreaded</h3>
+
+<p><strong>題意：</strong>4 個 thread (fizz, buzz, fizzbuzz, number) 合作印 1 到 n 的 FizzBuzz 序列。</p>
+
+<pre><code class="language-python">import threading
+
+class FizzBuzz:
+    def __init__(self, n: int):
+        self.n = n
+        self.current = 1
+        self.lock = threading.Lock()
+        self.cond = threading.Condition(self.lock)
+
+    def fizz(self, printFizz):
+        for _ in range(self.n):
+            with self.cond:
+                while self.current &lt;= self.n and not (self.current % 3 == 0 and self.current % 5 != 0):
+                    self.cond.wait()
+                if self.current > self.n: return
+                printFizz()
+                self.current += 1
+                self.cond.notify_all()
+
+    def buzz(self, printBuzz):
+        for _ in range(self.n):
+            with self.cond:
+                while self.current &lt;= self.n and not (self.current % 5 == 0 and self.current % 3 != 0):
+                    self.cond.wait()
+                if self.current > self.n: return
+                printBuzz()
+                self.current += 1
+                self.cond.notify_all()
+
+    def fizzbuzz(self, printFizzBuzz):
+        for _ in range(self.n):
+            with self.cond:
+                while self.current &lt;= self.n and not (self.current % 15 == 0):
+                    self.cond.wait()
+                if self.current > self.n: return
+                printFizzBuzz()
+                self.current += 1
+                self.cond.notify_all()
+
+    def number(self, printNumber):
+        for _ in range(self.n):
+            with self.cond:
+                while self.current &lt;= self.n and (self.current % 3 == 0 or self.current % 5 == 0):
+                    self.cond.wait()
+                if self.current > self.n: return
+                printNumber(self.current)
+                self.current += 1
+                self.cond.notify_all()
+</code></pre>
+
+<div class="qa">
+<h4>📝 Ch1 理解確認</h4>
+<details open>
+<summary>Q1: 為什麼 Python 的 counter += 1 不是 thread-safe？</summary>
+<p><strong>A:</strong> counter += 1 編譯成 3 個 bytecode 操作：LOAD counter → ADD 1 → STORE counter。GIL 在任何一步之間都可能切換 thread。如果 Thread A LOAD 了 5，被切走，Thread B 也 LOAD 5，各自 +1 存回 6，結果本該是 7 卻變成 6。</p>
+</details>
+<details open>
+<summary>Q2: Event vs Semaphore vs Condition — 什麼時候用哪個？</summary>
+<p><strong>A:</strong> Event = 一次性信號（"X 已完成"），binary flag。Semaphore = 計數器（"最多 N 個可以同時進入"）。Condition = 等待某個條件成立（"queue 非空"），搭配 while loop 使用。經驗：排序用 Event，限量用 Semaphore，條件等待用 Condition。</p>
+</details>
+<details open>
+<summary>Q3: Go channel 比 Python threading 簡單在哪？</summary>
+<p><strong>A:</strong> Go channel 把同步和通訊合而為一（CSP model）。Python 需要 Lock+Condition+Queue 三件套，Go 只要一個 channel 就搞定（自帶 blocking semantics）。而且 goroutine 比 thread 輕量 1000x（2KB vs 2MB stack），可以開百萬個。</p>
+</details>
+</div>
+
+<div class="followup">
+<h4>💬 Ch1 Follow-up 面試問題</h4>
+<details open>
+<summary>Q1: How would you debug a race condition in production?</summary>
+<p><strong>A:</strong> 1) ThreadSanitizer (TSan) for C++/Go — detects data races at runtime. 2) For Python: use logging with thread_id + timestamps to identify interleaving. 3) Stress testing: run the suspicious code path with many threads and random delays. 4) Code review: look for shared mutable state without synchronization. 5) In production: add metrics for inconsistent states (e.g., counter mismatch).</p>
+</details>
+<details open>
+<summary>Q2: What's the performance impact of using locks?</summary>
+<p><strong>A:</strong> Lock contention causes: 1) Thread blocking (context switch = ~1-10μs). 2) Cache invalidation (lock acquisition invalidates other cores' cache lines). 3) Reduced parallelism (only one thread in critical section). Mitigation: minimize critical section size, use read-write locks, lock-free structures for hot paths, or partition data to reduce contention.</p>
+</details>
+<details open>
+<summary>Q3: Mutex vs Semaphore — when do you use each?</summary>
+<p><strong>A:</strong> Mutex = binary, only the owner can unlock (mutual exclusion). Semaphore = counting, any thread can signal (resource counting). Use Mutex for protecting critical sections. Use Semaphore for limiting concurrency (connection pool = Semaphore(10)) or signaling between threads.</p>
+</details>
+<details open>
+<summary>Q4: How do you prevent deadlock in a system with multiple locks?</summary>
+<p><strong>A:</strong> 1) Lock ordering: always acquire locks in a fixed global order (breaks circular wait). 2) Lock timeout: tryLock with timeout, release all and retry (breaks hold-and-wait). 3) Single lock: coarse-grained lock covering all resources (simple but reduces parallelism). 4) Lock-free algorithms: eliminate locks entirely for hot paths.</p>
+</details>
+<details open>
+<summary>Q5: Compare Python's GIL with Go's goroutine scheduling.</summary>
+<p><strong>A:</strong> Python GIL: one thread executes bytecode at a time. Multiple threads help for I/O-bound only. Go: no GIL. Goroutines are M:N scheduled (M goroutines on N OS threads). Go scheduler does cooperative preemption at function calls and since Go 1.14, asynchronous preemption. Result: Go achieves true parallelism for CPU-bound work; Python needs multiprocessing for that.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch1 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: 以下程式碼有 bug，找出問題並修正：</summary>
+<pre><code class="language-python">import threading
+balance = 1000
+
+def withdraw(amount):
+    global balance
+    if balance >= amount:
+        balance -= amount
+    return balance
+
+# 兩個 thread 同時提款 800 元
+t1 = threading.Thread(target=withdraw, args=(800,))
+t2 = threading.Thread(target=withdraw, args=(800,))
+t1.start(); t2.start()
+t1.join(); t2.join()
+</code></pre>
+<p><strong>答案：</strong>Race condition！兩個 thread 都可能通過 <code>if balance >= amount</code> 檢查（都看到 balance=1000），然後各自扣 800，導致 balance 變成 -600。<br>
+<strong>修正：</strong>用 Lock 保護整個 check-then-act 區段：</p>
+<pre><code class="language-python">lock = threading.Lock()
+def withdraw(amount):
+    global balance
+    with lock:  # 整個 check + modify 必須是 atomic
+        if balance >= amount:
+            balance -= amount
+    return balance
+</code></pre>
+<p><strong>核心概念：</strong>Check-then-act 必須在同一個 critical section 內完成。分開的 check 和 act 之間可以被其他 thread 插入。這叫做 TOCTOU (Time-of-Check to Time-of-Use) bug。</p>
+</details>
+<details open>
+<summary>VQ2: 為什麼以下 deadlock 解法「讓 philosopher 4 先拿右邊」能避免 deadlock？用 Coffman 條件解釋。</summary>
+<p><strong>答案：</strong>這打破了 <strong>Circular Wait</strong>（第 4 條件）。正常情況：P0 拿 fork0 等 fork1，P1 拿 fork1 等 fork2...P4 拿 fork4 等 fork0 → 形成環。如果 P4 改成先拿 fork0（右邊）再拿 fork4（左邊），那拿取順序變成：所有人都是「拿較小編號的 fork 先」。這等於建立了全局排序（Total Order），不可能形成環，因為環需要至少一個人拿大等小，但現在沒有人這樣做。</p>
+</details>
+<details open>
+<summary>VQ3: Python 的 GIL 是否意味著 Python 程式永遠不需要 Lock？為什麼？</summary>
+<p><strong>答案：</strong>錯！GIL 只保證「一次一個 thread 執行 bytecode」，但 <strong>不保證</strong> 一個 Python 語句是 atomic 的。例如 <code>counter += 1</code> 是 3 個 bytecode（LOAD → ADD → STORE），GIL 可以在任何兩步之間切換。GIL 保護的是 CPython 內部資料結構（如 reference count），<strong>不是</strong>你的應用邏輯。只有單一 bytecode 操作（如 <code>x = []</code>、<code>L.append(x)</code>）在 CPython 中是 atomic 的，但依賴這個是非 portable 的壞實踐。</p>
+</details>
+<details open>
+<summary>VQ4: 設計題：如果你要實作一個 thread-safe 的計數器，有 Lock、Atomic、Channel 三種方式，各適合什麼場景？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>Lock (Mutex)：</strong>適合 critical section 包含多步驟邏輯（如 check-then-modify-then-notify）。簡單好理解，但 contention 高時效能差。</li>
+<li><strong>Atomic (CAS)：</strong>適合純數值操作（increment, compare-and-swap）。零 overhead 在低 contention；高 contention 時 spin loop 浪費 CPU。Go 用 <code>atomic.AddInt64</code>，Java 用 <code>AtomicLong</code>。</li>
+<li><strong>Channel (Go)：</strong>適合 counter 的更新需要觸發其他邏輯（如通知、彙整）。用一個 goroutine 持有 counter，其他人透過 channel 發送 increment 請求。actor model 風格，零 shared state。</li>
+</ul>
+<p><strong>面試黃金答案：</strong>「對於簡單 counter，我用 atomic（最快）。如果要 check-then-act，用 Lock。如果是 Go 且 counter 變更需觸發後續流程，用 channel + owner goroutine。」</p>
+</details>
+<details open>
+<summary>VQ5: 解釋為什麼 Bounded Blocking Queue 的 wait() 必須放在 while loop 裡而不是 if？</summary>
+<p><strong>答案：</strong>因為 <strong>Spurious Wakeup</strong>（虛假喚醒）。OS 可能在沒有 notify 的情況下喚醒等待的 thread（POSIX 標準允許這樣做以簡化實作）。另外，即使是真正的 notify，也可能有其他 thread 在你被喚醒到你獲取 lock 之間，搶先消費了資源（Stolen Wakeup）。所以必須用 <code>while</code> 重新檢查條件：</p>
+<pre><code class="language-python"># 錯誤：if 只檢查一次
+if len(queue) == 0:
+    condition.wait()  # 被喚醒後直接往下跑，但可能又是空的！
+
+# 正確：while 持續檢查
+while len(queue) == 0:
+    condition.wait()  # 被喚醒後再檢查一次，確認真的有東西
+</code></pre>
+</details>
+</div>
+
+
+
+<!-- ============================================================ -->
+<h2>Chapter 2：互斥鎖與同步原語</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<p>本章會用到 Ch1 的以下概念（如果你直接跳到這章，先確認你理解這些）：</p>
+<ul>
+<li><strong>Thread</strong>：程式內的輕量執行單位，共享記憶體。多個 thread 同時讀寫同一變數 → Race Condition。</li>
+<li><strong>Critical Section</strong>：一次只能一個 thread 進入的程式碼區段。用 Lock/Mutex 保護。</li>
+<li><strong>Deadlock</strong>：兩個 thread 互相等待對方的資源。打破 4 條件之一即可避免。</li>
+<li><strong>Semaphore</strong>：計數器，限制同時 N 個 thread 進入。acquire() 減 1，release() 加 1。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>Mutex (互斥鎖)</strong></td><td>一次只有一個人能持有的鎖。持有者負責解鎖</td><td>廁所門鎖 — 進去的人鎖門，出來才能讓下一個人進</td><td>Java synchronized、Python threading.Lock()、Go sync.Mutex</td></tr>
+<tr><td><strong>RWLock (讀寫鎖)</strong></td><td>多人可以同時讀，但寫入時必須獨佔（排除所有讀和寫）</td><td>圖書館閱覽室：多人同時看書OK，但要改黑板時全部暫停</td><td>PostgreSQL 的 SELECT（shared lock）vs UPDATE（exclusive lock）</td></tr>
+<tr><td><strong>Reentrant Lock (可重入鎖)</strong></td><td>同一個 thread 可以多次獲取同一把鎖（計數器追蹤）</td><td>你已經在房間裡了，可以再鎖一次門（記住鎖了幾次）</td><td>Java ReentrantLock、Python threading.RLock</td></tr>
+<tr><td><strong>Condition Variable</strong></td><td>讓 thread 等待某個條件成立，成立時被喚醒</td><td>餐廳叫號器 — 號碼到了才去取餐</td><td>Kafka consumer wait for new messages</td></tr>
+<tr><td><strong>Barrier</strong></td><td>所有參與者都到齊才能繼續（同步點）</td><td>旅行團集合點 — 全員到齊才出發</td><td>MapReduce shuffle barrier：所有 mapper 完成才開始 reduce</td></tr>
+<tr><td><strong>sync.Once (Go)</strong></td><td>保證某段程式碼只執行一次（即使多個 goroutine 同時呼叫）</td><td>破冰儀式 — 只有第一個人做，其他人等結果</td><td>Singleton 初始化、DB connection pool 建立</td></tr>
+<tr><td><strong>Double-Checked Locking</strong></td><td>先不加鎖檢查（快速路徑），需要時才加鎖再檢查一次</td><td>先看門有沒有鎖（不用掏鑰匙），有鎖才掏鑰匙開門再確認</td><td>Singleton pattern 在 Java/C++ 中的實作</td></tr>
+<tr><td><strong>Spurious Wakeup</strong></td><td>OS 可能在沒人 notify 的情況下喚醒等待中的 thread</td><td>鬧鐘誤響 — 醒來發現還沒到時間</td><td>POSIX pthread_cond_wait 標準明確允許 spurious wakeup</td></tr>
+<tr><td><strong>Dining Philosophers</strong></td><td>經典死鎖問題：5 人共 5 支筷子，每人需要左右各一支</td><td>圓桌晚餐：每人左右各一支筷子，同時伸手就卡住</td><td>多個 DB transaction 爭搶多個 row lock</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>MySQL InnoDB：</strong>使用 RWLock 管理 buffer pool。SELECT 拿 shared lock（多人讀），UPDATE/DELETE 拿 exclusive lock。高讀低寫場景下 RWLock 比 Mutex 快 10x+。</li>
+<li><strong>Go HTTP Server (net/http)：</strong>每個 request 一個 goroutine。共享的 session store 用 sync.RWMutex 保護。讀多寫少 → 99% 的 request 不需要等鎖。</li>
+<li><strong>Java ConcurrentHashMap (JDK 8+)：</strong>不再用 segment lock，改用 CAS + synchronized on bin head。只有 hash collision 時才加鎖，大幅降低 contention。</li>
+<li><strong>Kubernetes API Server：</strong>使用 sync.Once 初始化各種 controller。確保 leader election callback 只觸發一次。</li>
+<li><strong>Redis 單執行緒模型：</strong>完全避免鎖！所有操作 serialized 在單一 thread。簡單但 throughput 受限於單核。Redis 6.0+ 引入 I/O threading（只有 I/O 是 multi-thread，命令執行仍 single-thread）。</li>
+</ul>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>Mutex = 廁所門鎖（一次一個人）。Semaphore = 停車場剩餘車位數（計數器）。RWLock = 圖書館閱覽室（多人同時看書OK，但有人要寫黑板時全部暫停）。Condition Variable = 餐廳叫號器（等到你的號碼才行動）。Barrier = 團體旅行集合點（所有人到齊才出發）。</p>
+</div>
+
+<h3>2.1 同步原語總覽</h3>
+
+<table>
+<tr><th>原語</th><th>語意</th><th>Python</th><th>Go</th></tr>
+<tr><td>Mutex</td><td>互斥，一次一個</td><td>threading.Lock()</td><td>sync.Mutex</td></tr>
+<tr><td>RWLock</td><td>讀共享，寫互斥</td><td>threading.RLock() (reentrant only)</td><td>sync.RWMutex</td></tr>
+<tr><td>Semaphore</td><td>計數器限制並發數</td><td>threading.Semaphore(n)</td><td>chan struct{} (buffered)</td></tr>
+<tr><td>Condition</td><td>等待條件成立</td><td>threading.Condition(lock)</td><td>sync.Cond</td></tr>
+<tr><td>Barrier</td><td>N 個 thread 到齊</td><td>threading.Barrier(n)</td><td>sync.WaitGroup</td></tr>
+<tr><td>Once</td><td>只執行一次</td><td>threading.Event + flag</td><td>sync.Once</td></tr>
+</table>
+
+<hr>
+
+<h3>題目 6：LC 1226 - Dining Philosophers 🍝</h3>
+
+<p><strong>題意：</strong>5 個哲學家圍桌，每人需要左右兩支筷子才能吃飯。避免 deadlock。</p>
+
+<pre><code class="language-python">import threading
+
+class DiningPhilosophers:
+    def __init__(self):
+        # 5 支筷子（叉子），每支是一把鎖
+        self.forks = [threading.Lock() for _ in range(5)]
+        # 限制最多 4 人同時嘗試拿筷子 → 打破 circular wait
+        self.limit = threading.Semaphore(4)
+
+    def wantsToEat(self, philosopher: int, *actions):
+        pickLeftFork, pickRightFork, eat, putLeftFork, putRightFork = actions
+        left = philosopher
+        right = (philosopher + 1) % 5
+
+        self.limit.acquire()        # 最多 4 人同時嘗試
+        self.forks[left].acquire()
+        self.forks[right].acquire()
+
+        pickLeftFork()
+        pickRightFork()
+        eat()
+        putLeftFork()
+        putRightFork()
+
+        self.forks[right].release()
+        self.forks[left].release()
+        self.limit.release()
+</code></pre>
+
+<div class="go-code"><pre><code>// Go 解法：Resource ordering（小號先拿）
+type DiningPhilosophers struct {
+    forks [5]sync.Mutex
+}
+
+func (dp *DiningPhilosophers) WantsToEat(id int, eat func()) {
+    left, right := id, (id+1)%5
+    // Always pick lower-numbered fork first → breaks circular wait
+    first, second := left, right
+    if first > second { first, second = second, first }
+
+    dp.forks[first].Lock()
+    dp.forks[second].Lock()
+    eat()
+    dp.forks[second].Unlock()
+    dp.forks[first].Unlock()
+}
+</code></pre></div>
+
+<p><strong>Why this works：</strong>固定順序取鎖打破 Circular Wait（Deadlock 第 4 條件）。或用 Semaphore(4) 確保至少一人能拿到兩支筷子。</p>
+
+<hr>
+
+<h3>題目 7：LC 1242 - Web Crawler Multithreaded 🕷️</h3>
+
+<p><strong>題意：</strong>多執行緒爬蟲，給定起始 URL，爬同 domain 的所有頁面。</p>
+
+<pre><code class="language-python">import threading
+from collections import deque
+from typing import List
+from concurrent.futures import ThreadPoolExecutor
+
+class Solution:
+    def crawl(self, startUrl: str, htmlParser) -> List[str]:
+        domain = startUrl.split('/')[2]
+        visited = {startUrl}
+        lock = threading.Lock()
+        result = [startUrl]
+
+        def get_domain(url):
+            return url.split('/')[2]
+
+        def worker(url):
+            links = htmlParser.getUrls(url)
+            new_urls = []
+            with lock:
+                for link in links:
+                    if get_domain(link) == domain and link not in visited:
+                        visited.add(link)
+                        result.append(link)
+                        new_urls.append(link)
+            return new_urls
+
+        queue = deque([startUrl])
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            while queue:
+                futures = []
+                while queue:
+                    url = queue.popleft()
+                    futures.append(executor.submit(worker, url))
+                for f in futures:
+                    for new_url in f.result():
+                        queue.append(new_url)
+
+        return result
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: goroutines + sync.Map + WaitGroup
+func crawl(startUrl string, htmlParser HtmlParser) []string {
+    domain := getDomain(startUrl)
+    visited := sync.Map{}
+    visited.Store(startUrl, true)
+    var mu sync.Mutex
+    result := []string{startUrl}
+    var wg sync.WaitGroup
+
+    var dfs func(string)
+    dfs = func(url string) {
+        defer wg.Done()
+        for _, link := range htmlParser.GetUrls(url) {
+            if getDomain(link) == domain {
+                if _, loaded := visited.LoadOrStore(link, true); !loaded {
+                    mu.Lock()
+                    result = append(result, link)
+                    mu.Unlock()
+                    wg.Add(1)
+                    go dfs(link)
+                }
+            }
+        }
+    }
+
+    wg.Add(1)
+    go dfs(startUrl)
+    wg.Wait()
+    return result
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 8：Implement Read-Write Lock</h3>
+
+<p><strong>題意：</strong>實作 RWLock — 多個 reader 可以同時讀，但 writer 獨佔。</p>
+
+<pre><code class="language-python">import threading
+
+class ReadWriteLock:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._readers = 0
+        self._readers_lock = threading.Lock()
+        self._writer_lock = threading.Lock()
+
+    def acquire_read(self):
+        with self._readers_lock:
+            self._readers += 1
+            if self._readers == 1:
+                self._writer_lock.acquire()  # First reader blocks writers
+
+    def release_read(self):
+        with self._readers_lock:
+            self._readers -= 1
+            if self._readers == 0:
+                self._writer_lock.release()  # Last reader unblocks writers
+
+    def acquire_write(self):
+        self._writer_lock.acquire()
+
+    def release_write(self):
+        self._writer_lock.release()
+</code></pre>
+
+<p><strong>⚠️ 問題：</strong>這是 reader-preference — 持續有 reader 時 writer 會 starve。面試 follow-up 常問如何改成 fair（見 Ch5）。</p>
+
+<hr>
+
+<h3>題目 9：Producer-Consumer with Bounded Buffer</h3>
+
+<pre><code class="language-python">import threading
+import queue
+import time
+import random
+
+def producer(buffer: queue.Queue, producer_id: int):
+    for i in range(5):
+        item = f"P{producer_id}-Item{i}"
+        buffer.put(item)  # Blocks if full
+        print(f"[Producer {producer_id}] Produced: {item}")
+        time.sleep(random.uniform(0.1, 0.5))
+
+def consumer(buffer: queue.Queue, consumer_id: int):
+    while True:
+        try:
+            item = buffer.get(timeout=2)  # Blocks if empty, timeout to exit
+            print(f"[Consumer {consumer_id}] Consumed: {item}")
+            buffer.task_done()
+            time.sleep(random.uniform(0.2, 0.8))
+        except queue.Empty:
+            break
+
+buffer = queue.Queue(maxsize=3)
+producers = [threading.Thread(target=producer, args=(buffer, i)) for i in range(2)]
+consumers = [threading.Thread(target=consumer, args=(buffer, i)) for i in range(3)]
+for t in producers + consumers: t.start()
+for t in producers: t.join()
+buffer.join()
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Buffered channel IS the bounded buffer
+func main() {
+    buffer := make(chan string, 3)
+    var wg sync.WaitGroup
+
+    for i := 0; i &lt; 2; i++ {
+        wg.Add(1)
+        go func(id int) {
+            defer wg.Done()
+            for j := 0; j &lt; 5; j++ {
+                item := fmt.Sprintf("P%d-Item%d", id, j)
+                buffer &lt;- item // Blocks if full
+            }
+        }(i)
+    }
+
+    go func() { wg.Wait(); close(buffer) }()
+
+    var cwg sync.WaitGroup
+    for i := 0; i &lt; 3; i++ {
+        cwg.Add(1)
+        go func(id int) {
+            defer cwg.Done()
+            for item := range buffer {
+                fmt.Printf("[Consumer %d] Consumed: %s\n", id, item)
+            }
+        }(i)
+    }
+    cwg.Wait()
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 10：Thread-Safe Singleton (Double-Checked Locking)</h3>
+
+<pre><code class="language-python">import threading
+
+class Singleton:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:               # First check (no lock)
+            with cls._lock:
+                if cls._instance is None:       # Second check (with lock)
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            self.data = {}
+
+# Why double-checked locking?
+# - First check: avoid lock overhead for 99% of calls (instance already exists)
+# - Second check: prevent race between first check and lock acquisition
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: sync.Once is the idiomatic way
+var (
+    dbInstance *Database
+    once       sync.Once
+)
+
+func GetDB() *Database {
+    once.Do(func() {
+        dbInstance = &amp;Database{connection: "postgres://..."}
+    })
+    return dbInstance
+}
+// sync.Once guarantees the function runs exactly once, even with concurrent calls
+</code></pre></div>
+
+<div class="followup">
+<h4>💬 Ch2 Follow-up</h4>
+<details open>
+<summary>Q1: Why is volatile/memory barrier needed for double-checked locking in Java/C++ but not Python?</summary>
+<p><strong>A:</strong> In Java/C++, without volatile, the compiler/CPU may reorder instructions: the instance pointer could be assigned before the constructor finishes. Python's GIL provides implicit memory ordering for bytecode operations.</p>
+</details>
+<details open>
+<summary>Q2: How would you implement a fair ReadWriteLock?</summary>
+<p><strong>A:</strong> Add a "write_waiting" flag or turnstile semaphore. When a writer is waiting, new readers also block. This prevents writer starvation. (Full implementation in Ch5.)</p>
+</details>
+<details open>
+<summary>Q3: What's the difference between threading.Lock and threading.RLock in Python?</summary>
+<p><strong>A:</strong> Lock: same thread acquiring twice → deadlock. RLock (Reentrant): same thread can acquire multiple times (maintains count). Use RLock for recursive functions that need the lock.</p>
+</details>
+<details open>
+<summary>Q4: How does Go's sync.Map compare to a regular map with RWMutex?</summary>
+<p><strong>A:</strong> sync.Map optimized for: (1) key written once, read many times, (2) disjoint key sets. Uses read-only atomic copy + dirty map. For high write contention, sharded map with RWMutex per shard often performs better.</p>
+</details>
+<details open>
+<summary>Q5: In Dining Philosophers, what's the throughput difference between Semaphore(4) vs ordered locking?</summary>
+<p><strong>A:</strong> Semaphore(4): higher throughput (up to 4 attempt, 2 eat simultaneously). Ordered locking: slightly lower (philosopher 4 always waits for fork 0). Both correct; Semaphore(4) preferred for throughput.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch2 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: 以下 RWLock 實作有什麼問題？在什麼場景下會出 bug？</summary>
+<pre><code class="language-python">class BadRWLock:
+    def __init__(self):
+        self.readers = 0
+        self.writer_lock = threading.Lock()
+
+    def acquire_read(self):
+        self.readers += 1          # BUG HERE
+        if self.readers == 1:
+            self.writer_lock.acquire()
+
+    def release_read(self):
+        self.readers -= 1
+        if self.readers == 0:
+            self.writer_lock.release()
+</code></pre>
+<p><strong>答案：</strong><code>self.readers += 1</code> 本身就不是 thread-safe！兩個 reader thread 同時呼叫 acquire_read() 時，可能都讀到 readers=0，各自 +1 變成 1，然後兩個都嘗試 acquire writer_lock（但只有一個能拿到）。更糟：readers 最終可能是 1 而不是 2，導致第一個 reader release_read() 時 readers 變成 0，提前釋放 writer_lock，讓 writer 進入 — 此時另一個 reader 還在讀！<br>
+<strong>修正：</strong>用一個額外的 Lock 保護 readers 變數（如原版 ReadWriteLock 中的 <code>_readers_lock</code>）。</p>
+</details>
+<details open>
+<summary>VQ2: Go 的 sync.Once 和 Python 的 Double-Checked Locking 的本質差異是什麼？為什麼 Go 不需要 double-check？</summary>
+<p><strong>答案：</strong>sync.Once 內部使用 atomic.LoadUint32 做 fast path check + mutex + atomic.StoreUint32 做 slow path。本質上它 <strong>就是</strong> double-checked locking，只是被封裝成一個 API 了。Go 的 memory model 保證 atomic store 之後的 load 一定能看到最新值（happens-before），所以不需要 volatile 這種額外標記。Python 因為有 GIL，bytecode 層面已經 serialized，所以 double-check 更像是效能優化（避免每次都搶 lock）而非 correctness 需求。</p>
+</details>
+<details open>
+<summary>VQ3: Producer-Consumer 中，為什麼用 buffered channel/Queue 而不是 unbuffered？各自的 tradeoff 是什麼？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>Unbuffered (size=0)：</strong>同步 rendezvous — producer 和 consumer 必須同時準備好。優點：zero latency handoff、backpressure 立即。缺點：吞吐量低（每次只能傳一個）。</li>
+<li><strong>Buffered (size=N)：</strong>解耦 producer 和 consumer 的速度差異。producer 可以突發 N 個不等 consumer。優點：higher throughput、容忍 burst。缺點：增加 latency（item 在 buffer 中等待）、memory 使用。</li>
+<li><strong>選擇原則：</strong>如果 producer/consumer 速度差異大 → buffered。如果需要嚴格配對（如 request-response）→ unbuffered。Buffer size = 預期的 burst size / (consumer_rate - producer_rate)。</li>
+</ul>
+</details>
+<details open>
+<summary>VQ4: 為什麼 Web Crawler 用 visited = set() + lock 比 sync.Map 更危險？什麼場景會出問題？</summary>
+<p><strong>答案：</strong>Python set() + lock 的問題：lock 粒度。如果 lock 範圍太小（只保護 <code>visited.add(link)</code>），可能出現：Thread A check <code>link not in visited</code> = True，被 preempt，Thread B 也 check = True，兩個都 add 並爬同一個 URL。必須把 check + add 放在同一個 critical section（TOCTOU）。<br>
+Go 的 <code>sync.Map.LoadOrStore()</code> 是 atomic 的：check + store 一步完成，不會有 TOCTOU。所以 Go 版本天然正確，Python 版本需要手動保證。</p>
+</details>
+</div>
+
+
+
+<!-- ============================================================ -->
+<h2>Chapter 3：Lock-Free & Atomic Operations</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<ul>
+<li><strong>Mutex/Lock</strong>：一次一個 thread 進入 critical section。簡單但有 contention overhead（context switch ~1-10μs）。</li>
+<li><strong>Race Condition</strong>：多 thread 同時讀寫共享資源。Lock 是一種解法，Lock-free 是另一種。</li>
+<li><strong>Deadlock</strong>：Lock-free 完全不用鎖，所以不可能 deadlock（但可能 livelock）。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>Atomic Operation</strong></td><td>不可分割的操作 — 要嘛完成，要嘛沒發生，不會被打斷</td><td>打包好的快遞 — 要嘛整包送到，不會只送一半</td><td>x86 CPU 的 LOCK CMPXCHG 指令、Go atomic.AddInt64</td></tr>
+<tr><td><strong>CAS (Compare-And-Swap)</strong></td><td>「如果目前值還是我上次看到的 X，就改成 Y；否則失敗」— 硬體保證 atomic</td><td>搶票：「如果座位還是空的，就寫我的名字；如果已經有人了就放棄重來」</td><td>Java AtomicInteger.compareAndSet()、Go atomic.CompareAndSwapInt64</td></tr>
+<tr><td><strong>Lock-Free</strong></td><td>保證至少一個 thread 能在有限步內完成（不用鎖、不會 deadlock）</td><td>自助結帳 — 沒有排隊等收銀員，但碰撞時要重掃</td><td>Java ConcurrentLinkedQueue、Disruptor ring buffer</td></tr>
+<tr><td><strong>Wait-Free</strong></td><td>保證每個 thread 都能在有限步內完成（比 lock-free 更強）</td><td>每個人有自己的結帳機 — 不管別人，自己一定能完成</td><td>很少見，通常 overhead 太高。某些 read 操作是 wait-free</td></tr>
+<tr><td><strong>ABA Problem</strong></td><td>值從 A 變 B 再變回 A，CAS 誤認為「沒變」</td><td>你離開座位，有人坐了又走了。你回來看是空的就坐下 — 但中間可能椅子被換過了</td><td>Java AtomicStampedReference 用 version 解決</td></tr>
+<tr><td><strong>Memory Ordering</strong></td><td>CPU/編譯器可能重新排列記憶體操作的順序</td><td>郵局不保證兩封信的送達順序 — 即使你先寄第一封</td><td>x86 是 TSO (Total Store Order)，ARM 是 relaxed → 需要 barrier</td></tr>
+<tr><td><strong>Spin Loop</strong></td><td>CAS 失敗後不斷重試（不 sleep），佔用 CPU</td><td>一直按門鈴直到有人開門（不走開等）</td><td>SpinLock in Linux kernel for short critical sections</td></tr>
+<tr><td><strong>SPSC Ring Buffer</strong></td><td>單生產者單消費者環形緩衝區 — 不需要任何鎖</td><td>壽司迴轉帶：一個師傅放、一個客人取，互不干擾</td><td>LMAX Disruptor（每秒 600 萬筆交易）、Linux kernel io_uring</td></tr>
+<tr><td><strong>Token Bucket</strong></td><td>令牌桶限流：每秒補充 N 個令牌，請求消耗令牌，沒令牌就拒絕</td><td>遊戲機台：每小時投幣 N 枚，用完就不能玩了</td><td>AWS API Gateway throttling、Nginx rate limiting、Stripe API</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>LMAX Disruptor (金融交易所)：</strong>Lock-free ring buffer 實現每秒 600 萬筆交易。單一 writer thread + 多 reader。比 Java ArrayBlockingQueue 快 8x。核心：sequence number + CAS + memory barrier。</li>
+<li><strong>Linux Kernel (RCU - Read-Copy-Update)：</strong>reader 幾乎 zero overhead（不加鎖），writer 複製舊資料 → 修改副本 → atomic 指標切換 → 等所有舊 reader 結束 → 釋放舊資料。用於 routing table、file system cache。</li>
+<li><strong>Java ConcurrentHashMap (JDK 8)：</strong>get() 完全 lock-free（volatile read + CAS for table resize）。put() 只在 hash collision 時 synchronized on bin head。99% 操作 lock-free。</li>
+<li><strong>Google Abseil (C++)：</strong>提供 absl::Mutex with adaptive spinning — 先 spin 一小段時間（~100ns），如果拿不到鎖才 park thread。結合了 lock-free 的低延遲和 lock-based 的 CPU 效率。</li>
+<li><strong>Cloudflare Rate Limiter：</strong>全球每秒處理 4500 萬筆 HTTP request 的限流。用 atomic counter per IP + sliding window 實作。不用 Redis — 每台 edge server 本地 atomic 計算。</li>
+</ul>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>Lock-free 就像便利商店的自助結帳——沒有排隊等鎖（收銀員），每個人自己掃描商品。如果偵測到衝突（兩人同時拿同一商品），就重試。大部分時候比排隊快，但有衝突時要重做。</p>
+<p><strong>核心概念 CAS（Compare-And-Swap）：</strong>「如果值還是我上次看到的，就改成新值；否則放棄，重新來。」這是所有 lock-free 結構的基礎。</p>
+</div>
+
+<h3>3.1 CAS 原理</h3>
+
+<pre><code class="language-python"># CAS 偽代碼（硬體層面是 atomic 的）
+def compare_and_swap(addr, expected, new_val) -> bool:
+    """Atomically: if *addr == expected, set *addr = new_val, return True
+       Otherwise return False (someone else changed it)"""
+    if addr.value == expected:
+        addr.value = new_val
+        return True
+    return False
+
+# Python 沒有原生 CAS，但可以模擬概念
+# 實際使用：Java AtomicInteger, Go atomic.CompareAndSwapInt64, C++ std::atomic
+</code></pre>
+
+<h3>3.2 ABA Problem</h3>
+
+<pre><code># ABA Problem:
+# Thread A reads value = "A"
+# Thread A gets preempted
+# Thread B changes A -> B -> A (value back to "A")
+# Thread A wakes up, does CAS(expected=A, new=C) → succeeds!
+# But the "A" is NOT the same A — state may have changed
+
+# Solution: Version counter (tagged pointer)
+# Instead of CAS(value), do CAS(value + version)
+# Even if value returns to "A", version is different (A:v1 ≠ A:v3)
+</code></pre>
+
+<hr>
+
+<h3>題目 11：Implement Atomic Counter (CAS-based)</h3>
+
+<pre><code class="language-python">import threading
+
+class AtomicCounter:
+    """Lock-free counter using CAS loop."""
+    def __init__(self, initial=0):
+        self._value = initial
+        self._lock = threading.Lock()  # Python doesn't have real CAS
+
+    def increment(self) -> int:
+        while True:
+            old = self._value
+            new = old + 1
+            with self._lock:
+                if self._value == old:
+                    self._value = new
+                    return new
+            # CAS failed, retry (spin)
+
+    def get(self) -> int:
+        return self._value
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Real atomic CAS
+import "sync/atomic"
+
+type AtomicCounter struct {
+    value int64
+}
+
+func (c *AtomicCounter) Increment() int64 {
+    for {
+        old := atomic.LoadInt64(&amp;c.value)
+        new := old + 1
+        if atomic.CompareAndSwapInt64(&amp;c.value, old, new) {
+            return new
+        }
+    }
+}
+
+// Simpler: just use atomic.AddInt64
+func (c *AtomicCounter) IncrementSimple() int64 {
+    return atomic.AddInt64(&amp;c.value, 1)
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 12：Lock-Free Stack (Treiber Stack)</h3>
+
+<div class="go-code"><pre><code>// Go implementation of Treiber Stack (lock-free using CAS)
+import (
+    "sync/atomic"
+    "unsafe"
+)
+
+type node struct {
+    value int
+    next  *node
+}
+
+type LockFreeStack struct {
+    top unsafe.Pointer // *node
+}
+
+func (s *LockFreeStack) Push(val int) {
+    newNode := &amp;node{value: val}
+    for {
+        oldTop := atomic.LoadPointer(&amp;s.top)
+        newNode.next = (*node)(oldTop)
+        if atomic.CompareAndSwapPointer(&amp;s.top, oldTop, unsafe.Pointer(newNode)) {
+            return
+        }
+    }
+}
+
+func (s *LockFreeStack) Pop() (int, bool) {
+    for {
+        oldTop := atomic.LoadPointer(&amp;s.top)
+        if oldTop == nil {
+            return 0, false
+        }
+        topNode := (*node)(oldTop)
+        newTop := unsafe.Pointer(topNode.next)
+        if atomic.CompareAndSwapPointer(&amp;s.top, oldTop, newTop) {
+            return topNode.value, true
+        }
+    }
+}
+</code></pre></div>
+
+<pre><code class="language-python"># Python equivalent (conceptual)
+import threading
+
+class LockFreeStack:
+    def __init__(self):
+        self.top = None
+        self._lock = threading.Lock()  # Simulating CAS
+
+    def push(self, val):
+        while True:
+            old_top = self.top
+            new_node = {'value': val, 'next': old_top}
+            with self._lock:
+                if self.top is old_top:
+                    self.top = new_node
+                    return
+
+    def pop(self):
+        while True:
+            old_top = self.top
+            if old_top is None:
+                return None
+            with self._lock:
+                if self.top is old_top:
+                    self.top = old_top['next']
+                    return old_top['value']
+</code></pre>
+
+<hr>
+
+<h3>題目 13：Lock-Free Ring Buffer (SPSC)</h3>
+
+<pre><code class="language-python">from typing import Optional
+
+class LockFreeRingBuffer:
+    """Single-producer single-consumer ring buffer (no lock needed)."""
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.head = 0  # Write pointer (producer owns)
+        self.tail = 0  # Read pointer (consumer owns)
+
+    def enqueue(self, item) -> bool:
+        next_head = (self.head + 1) % self.capacity
+        if next_head == self.tail:  # Full
+            return False
+        self.buffer[self.head] = item
+        self.head = next_head
+        return True
+
+    def dequeue(self) -> Optional[any]:
+        if self.head == self.tail:  # Empty
+            return None
+        item = self.buffer[self.tail]
+        self.tail = (self.tail + 1) % self.capacity
+        return item
+
+# Why lock-free: Producer only writes head, Consumer only writes tail.
+# No shared mutable state between them! (SPSC = Single Producer Single Consumer)
+</code></pre>
+
+<hr>
+
+<h3>題目 14：Implement Rate Limiter (Token Bucket, Thread-Safe)</h3>
+
+<pre><code class="language-python">import time
+import threading
+
+class TokenBucketRateLimiter:
+    def __init__(self, rate: float, capacity: int):
+        self.rate = rate          # Tokens per second
+        self.capacity = capacity
+        self.tokens = capacity
+        self.last_refill = time.time()
+        self._lock = threading.Lock()
+
+    def allow(self) -> bool:
+        with self._lock:
+            now = time.time()
+            elapsed = now - self.last_refill
+            self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
+            self.last_refill = now
+            if self.tokens >= 1:
+                self.tokens -= 1
+                return True
+            return False
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Atomic-based rate limiter
+import (
+    "sync/atomic"
+    "time"
+)
+
+type TokenBucket struct {
+    tokens   int64
+    capacity int64
+    rate     int64
+    lastTime int64
+}
+
+func (tb *TokenBucket) Allow() bool {
+    for {
+        now := time.Now().UnixNano()
+        last := atomic.LoadInt64(&amp;tb.lastTime)
+        elapsed := float64(now-last) / 1e9
+        current := atomic.LoadInt64(&amp;tb.tokens)
+        newTokens := int64(elapsed * float64(tb.rate))
+        updated := min64(tb.capacity, current+newTokens)
+        if updated &lt; 1 { return false }
+        if atomic.CompareAndSwapInt64(&amp;tb.tokens, current, updated-1) {
+            atomic.StoreInt64(&amp;tb.lastTime, now)
+            return true
+        }
+    }
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 15：Design Thread Pool</h3>
+
+<pre><code class="language-python">import threading
+from queue import Queue
+from typing import Callable
+
+class ThreadPool:
+    def __init__(self, num_workers: int):
+        self.task_queue = Queue()
+        self.workers = []
+        self._shutdown = False
+
+        for i in range(num_workers):
+            w = threading.Thread(target=self._worker, daemon=True)
+            w.start()
+            self.workers.append(w)
+
+    def _worker(self):
+        while not self._shutdown:
+            try:
+                task, args, kwargs, future = self.task_queue.get(timeout=1)
+                try:
+                    result = task(*args, **kwargs)
+                    future['result'] = result
+                    future['done'] = True
+                except Exception as e:
+                    future['error'] = e
+                    future['done'] = True
+                finally:
+                    self.task_queue.task_done()
+            except:
+                continue
+
+    def submit(self, task: Callable, *args, **kwargs) -> dict:
+        future = {'done': False, 'result': None, 'error': None}
+        self.task_queue.put((task, args, kwargs, future))
+        return future
+
+    def shutdown(self, wait=True):
+        self._shutdown = True
+        if wait:
+            self.task_queue.join()
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Worker pool with channels
+type WorkerPool struct {
+    tasks chan func()
+    wg    sync.WaitGroup
+}
+
+func NewWorkerPool(numWorkers int, queueSize int) *WorkerPool {
+    pool := &amp;WorkerPool{tasks: make(chan func(), queueSize)}
+    for i := 0; i &lt; numWorkers; i++ {
+        pool.wg.Add(1)
+        go func() {
+            defer pool.wg.Done()
+            for task := range pool.tasks {
+                task()
+            }
+        }()
+    }
+    return pool
+}
+
+func (p *WorkerPool) Submit(task func()) { p.tasks &lt;- task }
+func (p *WorkerPool) Shutdown() { close(p.tasks); p.wg.Wait() }
+</code></pre></div>
+
+<div class="followup">
+<h4>💬 Ch3 Follow-up</h4>
+<details open>
+<summary>Q1: When should you use lock-free vs lock-based?</summary>
+<p><strong>A:</strong> Lock-free when: critical section is tiny (CAS on a pointer), contention is very high, or you can't afford priority inversion (real-time systems). Lock-based when: critical section is complex, correctness is hard to reason about, or contention is moderate. Rule of thumb: if you're not sure, use locks.</p>
+</details>
+<details open>
+<summary>Q2: What's memory ordering and why does it matter?</summary>
+<p><strong>A:</strong> CPUs/compilers may reorder memory operations. In concurrent code, one thread may see stale values. Memory ordering guarantees (relaxed, acquire, release, seq_cst) specify visibility. Go's sync/atomic provides sequential consistency. Without proper ordering, lock-free algorithms silently corrupt data.</p>
+</details>
+<details open>
+<summary>Q3: SPSC vs MPMC ring buffer — what's the complexity difference?</summary>
+<p><strong>A:</strong> SPSC: no synchronization needed (producer owns head, consumer owns tail). MPMC: need CAS on both. SPSC is O(1) guaranteed; MPMC may spin. SPSC for I/O pipelines; MPMC for thread pools.</p>
+</details>
+<details open>
+<summary>Q4: How does Go's channel compare to a lock-free queue internally?</summary>
+<p><strong>A:</strong> Go channels internally use a lock (runtime mutex) + ring buffer. They are NOT lock-free. The abstraction benefit (CSP model, select, range) outweighs raw performance for most apps.</p>
+</details>
+<details open>
+<summary>Q5: CAS spin loops under high contention?</summary>
+<p><strong>A:</strong> Low contention: CAS rarely spins, outperforms locks. High contention: many threads spin → waste CPU → slower than lock. Mitigation: exponential backoff or hybrid spin-then-park approach.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch3 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: CAS loop 和 Mutex 在高 contention 下的效能差異是什麼？什麼時候 CAS 反而更慢？</summary>
+<p><strong>答案：</strong>Mutex 在 contention 時讓 thread sleep（不佔 CPU），OS scheduler 會喚醒。CAS loop 在 contention 時 spin（佔 CPU 空轉）。當 critical section 很短（< 100ns）且 contention 低時，CAS 快（避免 context switch 的 1-10μs overhead）。但當 16+ threads 同時 CAS 同一個值時，所有失敗的 thread 都在 spin 浪費 CPU，且頻繁的 cache line invalidation（MESI protocol 的 exclusive→invalid 風暴）讓所有 core 的 L1 cache 失效。此時 Mutex + sleep 反而更有效率，因為只有一個 thread 在執行。</p>
+<p><strong>面試最佳答案：</strong>「低 contention 用 CAS（避免 syscall），高 contention 用 adaptive spinning（先 spin 100ns，拿不到就 park）。Go runtime 的 mutex 就是這樣實作的。」</p>
+</details>
+<details open>
+<summary>VQ2: 為什麼 SPSC Ring Buffer 不需要任何同步原語？如果改成 MPSC 或 MPMC 會怎樣？</summary>
+<p><strong>答案：</strong>SPSC 安全的原因：producer <strong>只寫</strong> head pointer，consumer <strong>只寫</strong> tail pointer。兩者互不干擾 — 即使同時存取也不會 corrupt（因為各自操作不同的記憶體位置）。唯一的「共享」是讀對方的 pointer 來判斷 full/empty，但讀是安全的（worst case 是看到稍微舊的值 → 誤判 empty/full → 下次再試）。<br>
+<strong>MPSC：</strong>多個 producer 同時寫 head → 需要 CAS 保護 head 推進。<br>
+<strong>MPMC：</strong>head 和 tail 都需要 CAS。還要處理「兩個 consumer 同時 pop 同一元素」的問題。複雜度從 O(1) guaranteed 變成 O(1) amortized with potential spin。</p>
+</details>
+<details open>
+<summary>VQ3: Token Bucket vs Leaky Bucket — 兩種限流器的行為差異？什麼場景選哪個？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>Token Bucket：</strong>允許 burst（桶裡有 token 就放行，可以瞬間放行 capacity 個 request），然後以 rate 速度補充。適合：允許突發流量但長期平均限速的場景（如 API Gateway: burst 100, sustained 10/s）。</li>
+<li><strong>Leaky Bucket：</strong>嚴格平滑輸出（不管輸入多 bursty，輸出永遠是固定速率）。像漏水的桶 — 水流出速度恆定。適合：需要嚴格恆定速率的場景（如 network traffic shaping, video streaming bitrate control）。</li>
+<li><strong>面試陷阱：</strong>很多人搞混！Token Bucket 控制的是「平均速率 + 突發容忍」，Leaky Bucket 控制的是「絕對恆定速率」。AWS/GCP 用 Token Bucket，因為 API 呼叫天然有 burst 性質。</li>
+</ul>
+</details>
+<details open>
+<summary>VQ4: 以下 Lock-Free Stack 的 Pop 操作有 ABA 問題嗎？什麼場景下會觸發？如何修復？</summary>
+<pre><code>func (s *LockFreeStack) Pop() (int, bool) {
+    for {
+        oldTop := atomic.LoadPointer(&amp;s.top)
+        if oldTop == nil { return 0, false }
+        topNode := (*node)(oldTop)
+        newTop := unsafe.Pointer(topNode.next)
+        if atomic.CompareAndSwapPointer(&amp;s.top, oldTop, newTop) {
+            return topNode.value, true
+        }
+    }
+}
+</code></pre>
+<p><strong>答案：</strong>是的，有 ABA 問題！場景：Thread A 讀到 top=NodeX(val=5, next=NodeY)，被 preempt。Thread B pop NodeX → pop NodeY → push 新的 NodeZ → push 回 NodeX（重用記憶體）。Thread A 醒來，CAS(top, NodeX, NodeY) 成功 — 但 NodeX.next 已經不是 NodeY 了（NodeX 被重用後 next 指向 NodeZ）！Stack 被 corrupt。<br>
+<strong>修復：</strong>(1) Tagged pointer — 在 pointer 旁邊附帶 version counter：CAS(ptr+version)，即使 ptr 相同 version 也不同。(2) Hazard Pointers — 標記正在使用的 node，延遲 free。(3) Epoch-based reclamation（Go 通常靠 GC 避免 — GC 不會 free 仍被引用的 node）。</p>
+</details>
+<details open>
+<summary>VQ5: Thread Pool 的 queue 用 bounded 好還是 unbounded 好？各自的風險是什麼？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>Bounded（推薦）：</strong>submit 時如果滿了就 block 或 reject。好處：memory 可控，自帶 backpressure。壞處：caller 可能被 block。適合：生產環境（避免 OOM）。</li>
+<li><strong>Unbounded：</strong>submit 永遠成功。好處：caller 不 block。壞處：如果 producer 速度 > consumer，queue 無限增長 → OOM → 整個 process crash。</li>
+<li><strong>面試答案：</strong>「Always bounded in production。Size = num_workers × expected_processing_time × acceptable_latency。配合 rejection policy：CallerRunsPolicy（caller 自己做）或 DiscardOldestPolicy（丟最舊的）。」Java 的 ThreadPoolExecutor 就有這些 policy。</li>
+</ul>
+</details>
+</div>
+
+
+
+<!-- ============================================================ -->
+<h2>Chapter 4：並行設計模式 (Concurrency Patterns)</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<ul>
+<li><strong>Thread/Goroutine</strong>：並行執行的單位。Python thread 受 GIL 限制（I/O-bound 有效）；Go goroutine 輕量（2KB stack），百萬級。</li>
+<li><strong>Lock/Mutex</strong>：保護共享資源。本章的 pattern 通常用 channel/queue 代替 lock 來通訊（CSP 哲學：不要透過共享記憶體通訊，而是透過通訊共享記憶體）。</li>
+<li><strong>Semaphore</strong>：限制並發數。Fan-out pattern 用 Semaphore/worker pool 限制同時發出的請求。</li>
+<li><strong>Condition Variable</strong>：等待條件成立。Pipeline pattern 用 queue/channel 隱式實現相同效果。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>Fan-out</strong></td><td>一個任務分發給多個 worker 平行處理</td><td>經理把 100 份文件分給 10 個員工同時處理</td><td>Web crawler 同時發出 50 個 HTTP request</td></tr>
+<tr><td><strong>Fan-in</strong></td><td>多個 worker 的結果彙整回一處</td><td>10 個員工做完後把結果交回經理桌上</td><td>MapReduce 的 Reduce 階段</td></tr>
+<tr><td><strong>Pipeline</strong></td><td>資料流過多個處理階段，每階段是獨立 worker</td><td>工廠流水線：每個工站做一步（切割→焊接→噴漆→包裝）</td><td>Unix pipe: cat file | grep error | sort | uniq</td></tr>
+<tr><td><strong>Actor Model</strong></td><td>每個 actor 有私有狀態 + 信箱。只透過訊息通訊，不共享記憶體</td><td>每人有自己的信箱，不共用桌子。要溝通就寫信放對方信箱</td><td>Erlang/OTP (WhatsApp 用 Erlang 管理 20 億用戶)、Akka</td></tr>
+<tr><td><strong>Future/Promise</strong></td><td>一個「未來會有結果」的佔位符。提交任務後拿到 Future，稍後再取結果</td><td>餐廳點餐後拿到號碼牌，叫號時去取餐</td><td>Python concurrent.futures.Future、Java CompletableFuture</td></tr>
+<tr><td><strong>Connection Pool</strong></td><td>預先建好 N 個連線，用完歸還而非每次新建</td><td>圖書館借書：書有限，借完歸還讓別人借，不用每次買新書</td><td>HikariCP (Java)、pgbouncer (PostgreSQL)</td></tr>
+<tr><td><strong>Context Cancellation</strong></td><td>父任務取消時，所有子任務也跟著取消（樹狀傳播）</td><td>旅行團取消 → 所有已訂的飯店、機票、景點門票全部取消</td><td>Go context.Context、Python asyncio.Task.cancel()</td></tr>
+<tr><td><strong>Graceful Shutdown</strong></td><td>收到關閉信號後，完成手上的工作再退出（不要半途中斷）</td><td>打烊前讓店裡的客人吃完，但不再接待新客人</td><td>Kubernetes pod termination: SIGTERM → drain → SIGKILL</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>Google Search Fan-out/Fan-in：</strong>搜尋 query fan-out 到 1000+ shards，每個 shard 獨立處理，結果 fan-in merge。用 deadline propagation（context timeout 200ms），超時的 shard 直接跳過。</li>
+<li><strong>Kafka Consumer Pipeline：</strong>consume → deserialize → validate → transform → write to DB。每階段獨立 thread pool，用 internal queue 連接。Stage 之間速度不同（DB write 慢 100x）→ 需要 bounded buffer backpressure。</li>
+<li><strong>Erlang/WhatsApp Actor Model：</strong>每個用戶 session 是一個 actor（process）。2 billion 用戶 = 2B actors。每個 actor 只處理自己的消息。一個 crash 不影響其他人。50 engineers manage 900M users（2014 被 Facebook 收購時）。</li>
+<li><strong>AWS Lambda Connection Pool：</strong>每個 Lambda instance 建一個 DB connection（在 handler 外面初始化）。重用 execution context = connection pool size 1。高並發靠 Lambda scaling（3000 concurrent），而非 pool scaling。</li>
+<li><strong>Kubernetes Graceful Shutdown：</strong>Pod 收到 SIGTERM → preStop hook → drain connections (stop accepting new, finish existing) → 30s grace period → SIGKILL。Go 服務用 <code>signal.NotifyContext</code> + <code>server.Shutdown(ctx)</code>。</li>
+</ul>
+</div>
+
+<h3>題目 16：Fan-out / Fan-in Pattern</h3>
+
+<pre><code class="language-python">import concurrent.futures
+from typing import List, Callable
+
+def fan_out_fan_in(items: List, worker_fn: Callable, max_workers: int = 8):
+    """Fan-out: distribute items to workers. Fan-in: collect results."""
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(worker_fn, item): item for item in items}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                print(f"Error: {e}")
+    return results
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Fan-out/Fan-in with goroutines and channels
+func fanOutFanIn(items []string, workerFn func(string) int, numWorkers int) []int {
+    jobs := make(chan string, len(items))
+    results := make(chan int, len(items))
+
+    var wg sync.WaitGroup
+    for i := 0; i &lt; numWorkers; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            for item := range jobs {
+                results &lt;- workerFn(item)
+            }
+        }()
+    }
+
+    for _, item := range items { jobs &lt;- item }
+    close(jobs)
+    go func() { wg.Wait(); close(results) }()
+
+    var output []int
+    for r := range results { output = append(output, r) }
+    return output
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 17：Pipeline Pattern</h3>
+
+<div class="go-code"><pre><code>// Go Pipeline: Each stage is a goroutine, connected by channels
+func generate(nums ...int) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        for _, n := range nums { out &lt;- n }
+        close(out)
+    }()
+    return out
+}
+
+func square(in &lt;-chan int) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        for n := range in { out &lt;- n * n }
+        close(out)
+    }()
+    return out
+}
+
+func filter(in &lt;-chan int, pred func(int) bool) &lt;-chan int {
+    out := make(chan int)
+    go func() {
+        for n := range in {
+            if pred(n) { out &lt;- n }
+        }
+        close(out)
+    }()
+    return out
+}
+
+// Usage: generate → square → filter
+func main() {
+    nums := generate(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+    squared := square(nums)
+    evens := filter(squared, func(n int) bool { return n%2 == 0 })
+    for result := range evens { fmt.Println(result) }
+}
+</code></pre></div>
+
+<pre><code class="language-python"># Python Pipeline with threads + queues
+import threading
+from queue import Queue
+
+def pipeline_stage(input_q, transform_fn, output_q):
+    while True:
+        item = input_q.get()
+        if item is None:
+            output_q.put(None)
+            break
+        output_q.put(transform_fn(item))
+
+def run_pipeline(data, stages):
+    queues = [Queue() for _ in range(len(stages) + 1)]
+    for item in data: queues[0].put(item)
+    queues[0].put(None)
+
+    threads = []
+    for i, fn in enumerate(stages):
+        t = threading.Thread(target=pipeline_stage, args=(queues[i], fn, queues[i+1]))
+        t.start()
+        threads.append(t)
+
+    results = []
+    while True:
+        item = queues[-1].get()
+        if item is None: break
+        results.append(item)
+    for t in threads: t.join()
+    return results
+</code></pre>
+
+<hr>
+
+<h3>題目 18：Context Cancellation + Graceful Shutdown</h3>
+
+<div class="go-code"><pre><code>func worker(ctx context.Context, id int, results chan&lt;- int) {
+    for {
+        select {
+        case &lt;-ctx.Done():
+            fmt.Printf("Worker %d shutting down\n", id)
+            return
+        default:
+            time.Sleep(100 * time.Millisecond)
+            results &lt;- id * 10
+        }
+    }
+}
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+    defer cancel()
+
+    results := make(chan int, 100)
+    var wg sync.WaitGroup
+    for i := 0; i &lt; 5; i++ {
+        wg.Add(1)
+        go func(id int) { defer wg.Done(); worker(ctx, id, results) }(i)
+    }
+    go func() { wg.Wait(); close(results) }()
+    for r := range results { fmt.Println("Result:", r) }
+}
+</code></pre></div>
+
+<pre><code class="language-python"># Python: Event-based cancellation
+import threading, time
+
+def worker(stop_event, worker_id, results):
+    while not stop_event.is_set():
+        time.sleep(0.1)
+        results.append(worker_id * 10)
+
+stop = threading.Event()
+results = []
+threads = [threading.Thread(target=worker, args=(stop, i, results)) for i in range(5)]
+for t in threads: t.start()
+time.sleep(2)
+stop.set()
+for t in threads: t.join()
+</code></pre>
+
+<hr>
+
+<h3>題目 19：Implement Future/Promise</h3>
+
+<pre><code class="language-python">import threading
+from typing import Callable
+
+class Future:
+    def __init__(self):
+        self._result = None
+        self._exception = None
+        self._done = threading.Event()
+        self._callbacks = []
+
+    def set_result(self, result):
+        self._result = result
+        self._done.set()
+        for cb in self._callbacks: cb(result)
+
+    def set_exception(self, exc):
+        self._exception = exc
+        self._done.set()
+
+    def result(self, timeout=None):
+        self._done.wait(timeout)
+        if self._exception: raise self._exception
+        return self._result
+
+    def add_callback(self, fn):
+        if self._done.is_set(): fn(self._result)
+        else: self._callbacks.append(fn)
+
+def async_execute(fn, *args) -> Future:
+    future = Future()
+    def wrapper():
+        try: future.set_result(fn(*args))
+        except Exception as e: future.set_exception(e)
+    threading.Thread(target=wrapper, daemon=True).start()
+    return future
+</code></pre>
+
+<hr>
+
+<h3>題目 20：Semaphore-based Connection Pool</h3>
+
+<pre><code class="language-python">import threading
+import time
+from queue import Queue
+
+class ConnectionPool:
+    def __init__(self, max_size: int = 10):
+        self.max_size = max_size
+        self._pool = Queue(maxsize=max_size)
+        self._semaphore = threading.Semaphore(max_size)
+        for _ in range(max_size):
+            self._pool.put(self._create_connection())
+
+    def _create_connection(self):
+        return {"id": id(object()), "in_use": False}
+
+    def acquire(self, timeout=5.0):
+        if not self._semaphore.acquire(timeout=timeout):
+            raise TimeoutError("No connection available")
+        return self._pool.get()
+
+    def release(self, conn):
+        self._pool.put(conn)
+        self._semaphore.release()
+
+    class _Ctx:
+        def __init__(self, pool): self.pool = pool
+        def __enter__(self): self.conn = self.pool.acquire(); return self.conn
+        def __exit__(self, *a): self.pool.release(self.conn)
+
+    def get_connection(self): return self._Ctx(self)
+</code></pre>
+
+<div class="followup">
+<h4>💬 Ch4 Follow-up</h4>
+<details open>
+<summary>Q1: Fan-out/Fan-in vs Pipeline — when to use which?</summary>
+<p><strong>A:</strong> Fan-out/Fan-in: items are independent, same transformation. Pipeline: sequential stages with different work. Use pipeline when stages have different compute profiles (I/O → CPU → I/O).</p>
+</details>
+<details open>
+<summary>Q2: How does Go's context.Context work internally?</summary>
+<p><strong>A:</strong> Context forms a tree. Parent cancelled → all children cancelled (via closing done channel). WithTimeout starts a timer goroutine that calls cancel(). select{case &lt;-ctx.Done()} checks the internal done channel.</p>
+</details>
+<details open>
+<summary>Q3: Future vs Promise vs async/await?</summary>
+<p><strong>A:</strong> Future = read-only handle to a pending result. Promise = writable side (producer sets value). async/await = syntactic sugar over Futures. In Go: channels serve both roles.</p>
+</details>
+<details open>
+<summary>Q4: How to implement connection pool health checking?</summary>
+<p><strong>A:</strong> Background thread periodically: test idle connections (SELECT 1), replace dead ones, close connections older than max_lifetime, alert near capacity.</p>
+</details>
+<details open>
+<summary>Q5: How does the Actor model avoid shared mutable state?</summary>
+<p><strong>A:</strong> Each actor: private state + mailbox. Communicate via messages only. One message at a time (serial within actor). No shared memory = no races. Erlang/Akka built on this.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch4 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: Fan-out 10 個 goroutine 去呼叫外部 API，如果其中一個回傳 error，其他 9 個應該繼續還是取消？用 Go 程式碼說明兩種策略。</summary>
+<p><strong>答案：兩種策略各有適用場景：</strong></p>
+<p><strong>策略 A — 全部取消（errgroup）：</strong>適合「全部成功或全部失敗」的場景（如 distributed transaction）。</p>
+<pre><code>g, ctx := errgroup.WithContext(parentCtx)
+for _, url := range urls {
+    url := url
+    g.Go(func() error {
+        req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+        _, err := http.DefaultClient.Do(req) // ctx cancelled → request aborted
+        return err
+    })
+}
+if err := g.Wait(); err != nil { /* first error cancels all */ }
+</code></pre>
+<p><strong>策略 B — 收集所有結果（容忍部分失敗）：</strong>適合「best effort」場景（如搜尋多個 source，部分失敗也可以回傳）。</p>
+<pre><code>type result struct { data string; err error }
+results := make(chan result, len(urls))
+for _, url := range urls {
+    go func(u string) {
+        data, err := fetch(u)
+        results &lt;- result{data, err}
+    }(url)
+}
+// Collect all, filter failures
+for i := 0; i &lt; len(urls); i++ {
+    r := &lt;-results
+    if r.err == nil { use(r.data) }
+}
+</code></pre>
+</details>
+<details open>
+<summary>VQ2: Pipeline 中某個 stage 比其他 stage 慢 10x，會發生什麼？如何解決？</summary>
+<p><strong>答案：</strong>慢 stage 成為瓶頸 — 它前面的 stage 的 output channel 會滿（block producer），整條 pipeline 的吞吐量 = 最慢 stage 的速度。<br>
+<strong>解法：</strong></p>
+<ul>
+<li><strong>Parallel workers for slow stage：</strong>把慢 stage 變成 fan-out（多個 worker 讀同一個 input channel）。例如 stage 2 慢 10x → 開 10 個 stage 2 worker。</li>
+<li><strong>Buffered channel：</strong>增加慢 stage 前的 buffer size，容忍 burst。但只是推遲問題，不是根本解決。</li>
+<li><strong>Batch processing：</strong>慢 stage 改成批次處理（如 DB write 改成 batch insert）。</li>
+</ul>
+</details>
+<details open>
+<summary>VQ3: Graceful shutdown 中如果某個 worker 卡住了不 return（如等待 blocked I/O），你會怎麼處理？</summary>
+<p><strong>答案：</strong>設定 shutdown timeout（如 Kubernetes 的 terminationGracePeriodSeconds = 30s）。流程：</p>
+<ol>
+<li>Signal workers to stop（set Event / cancel Context）</li>
+<li>等待 timeout 秒讓 workers 自行結束</li>
+<li>Timeout 到了，強制退出（os.Exit / SIGKILL）</li>
+</ol>
+<pre><code class="language-python"># Python graceful shutdown with timeout
+stop.set()
+for t in threads:
+    t.join(timeout=10)  # 最多等 10 秒
+    if t.is_alive():
+        logging.warning(f"Worker {t.name} stuck, forcing exit")
+# 最後 os._exit(1) 如果有卡住的 daemon thread
+</code></pre>
+<p>Go 版本用 <code>context.WithTimeout(ctx, 30*time.Second)</code>，timeout 到了 ctx.Done() close，所有 select 接收到信號。仍卡住的 goroutine 在 process exit 時被 OS 回收。</p>
+</details>
+<details open>
+<summary>VQ4: Connection Pool 的 Semaphore 如果不設 timeout 會有什麼風險？</summary>
+<p><strong>答案：</strong>如果所有 connection 都被 leak（acquire 後沒 release — 例如 exception 跳過了 release），新的 acquire 呼叫永遠 block → 整個服務 hang。<strong>必須</strong>有 timeout + 監控。最佳實踐：</p>
+<ul>
+<li>Always 用 context manager / try-finally 確保 release</li>
+<li>設定 acquire timeout（如 5s），timeout 後 raise error 而非永遠等</li>
+<li>監控 pool utilization，alert when > 80%</li>
+<li>Connection 設 max_lifetime（如 30min），超時自動回收重建</li>
+</ul>
+</details>
+</div>
+
+<!-- ============================================================ -->
+<h2>Chapter 5：經典並行問題</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<ul>
+<li><strong>RWLock</strong>：讀共享、寫互斥。Reader-preference 會讓 writer starve（Ch2 題目 8）。</li>
+<li><strong>Semaphore</strong>：計數器限制並發數。acquire() 減 1（0 時 block），release() 加 1。</li>
+<li><strong>Condition Variable</strong>：wait() 在 while loop 裡等條件成立，notify/notify_all 喚醒等待者。</li>
+<li><strong>Deadlock 四條件</strong>：Mutual Exclusion, Hold-and-Wait, No Preemption, Circular Wait。打破任一即可。</li>
+<li><strong>Priority Queue (Heap)</strong>：O(log n) insert/extract-min。Python heapq，Go container/heap。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>Fair Lock</strong></td><td>先來先服務的鎖 — 不會有人被無限期跳過</td><td>銀行取號機 — 按號碼順序服務，不插隊</td><td>Java ReentrantLock(fair=true)、FIFO ticket lock</td></tr>
+<tr><td><strong>Writer Starvation</strong></td><td>Reader 持續進入導致 Writer 永遠等不到獨佔鎖</td><td>圖書館永遠有人在看書，管理員永遠無法關燈打掃</td><td>Reader-preference RWLock in high-read workloads</td></tr>
+<tr><td><strong>Sleeping Barber</strong></td><td>理髮師沒客人就睡，客人來了叫醒他；椅子滿了客人離開</td><td>（就是字面意思）</td><td>Thread pool + bounded task queue（worker sleep when empty）</td></tr>
+<tr><td><strong>Priority Inversion</strong></td><td>高優先權任務等待低優先權任務持有的鎖</td><td>救護車被前面的腳踏車擋住（腳踏車佔道）</td><td>Mars Pathfinder 1997 — priority inversion 導致看門狗重啟</td></tr>
+<tr><td><strong>Priority Inheritance</strong></td><td>低優先權 task 持有被高優先權需要的鎖時，暫時提升為高優先權</td><td>腳踏車被「借道」升級成救護車速度直到讓出路</td><td>Linux PI mutex、VxWorks RTOS</td></tr>
+<tr><td><strong>Turnstile</strong></td><td>用來確保公平性的序列化機制（一個一個通過）</td><td>捷運閘門 — 一次一個人</td><td>Fair RWLock 的 service_queue Lock</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>Mars Pathfinder (1997)：</strong>經典 priority inversion 事件。低優先權 meteorological task 持有 bus lock，中優先權 communications task 搶佔 CPU，高優先權 bus management task 等 lock → watchdog reset。修復：啟用 VxWorks 的 priority inheritance。</li>
+<li><strong>Linux Kernel RCU (Read-Copy-Update)：</strong>解決 Reader-Writer starvation 的終極方案。Reader 完全無同步開銷（0 cost），Writer 複製→修改→atomic swap→等待 grace period。用於 routing table、file system。</li>
+<li><strong>Apache Traffic Server：</strong>用 priority-based task scheduler 處理 HTTP request。高優先權：health check、keep-alive。低優先權：大檔案下載。用 priority inheritance 避免大下載 block health check。</li>
+<li><strong>Kafka Consumer Group Rebalance：</strong>類似 Barrier 問題 — 所有 consumer 必須停止消費，重新分配 partition，然後同時恢復。stop-the-world 式的 barrier sync。</li>
+</ul>
+</div>
+
+<h3>題目 21：Readers-Writers (Fair / Writer-Priority)</h3>
+
+<pre><code class="language-python">import threading
+
+class FairReadWriteLock:
+    """Fair RWLock: writers don't starve (using a service queue)."""
+    def __init__(self):
+        self._read_count = 0
+        self._resource = threading.Lock()
+        self._read_count_lock = threading.Lock()
+        self._service_queue = threading.Lock()  # Fairness turnstile
+
+    def acquire_read(self):
+        self._service_queue.acquire()  # Wait in queue (fair)
+        self._service_queue.release()  # Immediately release (just for ordering)
+        with self._read_count_lock:
+            self._read_count += 1
+            if self._read_count == 1:
+                self._resource.acquire()
+
+    def release_read(self):
+        with self._read_count_lock:
+            self._read_count -= 1
+            if self._read_count == 0:
+                self._resource.release()
+
+    def acquire_write(self):
+        self._service_queue.acquire()  # Wait in queue (fair)
+        self._resource.acquire()
+
+    def release_write(self):
+        self._resource.release()
+        self._service_queue.release()
+</code></pre>
+
+<hr>
+
+<h3>題目 22：Sleeping Barber Problem 💈</h3>
+
+<pre><code class="language-python">import threading, time, random
+
+class BarberShop:
+    def __init__(self, num_chairs: int):
+        self.num_chairs = num_chairs
+        self.waiting = 0
+        self.lock = threading.Lock()
+        self.barber_ready = threading.Semaphore(0)
+        self.customer_ready = threading.Semaphore(0)
+        self.done_cutting = threading.Semaphore(0)
+
+    def barber(self):
+        while True:
+            self.customer_ready.acquire()  # Sleep until customer
+            self.barber_ready.release()    # "Sit down"
+            time.sleep(random.uniform(0.5, 1.5))  # Cut hair
+            self.done_cutting.release()
+
+    def customer(self, customer_id: int):
+        with self.lock:
+            if self.waiting >= self.num_chairs:
+                print(f"Customer {customer_id}: leaving!")
+                return
+            self.waiting += 1
+        self.customer_ready.release()  # Wake barber
+        self.barber_ready.acquire()    # Wait for barber
+        with self.lock: self.waiting -= 1
+        self.done_cutting.acquire()
+        print(f"Customer {customer_id}: done! ✂️")
+</code></pre>
+
+<hr>
+
+<h3>題目 23：Traffic Light Controller 🚦</h3>
+
+<pre><code class="language-python">import threading
+from enum import Enum
+
+class Road(Enum):
+    NORTH_SOUTH = "NS"
+    EAST_WEST = "EW"
+
+class TrafficLight:
+    def __init__(self):
+        self.current_green = Road.NORTH_SOUTH
+        self.lock = threading.Lock()
+        self.condition = threading.Condition(self.lock)
+
+    def car_arrived(self, car_id, road, turn_green, cross_intersection):
+        with self.condition:
+            while self.current_green != road:
+                self.condition.wait()
+            turn_green()
+            cross_intersection()
+            self.condition.notify_all()
+
+    def change_light(self, new_green):
+        with self.condition:
+            self.current_green = new_green
+            self.condition.notify_all()
+</code></pre>
+
+<hr>
+
+<h3>題目 24：Concurrent Bounded Counter</h3>
+
+<pre><code class="language-python">import threading
+
+class BoundedCounter:
+    """Thread-safe counter that triggers callback at threshold."""
+    def __init__(self, threshold, callback):
+        self.count = 0
+        self.threshold = threshold
+        self.callback = callback
+        self.lock = threading.Lock()
+        self.triggered = False
+
+    def increment(self):
+        with self.lock:
+            if self.triggered: return
+            self.count += 1
+            if self.count >= self.threshold:
+                self.triggered = True
+                self.callback(self.count)
+</code></pre>
+
+<hr>
+
+<h3>題目 25：Priority Task Scheduler</h3>
+
+<pre><code class="language-python">import threading, heapq
+
+class PriorityTaskScheduler:
+    def __init__(self, num_workers=4):
+        self._queue = []
+        self._lock = threading.Lock()
+        self._not_empty = threading.Condition(self._lock)
+        self._shutdown = False
+        self._counter = 0
+        for _ in range(num_workers):
+            threading.Thread(target=self._worker, daemon=True).start()
+
+    def schedule(self, priority, task):
+        with self._not_empty:
+            self._counter += 1
+            heapq.heappush(self._queue, (priority, self._counter, task))
+            self._not_empty.notify()
+
+    def _worker(self):
+        while True:
+            with self._not_empty:
+                while not self._queue and not self._shutdown:
+                    self._not_empty.wait()
+                if self._shutdown and not self._queue: return
+                _, _, task = heapq.heappop(self._queue)
+            task()
+</code></pre>
+
+<div class="followup">
+<h4>💬 Ch5 Follow-up</h4>
+<details open>
+<summary>Q1: 3 variants of Readers-Writers?</summary>
+<p><strong>A:</strong> V1 Reader-preference: readers never wait → writers starve. V2 Writer-preference: waiting writer blocks new readers → readers starve. V3 Fair: FIFO turnstile → no starvation. V3 = lower throughput but guaranteed fairness.</p>
+</details>
+<details open>
+<summary>Q2: Priority inversion solutions?</summary>
+<p><strong>A:</strong> Priority inheritance (temporary boost), priority ceiling (lock has max priority), lock-free (eliminate locks).</p>
+</details>
+<details open>
+<summary>Q3: Sleeping Barber — customer cancellation?</summary>
+<p><strong>A:</strong> Use timeout on barber_ready.acquire(timeout=X). If timeout: decrement waiting and leave. Need careful handling to avoid barber signaling a ghost.</p>
+</details>
+<details open>
+<summary>Q4: Traffic Light grid scaling?</summary>
+<p><strong>A:</strong> Each intersection independent. Central coordinator or distributed algorithm for "green waves". Message passing between neighbors. Essentially simplified distributed consensus.</p>
+</details>
+<details open>
+<summary>Q5: Delayed task scheduler data structure?</summary>
+<p><strong>A:</strong> Min-heap keyed by execution_time. Timer thread sleeps until top item's time. Go: time.AfterFunc or priority queue + single timer goroutine.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch5 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: Fair RWLock 的 service_queue 為什麼 reader acquire 後要「立刻 release」？如果不 release 會怎樣？</summary>
+<p><strong>答案：</strong>service_queue 的唯一目的是「排隊」— 確保 FIFO 順序。Reader 只需要排隊表明「我到了」，然後立刻讓出排隊權讓後面的人也能表態。如果 reader 不 release service_queue，則所有後續 reader 和 writer 都會 block 在 service_queue 上，直到這個 reader 離開 — 這等於把 RWLock 降級成了普通 Mutex（一次只能一個人操作），完全喪失「多 reader 同時讀」的好處。<br>
+Writer 則必須持有 service_queue 直到寫完（acquire_write 到 release_write），因為 writer 需要獨佔 — 持有 service_queue 的同時阻止新 reader 進入。</p>
+</details>
+<details open>
+<summary>VQ2: Priority Task Scheduler 中使用 counter 作為 heapq 的第二排序鍵有什麼作用？不用會怎樣？</summary>
+<p><strong>答案：</strong>Python heapq 比較 tuple 時逐元素比較。如果兩個 task 有相同 priority，heapq 會嘗試比較第三個元素（task function）。但 function 不支援 &lt; 比較 → 拋出 TypeError！counter 作為 tiebreaker：同 priority 時按插入順序排（FIFO），且 int 永遠可比較。這是 Python heapq 使用 pattern 的標準技巧。Go 的 container/heap 用 Less() interface 可以自訂比較邏輯，不會有此問題。</p>
+</details>
+<details open>
+<summary>VQ3: Sleeping Barber 中如果有多個理髮師（N barbers），需要如何修改同步原語？</summary>
+<p><strong>答案：</strong>改 barber_ready 從 Semaphore(0) 改成「理髮師就緒 pool」的概念：</p>
+<ul>
+<li><code>barber_ready = Semaphore(0)</code> 不變（表示有幾個 barber 目前 ready）</li>
+<li><code>customer_ready = Semaphore(0)</code> 不變（表示有幾個客人在等）</li>
+<li>每個 barber 是一個獨立 thread，各自 loop：acquire customer → release barber_ready → cut → release done</li>
+<li>需要一個額外的 <code>done_cutting</code> 對應：每對 (barber, customer) 需要配對的 done signal。可以用一個 Queue 讓 barber 把自己的 done_semaphore 交給對應 customer。</li>
+</ul>
+<p>核心：N barbers = N 個 worker thread + 1 個 shared customer queue，本質上就是 Thread Pool！</p>
+</details>
+</div>
+
+
+
+<!-- ============================================================ -->
+<h2>Chapter 6：Go 並行模型深入</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<ul>
+<li><strong>Goroutine</strong>：Go 的輕量 thread（2KB stack，可動態增長）。用 <code>go func()</code> 啟動。百萬級。</li>
+<li><strong>Channel</strong>：goroutine 間的通訊管道。Unbuffered = 同步 rendezvous。Buffered = async queue。</li>
+<li><strong>sync.Mutex / sync.RWMutex</strong>：Go 的基本鎖。配合 defer Unlock() 使用。</li>
+<li><strong>sync.WaitGroup</strong>：等 N 個 goroutine 都完成。Add(N) → Done() × N → Wait()。</li>
+<li><strong>context.Context</strong>：樹狀取消傳播。WithTimeout/WithCancel。select case &lt;-ctx.Done()。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>G-M-P Model</strong></td><td>Go runtime scheduler：G(oroutine) 在 P(rocessor) 上由 M(achine thread) 執行</td><td>G=待辦事項、P=辦公桌、M=員工。員工在桌子上做待辦事項</td><td>GOMAXPROCS=8 → 8 個 P，配 8+ 個 M</td></tr>
+<tr><td><strong>Work Stealing</strong></td><td>空閒的 P 從其他 P 的 local queue 偷取 G 來執行</td><td>做完自己工作的員工去幫忙其他忙碌的同事</td><td>Go runtime、Java ForkJoinPool、Tokio (Rust)</td></tr>
+<tr><td><strong>singleflight</strong></td><td>相同 key 的並發請求只執行一次，其他人等結果</td><td>100 人同時問「現在幾度？」→ 只有 1 人去看溫度計，99 人等答案</td><td>Cache stampede prevention in CDN/API Gateway</td></tr>
+<tr><td><strong>errgroup</strong></td><td>parallel goroutines + first error cancels all + wait for all</td><td>團隊任務：一個人出錯全組停下來處理</td><td>Parallel API calls with fail-fast semantics</td></tr>
+<tr><td><strong>sync.Pool</strong></td><td>暫存可重用物件，減少 GC 壓力（GC 可隨時回收）</td><td>共用白板擦 — 用完放回架上，但管理員（GC）可能隨時清掉</td><td>HTTP handler 的 byte buffer reuse、JSON encoder</td></tr>
+<tr><td><strong>select</strong></td><td>同時等待多個 channel 操作，哪個先 ready 就執行哪個</td><td>同時在多個窗口排隊，哪個先叫到就去哪個</td><td>Timeout + result: select { case r := &lt;-ch: ... case &lt;-time.After(5s): ... }</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>Cloudflare Workers (Go runtime)：</strong>每個 edge server 數千個 goroutine 同時處理 request。GOMAXPROCS=核心數。Work stealing 確保所有 CPU 滿載。</li>
+<li><strong>Uber Ringpop (singleflight)：</strong>一致性 hash ring 查詢同一 partition 時用 singleflight 去重。避免 thundering herd 打爆 downstream service。</li>
+<li><strong>CockroachDB (errgroup)：</strong>SQL query 涉及多個 range → fan-out 到各 range → errgroup 等待。一個 range 失敗 → 取消其他 → 回傳 error。</li>
+<li><strong>Kubernetes Controller Manager (sync.Pool)：</strong>informer 事件處理大量短命 objects。sync.Pool 重用 watch event buffers，減少 GC pause 從 100ms 到 &lt;10ms。</li>
+<li><strong>Docker (select + context)：</strong>container exec 用 select 同時等：process exit、context timeout、signal handler。三者任一觸發就進行清理。</li>
+</ul>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解：Go 的 G-M-P 模型</h4>
+<ul>
+<li><strong>G</strong>: Goroutine，輕量級（2KB stack，可增長到 1GB），百萬級</li>
+<li><strong>M</strong>: OS thread（Machine），通常 GOMAXPROCS 個</li>
+<li><strong>P</strong>: 邏輯 Processor，擁有 local run queue，數量 = GOMAXPROCS</li>
+</ul>
+<p>調度：P 從 local queue 取 G 給 M 執行。空了就從 global queue 或其他 P 的 queue steal。</p>
+</div>
+
+<h3>題目 26：Concurrent Cache with singleflight</h3>
+
+<div class="go-code"><pre><code>import "golang.org/x/sync/singleflight"
+
+type Cache struct {
+    data map[string]string
+    mu   sync.RWMutex
+    sf   singleflight.Group
+}
+
+func (c *Cache) Get(key string) (string, error) {
+    c.mu.RLock()
+    if val, ok := c.data[key]; ok {
+        c.mu.RUnlock()
+        return val, nil
+    }
+    c.mu.RUnlock()
+
+    // Only ONE goroutine fetches from DB
+    val, err, _ := c.sf.Do(key, func() (interface{}, error) {
+        result := fetchFromDB(key)
+        c.mu.Lock()
+        c.data[key] = result
+        c.mu.Unlock()
+        return result, nil
+    })
+    return val.(string), err
+}
+</code></pre></div>
+
+<pre><code class="language-python"># Python equivalent: dict of Events per key
+import threading
+
+class SingleFlightCache:
+    def __init__(self, fetch_fn):
+        self.cache = {}
+        self.fetch_fn = fetch_fn
+        self.lock = threading.Lock()
+        self.inflight = {}
+
+    def get(self, key):
+        if key in self.cache: return self.cache[key]
+        with self.lock:
+            if key in self.cache: return self.cache[key]
+            if key in self.inflight:
+                event = self.inflight[key]
+            else:
+                event = threading.Event()
+                self.inflight[key] = event
+                threading.Thread(target=self._fetch, args=(key, event)).start()
+        event.wait()
+        return self.cache[key]
+
+    def _fetch(self, key, event):
+        result = self.fetch_fn(key)
+        self.cache[key] = result
+        with self.lock: del self.inflight[key]
+        event.set()
+</code></pre>
+
+<hr>
+
+<h3>題目 27：errgroup — Parallel Tasks with Error Handling</h3>
+
+<div class="go-code"><pre><code>import "golang.org/x/sync/errgroup"
+
+func fetchAll(ctx context.Context, urls []string) ([]string, error) {
+    g, ctx := errgroup.WithContext(ctx)
+    results := make([]string, len(urls))
+
+    for i, url := range urls {
+        i, url := i, url
+        g.Go(func() error {
+            req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+            resp, err := http.DefaultClient.Do(req)
+            if err != nil { return err }
+            defer resp.Body.Close()
+            results[i] = resp.Status
+            return nil
+        })
+    }
+
+    if err := g.Wait(); err != nil {
+        return nil, err // First error cancels all via ctx
+    }
+    return results, nil
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 28：Work Stealing Scheduler (Concept)</h3>
+
+<div class="go-code"><pre><code>type Scheduler struct {
+    queues []chan func()
+    n      int
+}
+
+func NewScheduler(numWorkers int) *Scheduler {
+    s := &amp;Scheduler{n: numWorkers, queues: make([]chan func(), numWorkers)}
+    for i := range s.queues { s.queues[i] = make(chan func(), 256) }
+    for i := 0; i &lt; numWorkers; i++ { go s.worker(i) }
+    return s
+}
+
+func (s *Scheduler) worker(id int) {
+    for {
+        select {
+        case task := &lt;-s.queues[id]:
+            task()
+        default:
+            victim := rand.Intn(s.n)
+            if victim == id { continue }
+            select {
+            case task := &lt;-s.queues[victim]: task()
+            default: runtime.Gosched()
+            }
+        }
+    }
+}
+</code></pre></div>
+
+<div class="followup">
+<h4>💬 Ch6 Follow-up</h4>
+<details open>
+<summary>Q1: Why M:N scheduling?</summary>
+<p><strong>A:</strong> 1:1 limits to ~10K goroutines. M:N maps millions onto few OS threads. Goroutine switch ~100ns vs OS thread switch ~1μs. Enables "goroutine per request".</p>
+</details>
+<details open>
+<summary>Q2: When to use singleflight?</summary>
+<p><strong>A:</strong> In front of expensive idempotent operations with high concurrent access to same key. NOT for side-effectful operations or unique results per caller.</p>
+</details>
+<details open>
+<summary>Q3: select with multiple ready channels?</summary>
+<p><strong>A:</strong> Go picks randomly (uniform). Prevents starvation. With default case: non-blocking. Without: blocks until one ready.</p>
+</details>
+<details open>
+<summary>Q4: sync.Pool vs regular pool?</summary>
+<p><strong>A:</strong> sync.Pool: temporary cache, GC can reclaim anytime. Per-P (no contention). NOT for connections (GC could reclaim). For: byte buffers, encoders, temporary objects on hot path.</p>
+</details>
+<details open>
+<summary>Q5: Work stealing advantages over global queue?</summary>
+<p><strong>A:</strong> No contention on common path, better cache locality (own tasks stay on same CPU), automatic load balancing. Used in Go runtime, Java ForkJoinPool, Tokio.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch6 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: singleflight 和 sync.Once 的差異？什麼場景用哪個？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>sync.Once</strong>：函數在整個程式生命週期只執行一次（永遠返回第一次的結果）。適合：Singleton 初始化、一次性 setup。</li>
+<li><strong>singleflight</strong>：相同 key 的「並發」請求只執行一次，但之後新的請求會再次執行。適合：cache miss deduplication（100 個 request 同時 miss → 只打 1 次 DB，但 5 分鐘後 cache 過期又會重新 fetch）。</li>
+</ul>
+<p>關鍵差異：sync.Once 是「全局只一次」，singleflight 是「當前這批並發只一次」。</p>
+</details>
+<details open>
+<summary>VQ2: errgroup.WithContext 為什麼能做到「一個失敗取消全部」？內部機制是什麼？</summary>
+<p><strong>答案：</strong>errgroup.WithContext(parent) 內部呼叫 context.WithCancel(parent) 建立子 context。每個 g.Go() 的 goroutine 用這個子 context。errgroup 在收到第一個 non-nil error 時呼叫 cancel()，關閉子 context 的 done channel。其他 goroutine 如果有 <code>select { case &lt;-ctx.Done(): }</code> 就會收到取消信號。<br>
+<strong>注意：</strong>errgroup 只 cancel context，不會強制 kill goroutine。如果 goroutine 內部不 check ctx.Done()（如 blocking I/O without timeout），它不會被取消。所以 <strong>必須</strong> 在 goroutine 內用 http.NewRequestWithContext(ctx, ...) 或 select ctx.Done()。</p>
+</details>
+<details open>
+<summary>VQ3: Go 的 channel 是 lock-free 的嗎？如果不是，為什麼還這麼快？</summary>
+<p><strong>答案：</strong>Go channel 內部 <strong>不是</strong> lock-free — 它用 runtime mutex（比 sync.Mutex 更輕量的 internal lock）。但它仍然很快因為：</p>
+<ul>
+<li>Runtime mutex 是 adaptive：先 spin 幾次（避免 context switch），拿不到才 park goroutine</li>
+<li>Park/unpark goroutine 比 park/unpark OS thread 快 100x（只是修改 G 的狀態，不涉及 syscall）</li>
+<li>Unbuffered channel 用 direct copy（sender 直接把值 copy 到 receiver 的 stack，zero allocation）</li>
+<li>Compiler 會 inline 小 channel operations</li>
+</ul>
+<p>對比：如果用 lock-free MPMC queue（如 Disruptor），raw throughput 確實更高（~200M ops/s vs channel ~50M ops/s），但 channel 的 select/range/close 語義讓程式碼簡潔 10x。Trade-off: 可讀性 vs 極致效能。</p>
+</details>
+<details open>
+<summary>VQ4: 為什麼 Go 的 goroutine leak 是一個嚴重問題？如何偵測和預防？</summary>
+<p><strong>答案：</strong>Goroutine 不會被 GC 回收（它不是記憶體物件 — 它是一個執行 entity）。如果一個 goroutine 永遠 block 在 channel read/write 或 lock acquire，它佔用的記憶體永遠不會釋放。大量 leak → OOM。<br>
+<strong>偵測：</strong><code>runtime.NumGoroutine()</code> 持續增長、pprof goroutine profile。<br>
+<strong>預防：</strong></p>
+<ul>
+<li>Always 用 context.WithTimeout/WithCancel 確保 goroutine 有 exit path</li>
+<li>Channel 發送方 close channel（reader 端 for range 自然退出）</li>
+<li>Buffered channel 而非 unbuffered（避免 sender 永遠 block）</li>
+<li>goleak 測試工具：在 TestMain 中檢查 test 結束後是否有 leaked goroutine</li>
+</ul>
+</details>
+</div>
+
+<!-- ============================================================ -->
+<h2>Chapter 7：分散式並行</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<ul>
+<li><strong>Mutex/Lock</strong>：單機內的互斥。分散式系統中不同機器沒有共享記憶體，所以需要外部協調（如 Redis/ZooKeeper）。</li>
+<li><strong>CAS</strong>：「如果值是 X 就改成 Y」的 atomic 操作。Redis 的 SET NX（Not eXists）= 分散式 CAS。</li>
+<li><strong>Race Condition</strong>：分散式場景中 = 兩台機器同時修改同一資源（如兩個 server 同時處理同一張訂單）。</li>
+<li><strong>Token Bucket</strong>：限流器。分散式版本需要 atomic counter（Redis INCR）或 sliding window。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>Distributed Lock</strong></td><td>跨機器的互斥鎖 — 確保同一時間只有一台機器能執行某操作</td><td>全公司只有一把會議室鑰匙，誰拿到誰用</td><td>Redis SET NX、ZooKeeper ephemeral node、DynamoDB conditional write</td></tr>
+<tr><td><strong>Redlock</strong></td><td>Martin Kleppmann 提出的 Redis 分散式鎖演算法（多 Redis instance 多數決）</td><td>找 5 個公證人簽名，3 個以上簽了才算數</td><td>Redis 官方推薦但有爭議（clock drift 問題）</td></tr>
+<tr><td><strong>Fencing Token</strong></td><td>分散式鎖配發的單調遞增 token，防止舊 lock holder 的延遲操作覆蓋新 holder 的結果</td><td>每次換班時發新的工號牌，機器只接受最新工號的指令</td><td>ZooKeeper lock 的 zxid / Redis INCR counter</td></tr>
+<tr><td><strong>Exponential Backoff</strong></td><td>重試間隔指數增長（1s → 2s → 4s → 8s...），避免所有 client 同時重試</td><td>電話佔線？等 1 分鐘再打。還是佔線？等 2 分鐘。然後 4 分鐘...</td><td>AWS SDK、gRPC retry policy、Stripe API</td></tr>
+<tr><td><strong>Jitter</strong></td><td>在重試間隔加入隨機偏移，避免 thundering herd（所有 client 同時重試）</td><td>大家都等 4 分鐘後同時打 → 又佔線。加隨機：等 3-5 分鐘之間隨機時間再打</td><td>Full jitter: random(0, backoff)。AWS 推薦。</td></tr>
+<tr><td><strong>Idempotency Key</strong></td><td>同一個請求重複發送多次，結果和只發一次一樣（用 unique key 去重）</td><td>ATM 按了兩次「轉帳」→ 只轉一次（因為 transaction ID 相同）</td><td>Stripe payment API、AWS SQS MessageDeduplicationId</td></tr>
+<tr><td><strong>Exactly-Once Delivery</strong></td><td>訊息恰好送達一次（不多不少）。理論上不可能完美實現，實務用 idempotency 近似</td><td>快遞保證送到且只送一次（實際做法：送到後標記「已送」，重送時檢查標記）</td><td>Kafka exactly-once semantics (EOS) = at-least-once + dedup</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>Stripe Idempotency：</strong>每個 API request 帶 Idempotency-Key header。Stripe server 存 (key → response) 24 小時。重複 request 直接返回快取的 response。防止網路重試導致重複收費。每天處理數十億美元。</li>
+<li><strong>AWS DynamoDB Conditional Write：</strong>用 ConditionExpression 實現分散式 CAS：「只有當 version = 3 時才更新，同時 version 改成 4」。如果兩個 writer 同時嘗試，只有一個成功（另一個收到 ConditionalCheckFailedException）。</li>
+<li><strong>Google Chubby / Apache ZooKeeper：</strong>分散式鎖服務。用 Paxos/ZAB 共識演算法保證一致性。ephemeral node = 分散式鎖（client 斷線自動釋放）。Google 內部幾乎所有需要 leader election 的系統都用 Chubby。</li>
+<li><strong>Shopify Flash Sales (Exponential Backoff)：</strong>限量商品開賣瞬間百萬人搶購。Redis incr 限流 + exponential backoff + jitter。沒有 jitter 時所有人 2 秒後同時重試 → Redis 再次過載 → 惡性循環。加 full jitter 後流量平滑分散。</li>
+</ul>
+</div>
+
+<h3>題目 29：Distributed Lock (Redis)</h3>
+
+<pre><code class="language-python">import redis, time, uuid
+
+class DistributedLock:
+    def __init__(self, redis_client, key, ttl=10):
+        self.redis = redis_client
+        self.key = f"lock:{key}"
+        self.ttl = ttl
+        self.token = str(uuid.uuid4())
+
+    def acquire(self, timeout=5.0):
+        deadline = time.time() + timeout
+        while time.time() &lt; deadline:
+            if self.redis.set(self.key, self.token, nx=True, ex=self.ttl):
+                return True
+            time.sleep(0.05)
+        return False
+
+    def release(self):
+        # CAS via Lua: only delete if we own it
+        lua = """
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+            return redis.call("del", KEYS[1])
+        else return 0 end
+        """
+        return self.redis.eval(lua, 1, self.key, self.token) == 1
+
+    def __enter__(self):
+        if not self.acquire(): raise TimeoutError("Lock acquire failed")
+        return self
+    def __exit__(self, *a): self.release()
+</code></pre>
+
+<hr>
+
+<h3>題目 30：Retry with Exponential Backoff + Jitter</h3>
+
+<pre><code class="language-python">import time, random
+
+def retry_with_backoff(fn, max_retries=5, base_delay=1.0, max_delay=30.0):
+    for attempt in range(max_retries + 1):
+        try:
+            return fn()
+        except Exception as e:
+            if attempt == max_retries: raise
+            delay = min(max_delay, base_delay * (2 ** attempt))
+            delay = random.uniform(0, delay)  # Full jitter
+            time.sleep(delay)
+</code></pre>
+
+<div class="go-code"><pre><code>func RetryWithBackoff(ctx context.Context, fn func() error, maxRetries int) error {
+    baseDelay := time.Second
+    for attempt := 0; attempt &lt;= maxRetries; attempt++ {
+        if err := fn(); err == nil { return nil }
+        if attempt == maxRetries { return err }
+        delay := baseDelay * time.Duration(1&lt;&lt;attempt)
+        if delay > 30*time.Second { delay = 30 * time.Second }
+        jitter := time.Duration(rand.Int63n(int64(delay)))
+        select {
+        case &lt;-ctx.Done(): return ctx.Err()
+        case &lt;-time.After(jitter):
+        }
+    }
+    return nil
+}
+</code></pre></div>
+
+<hr>
+
+<h3>題目 31：Idempotent Request Handler</h3>
+
+<pre><code class="language-python">import threading, time
+
+class IdempotentHandler:
+    def __init__(self, ttl=86400):
+        self._results = {}
+        self._in_progress = {}
+        self._lock = threading.Lock()
+        self._ttl = ttl
+
+    def execute(self, key, operation):
+        with self._lock:
+            if key in self._results:
+                result, ts = self._results[key]
+                if time.time() - ts &lt; self._ttl:
+                    return result
+            if key in self._in_progress:
+                event = self._in_progress[key]
+                self._lock.release()
+                event.wait()
+                self._lock.acquire()
+                return self._results[key][0]
+            event = threading.Event()
+            self._in_progress[key] = event
+
+        try:
+            result = operation()
+        except:
+            with self._lock: del self._in_progress[key]
+            event.set()
+            raise
+
+        with self._lock:
+            self._results[key] = (result, time.time())
+            del self._in_progress[key]
+        event.set()
+        return result
+</code></pre>
+
+<div class="followup">
+<h4>💬 Ch7 Follow-up</h4>
+<details open>
+<summary>Q1: Redis distributed lock limitations?</summary>
+<p><strong>A:</strong> Single Redis: SPOF. Clock drift in Redlock. Network partition → two holders. Solution: fencing token (monotonic counter attached to lock, downstream checks latest token).</p>
+</details>
+<details open>
+<summary>Q2: Full jitter vs equal jitter vs decorrelated jitter?</summary>
+<p><strong>A:</strong> Full: random(0, backoff). Equal: backoff/2 + random(0, backoff/2). Decorrelated: random(base, prev_delay*3). AWS analysis: full jitter best for reducing total client work and server load.</p>
+</details>
+<details open>
+<summary>Q3: How to implement exactly-once in a distributed system?</summary>
+<p><strong>A:</strong> Theoretically impossible (Two Generals). Practical: at-least-once delivery + idempotent receiver = effectively-once. Kafka EOS: transactional producer + consumer read_committed + server-side dedup by sequence number.</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>🧪 Ch7 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: Redis 分散式鎖的 release 為什麼必須用 Lua script？如果用兩個 command (GET + DEL) 會怎樣？</summary>
+<p><strong>答案：</strong>GET + DEL 之間有 race condition！場景：Client A 的鎖 TTL 到期被自動刪除 → Client B 取得新鎖 → Client A 的 release 執行 GET（看到值不是自己的... 或者更糟：GET 返回 B 的 token 但 A 沒檢查就直接 DEL）→ 刪掉 B 的鎖！<br>
+即使 A 有 check token：A 做 GET 確認是自己的 → 被 suspend → TTL 到期 → B 取鎖 → A resume 執行 DEL → 刪掉 B 的鎖。<br>
+Lua script 在 Redis 中是 atomic 的（Redis 單線程執行 Lua），所以 check-and-delete 一步完成，不會被打斷。</p>
+</details>
+<details open>
+<summary>VQ2: Idempotency Key 存在 server side 需要存多久？太短或太長各有什麼問題？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>太短（如 1 分鐘）：</strong>Client 的 retry 可能在 key 過期後才到達 → server 視為新 request → 重複執行（如重複收費）。必須 > client 的最大重試時間窗口。</li>
+<li><strong>太長（如 永久）：</strong>Storage 無限增長 → 最終 OOM 或儲存成本爆炸。而且太舊的 key 永遠不會被 retry 了（client 早就放棄了）。</li>
+<li><strong>最佳實踐：</strong>24-48 小時（Stripe 用 24h）。覆蓋所有合理的重試窗口，且不會無限增長。用 TTL 自動過期（Redis EXPIRE 或 DynamoDB TTL）。</li>
+</ul>
+</details>
+<details open>
+<summary>VQ3: 為什麼 exponential backoff 沒有 jitter 會導致 thundering herd？畫出時間線說明。</summary>
+<p><strong>答案：</strong>假設 1000 個 client 同時失敗：</p>
+<pre><code>Without jitter:
+t=0s: 1000 clients fail
+t=1s: 1000 clients retry simultaneously → server overloaded → all fail
+t=2s: 1000 clients retry → fail again
+t=4s: 1000 clients retry → fail again
+(永遠沒有 client 能成功因為永遠一起打)
+
+With full jitter (delay = random(0, backoff)):
+t=0s: 1000 clients fail
+t=0-1s: ~uniformly spread retries (each at random time) → ~100/s → server handles fine
+t=0-2s: next round spread over 2s → even more diluted
+(很快恢復正常)
+</code></pre>
+<p>核心洞見：沒有 jitter 時，所有 client 的重試是「同步的」（synchronized），形成 periodic burst。加 jitter 後變成「非同步的」，流量被時間軸平滑化。</p>
+</details>
+</div>
+
+<!-- ============================================================ -->
+<h2>Chapter 8：實戰系統設計中的並行 + 總結</h2>
+<!-- ============================================================ -->
+
+<div class="prereq">
+<h4>📋 前置知識速覽（Prerequisites Recap）</h4>
+<ul>
+<li><strong>所有前面章節的概念</strong>：本章是綜合應用。需要 Lock、CAS、Channel、Pipeline、Distributed Lock 等。</li>
+<li><strong>Hash Table</strong>：O(1) get/put。Thread-safe 版需要鎖保護。Striped locks = 分段鎖降低 contention。</li>
+<li><strong>LRU Cache</strong>：Least Recently Used 淘汰策略。OrderedDict (Python) 或 doubly-linked list + hashmap。</li>
+<li><strong>System Design 面試</strong>：本章的題目是 coding 面試和 system design 面試的交叉地帶 — 考的是「能否寫出 thread-safe 的核心元件」。</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 本章術語表（Glossary）</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>生活比喻</th><th>實際系統範例</th></tr>
+<tr><td><strong>LRU Cache</strong></td><td>最近最少使用的淘汰策略：滿了就踢掉最久沒用的</td><td>冰箱滿了 → 丟掉最久沒吃的食物</td><td>Redis maxmemory-policy allkeys-lru、CPU L1/L2 cache</td></tr>
+<tr><td><strong>Striped Lock</strong></td><td>把鎖按 hash 分成 N 段，不同 key 用不同鎖 → 降低 contention</td><td>超市有 16 個結帳櫃台，客人按商品類別分散 → 減少排隊</td><td>Java ConcurrentHashMap (JDK 7: 16 segments)、Go sync.Map</td></tr>
+<tr><td><strong>Sharding</strong></td><td>把資料按 key 分散到多個獨立的分區，每個分區有自己的鎖/資源</td><td>圖書館按字母分區：A-F 在 1 樓，G-L 在 2 樓...</td><td>DynamoDB partition、Redis Cluster、CockroachDB ranges</td></tr>
+<tr><td><strong>False Sharing</strong></td><td>兩個不相關的變數在同一個 CPU cache line 上 → 一個改了另一個也 invalidate</td><td>兩人住同一間房，一人開燈另一人被吵醒</td><td>高效能系統用 padding 把 hot variable 對齊到不同 cache line</td></tr>
+</table>
+</div>
+
+<div class="real-world">
+<h4>🌍 真實世界案例</h4>
+<ul>
+<li><strong>Memcached (Thread-Safe LRU)：</strong>全球部署的分散式記憶體快取。內部用 slab allocator + LRU 鏈表 + per-slab 鎖。Facebook 用 Memcached 快取 1 trillion items。</li>
+<li><strong>Java ConcurrentHashMap：</strong>JDK 7 用 16 segment locks（striped）。JDK 8 改用 CAS + synchronized on first node of chain。1M ops/s on 16 cores。</li>
+<li><strong>Google Guava Cache：</strong>Striped LRU + write-through + refresh-ahead。16 segments by default。支援 weigher（大 value 佔多個 slot）、expireAfterWrite、refreshAfterWrite。</li>
+<li><strong>Caffeine (Java)：</strong>比 Guava Cache 快 8x。用 Ring Buffer 記錄 access（batch eviction），Window TinyLfu 淘汰策略（比 LRU 命中率高 30%）。Lock-free read path。</li>
+</ul>
+</div>
+
+<h3>題目 32：Thread-Safe LRU Cache</h3>
+
+<pre><code class="language-python">import threading
+from collections import OrderedDict
+
+class ThreadSafeLRUCache:
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.cache = OrderedDict()
+        self.lock = threading.Lock()
+
+    def get(self, key):
+        with self.lock:
+            if key not in self.cache: return -1
+            self.cache.move_to_end(key)
+            return self.cache[key]
+
+    def put(self, key, value):
+        with self.lock:
+            if key in self.cache:
+                self.cache.move_to_end(key)
+                self.cache[key] = value
+            else:
+                if len(self.cache) >= self.capacity:
+                    self.cache.popitem(last=False)
+                self.cache[key] = value
+</code></pre>
+
+<div class="go-code"><pre><code>// Go: Striped LRU for better concurrency
+type StripedLRU struct {
+    shards    []*lruShard
+    numShards int
+}
+
+type lruShard struct {
+    mu    sync.Mutex
+    cache map[int]*list.Element
+    list  *list.List
+    cap   int
+}
+
+func NewStripedLRU(capacity, numShards int) *StripedLRU {
+    s := &amp;StripedLRU{numShards: numShards, shards: make([]*lruShard, numShards)}
+    perShard := capacity / numShards
+    for i := range s.shards {
+        s.shards[i] = &amp;lruShard{cache: make(map[int]*list.Element), list: list.New(), cap: perShard}
+    }
+    return s
+}
+
+func (s *StripedLRU) getShard(key int) *lruShard {
+    return s.shards[key%s.numShards]
+}
+// Each shard has its own lock → 16x less contention with 16 shards
+</code></pre></div>
+
+<hr>
+
+<h3>題目 33：Concurrent HashMap (Striped Locks)</h3>
+
+<pre><code class="language-python">import threading
+
+class ConcurrentHashMap:
+    def __init__(self, num_stripes=16):
+        self.num_stripes = num_stripes
+        self.buckets = [{} for _ in range(num_stripes)]
+        self.locks = [threading.Lock() for _ in range(num_stripes)]
+
+    def _stripe(self, key): return hash(key) % self.num_stripes
+
+    def get(self, key):
+        s = self._stripe(key)
+        with self.locks[s]: return self.buckets[s].get(key)
+
+    def put(self, key, value):
+        s = self._stripe(key)
+        with self.locks[s]: self.buckets[s][key] = value
+
+    def remove(self, key):
+        s = self._stripe(key)
+        with self.locks[s]: return self.buckets[s].pop(key, None)
+
+    def size(self):
+        return sum(len(self.buckets[i]) for i in range(self.num_stripes))
+</code></pre>
+
+<hr>
+
+<h3>📋 Concurrency 10 大 Pattern 總結</h3>
+
+<table>
+<tr><th>#</th><th>Pattern</th><th>核心思想</th><th>Python 工具</th><th>Go 工具</th></tr>
+<tr><td>1</td><td>Mutex/Lock</td><td>互斥存取共享資源</td><td>threading.Lock</td><td>sync.Mutex</td></tr>
+<tr><td>2</td><td>RWLock</td><td>讀共享寫互斥</td><td>自建 or RLock</td><td>sync.RWMutex</td></tr>
+<tr><td>3</td><td>Semaphore</td><td>限制並發數量</td><td>threading.Semaphore</td><td>buffered chan</td></tr>
+<tr><td>4</td><td>Condition/Signal</td><td>等待條件成立</td><td>threading.Condition</td><td>sync.Cond / chan</td></tr>
+<tr><td>5</td><td>Producer-Consumer</td><td>解耦生產與消費</td><td>queue.Queue</td><td>buffered chan</td></tr>
+<tr><td>6</td><td>Fan-out/Fan-in</td><td>並行處理再彙整</td><td>ThreadPoolExecutor</td><td>goroutines + chan</td></tr>
+<tr><td>7</td><td>Pipeline</td><td>流水線處理</td><td>Queue chain</td><td>chan chain</td></tr>
+<tr><td>8</td><td>Singleflight</td><td>去重並發請求</td><td>Event + dict</td><td>x/sync/singleflight</td></tr>
+<tr><td>9</td><td>Context Cancel</td><td>優雅取消子任務</td><td>threading.Event</td><td>context.Context</td></tr>
+<tr><td>10</td><td>Striped/Sharded</td><td>分散鎖競爭</td><td>list of locks</td><td>per-shard mutex</td></tr>
+</table>
+
+<h3>🎯 面試話術模板</h3>
+
+<pre><code>"For thread safety, I'll use [specific primitive] because [reason].
+
+The critical section is [describe shared state being protected].
+
+I chose [Lock/Semaphore/Channel/Atomic] over [alternative] because:
+- [Tradeoff 1: contention level]
+- [Tradeoff 2: complexity]
+- [Tradeoff 3: fairness requirement]
+
+For error handling, I use [retry/timeout/circuit-breaker] to handle
+transient failures without blocking the caller indefinitely.
+
+Potential issues with this design:
+- [Deadlock risk]: mitigated by [lock ordering / timeout]
+- [Starvation]: mitigated by [fair lock / FIFO]
+- [Performance]: under high contention, [striping / lock-free] would help"
+</code></pre>
+
+<h3>⚠️ 面試常見錯誤</h3>
+
+<table>
+<tr><th>錯誤</th><th>正確做法</th></tr>
+<tr><td>用 sleep() 代替同步原語</td><td>用 Event/Condition/Channel 明確同步</td></tr>
+<tr><td>Lock 範圍太大（整個函數）</td><td>只保護最小 critical section</td></tr>
+<tr><td>忘記 release lock（exception path）</td><td>用 with/defer 確保 release</td></tr>
+<tr><td>Busy wait（while True: check）</td><td>用 Condition.wait() 或 select 阻塞等待</td></tr>
+<tr><td>多個 lock 無固定順序</td><td>定義全局 lock 順序避免 deadlock</td></tr>
+<tr><td>假設 read 是 atomic 的</td><td>任何共享可變狀態都要保護</td></tr>
+</table>
+
+<div class="quiz">
+<h4>🧪 Ch8 驗證測驗（Verification Quiz）</h4>
+<details open>
+<summary>VQ1: Thread-Safe LRU 用單一 Lock 的缺點是什麼？Striped LRU 如何改善？有沒有 Striped 也解決不了的情況？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>單一 Lock 缺點：</strong>所有 get/put 操作 serialized。16 core machine 只用 1 core 的 capacity。高 QPS 下 lock contention 成為瓶頸。</li>
+<li><strong>Striped LRU 改善：</strong>key 按 hash 分到 16 shard，各 shard 獨立 lock。16 shards = 16x parallelism。不同 key 的操作互不阻塞。</li>
+<li><strong>Striped 解決不了的情況：</strong>Hot key（某個 key 被大量存取），所有 request 打同一個 shard → 回到單鎖瓶頸。解法：singleflight（去重）、local cache（每個 thread 有 L1 cache）、或把 hot key 複製到多個 shard（read replica）。</li>
+</ul>
+</details>
+<details open>
+<summary>VQ2: ConcurrentHashMap 的 size() 為什麼不精確？如何在不鎖全部 stripes 的情況下取得精確 size？</summary>
+<p><strong>答案：</strong>遍歷 N 個 stripe 各自取 size 再加總 — 但在你加總的時候其他 stripe 的 size 可能已經變了（non-atomic read across stripes）。結果是「某個時間段內」的近似值，不是某個精確時刻的 snapshot。<br>
+<strong>精確 size 的方法：</strong></p>
+<ul>
+<li><strong>方法 A — 鎖全部 stripes：</strong>按順序 acquire 所有 lock → 加總 → release。代價：O(N) lock + 暫時 block 所有操作。JDK 7 ConcurrentHashMap.size() 就這樣做（先嘗試不加鎖的估算，不一致才鎖全部）。</li>
+<li><strong>方法 B — Atomic counter：</strong>維護一個全局 atomic size counter（每次 put +1, remove -1）。精確但 high contention on single variable。可用 LongAdder（per-CPU counter + lazy sum）。</li>
+<li><strong>面試答案：</strong>「大多數場景不需要精確 size。如果需要，用 atomic LongAdder（contended 場景）或 lock-all（rare operation）。」</li>
+</ul>
+</details>
+<details open>
+<summary>VQ3: 面試時被問「你的解法在 10 million QPS 下表現如何？」你會怎麼分析和回答？</summary>
+<p><strong>答案：</strong>結構化的回答框架：</p>
+<ol>
+<li><strong>Identify bottleneck：</strong>「在 10M QPS 下，每個 request 的 critical path 有哪些 shared resources？」— Lock、atomic、network call、DB query。</li>
+<li><strong>Quantify contention：</strong>「假設 16 shards，每 shard 承受 625K QPS。每次 lock hold time ~100ns。contention probability = 625K × 100ns / 1s = 6.25% → 可接受。如果 hold time 是 1μs → 62.5% → 需要更多 shards。」</li>
+<li><strong>Propose optimization：</strong>根據分析提出：增加 shard 數（256 shards）、使用 lock-free read path（atomic load for cache hit）、per-CPU local cache（L1 → shared L2 兩級快取）、batch processing（amortize lock acquisition）。</li>
+<li><strong>State limitations：</strong>「Hot key 無論幾個 shard 都打同一個 → 需要 replication 或 singleflight。Memory overhead 隨 shard 數線性增長。」</li>
+</ol>
+<p><strong>面試加分：</strong>主動提到 benchmarking（「I'd run pprof/mutex profile to confirm the bottleneck before optimizing」）和 tradeoffs（「more shards = more memory + size() less accurate」）。</p>
+</details>
+<details open>
+<summary>VQ4: 總結：Lock-based vs Lock-free vs Channel-based — 三種並行控制方式的 decision framework？</summary>
+<p><strong>答案：</strong></p>
+<table>
+<tr><th>方式</th><th>適用</th><th>優點</th><th>缺點</th><th>代表</th></tr>
+<tr><td>Lock-based</td><td>Complex critical section（多步驟、條件判斷）</td><td>簡單正確、好理解</td><td>Contention、Deadlock risk、Priority inversion</td><td>Mutex、RWLock、Condition</td></tr>
+<tr><td>Lock-free (CAS)</td><td>Simple atomic update（counter、pointer swap）</td><td>No deadlock、低 latency at low contention</td><td>ABA、complex to verify、CPU waste at high contention</td><td>AtomicInteger、Treiber Stack、Disruptor</td></tr>
+<tr><td>Channel/CSP</td><td>Task coordination（fan-out/in、pipeline、cancellation）</td><td>No shared state、composable、readable</td><td>Overhead > raw lock、deadlock still possible (full channel)</td><td>Go channel、Erlang mailbox、Python queue</td></tr>
+</table>
+<p><strong>Decision tree：</strong>「是否需要共享可變狀態？」No → Channel/Actor。Yes → 「Critical section < 10 instructions?」Yes → Atomic/CAS。No → Lock/RWLock + 「Read-heavy?」Yes → RWLock。「Fairness needed?」Yes → Fair Lock with turnstile。</p>
+</details>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

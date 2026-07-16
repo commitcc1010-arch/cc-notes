@@ -1,0 +1,4953 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>OOD 面試完全攻略 v2 — 15 題 Class Design（加強版）</title>
+<style>
+body { font-family: -apple-system, 'Noto Sans CJK TC', sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; line-height: 1.8; background: #fff; color: #333; }
+h1 { color: #1a5276; border-bottom: 3px solid #2980b9; padding-bottom: 10px; }
+h2 { color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 6px; page-break-before: always; }
+h3 { color: #34495e; }
+h4 { color: #2c3e50; }
+pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 13px; }
+code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+th { background: #f1f3f5; }
+.seedling { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.qa { background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.followup { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.glossary { background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.why-pattern { background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.quiz { background: #e0f7fa; border-left: 4px solid #00bcd4; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.real-world { background: #fff8e1; border-left: 4px solid #ffc107; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.key-concepts { background: #e8eaf6; border-left: 4px solid #3f51b5; padding: 16px; margin: 16px 0; border-radius: 4px; }
+details { margin: 12px 0; }
+details summary { cursor: pointer; font-weight: bold; color: #2980b9; }
+blockquote { border-left: 4px solid #3498db; margin: 12px 0; padding: 8px 16px; background: #f9f9f9; }
+.pattern-tag { background: #e3f2fd; border: 1px solid #90caf9; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #1565c0; }
+.solid-tag { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #2e7d32; }
+</style>
+</head>
+<body>
+
+<h1>📗 OOD 面試完全攻略 v2：15 題 Class Design + Python 實作（加強版）</h1>
+
+<p><strong>目標讀者：</strong>Google / Meta / Amazon L5-L6 面試準備者<br>
+<strong>每題包含：</strong>術語詞彙表、需求分析、為什麼用這個模式、ASCII 類別圖、完整 Python 實作（200+ 行）、SOLID 分析、真實世界案例、5 個 Follow-up、驗證測驗 + 詳解<br>
+<strong>v2 新增：</strong>每章獨立術語表、「為什麼選這個模式」深度分析、真實系統案例、自測驗證題（含答案）、關鍵前置知識盒</p>
+
+<hr>
+
+<!-- ==================== CHAPTER 1 ==================== -->
+<h2>Chapter 1：OOD 面試框架與設計原則</h2>
+
+<div class="key-concepts">
+<h4>🔑 本章關鍵前置知識</h4>
+<p>本章是全書基礎，不需額外前置知識。如果你有以下背景會更容易理解：</p>
+<ul>
+<li>寫過任何語言的 class（Python / Java / TypeScript 皆可）</li>
+<li>知道 function 和 method 的差異</li>
+<li>理解 import / module 的概念</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 術語詞彙表</h4>
+
+<details open>
+<summary>Polymorphism（多型）</summary>
+<p><strong>生活比喻：</strong>「遙控器上的電源鍵」——不管你對電視、冷氣、音響按，都能開關電器，但每個電器的開機行為完全不同。</p>
+<p><strong>技術定義：</strong>同一介面、不同實作。父類別定義方法簽名，子類別各自實作行為。</p>
+<pre><code class="language-python"># 多型範例：同樣的 speak()，不同動物有不同行為
+class Animal:
+    def speak(self) -> str:
+        raise NotImplementedError
+
+class Dog(Animal):
+    def speak(self) -> str:
+        return "Woof!"
+
+class Cat(Animal):
+    def speak(self) -> str:
+        return "Meow!"
+
+# 呼叫端不需要知道是哪種動物
+def make_sound(animal: Animal):
+    print(animal.speak())  # 多型：runtime 決定呼叫哪個版本
+</code></pre>
+</details>
+
+<details open>
+<summary>Composition（組合）vs Inheritance（繼承）</summary>
+<p><strong>生活比喻：</strong>繼承 = 「我是我爸的兒子，天生繼承了他的姓氏和血型」。組合 = 「我買了一台車、一支手機，隨時可以換新的」。</p>
+<p><strong>關鍵差異：</strong></p>
+<pre><code class="language-python"># 繼承 (IS-A)：Dog IS-A Animal
+class Animal:
+    def breathe(self): ...
+class Dog(Animal):  # Dog 永遠是 Animal，不可改
+    def bark(self): ...
+
+# 組合 (HAS-A)：Car HAS-A Engine
+class Engine:
+    def start(self): ...
+class Car:
+    def __init__(self):
+        self.engine = Engine()  # 可以隨時換成 TurboEngine()
+</code></pre>
+<p><strong>經驗法則：</strong>Favor composition over inheritance. 組合更靈活、更易測試、避免深層繼承鏈。</p>
+</details>
+
+<details open>
+<summary>Interface（介面）vs Abstract Class（抽象類別）</summary>
+<p><strong>生活比喻：</strong>Interface = 「合約」（只規定你要做什麼，不管怎麼做）。Abstract Class = 「半成品」（有些步驟已經做好了，剩下的你自己補）。</p>
+<pre><code class="language-python">from abc import ABC, abstractmethod
+
+# Abstract Class：可以有實作的方法（partial implementation）
+class Shape(ABC):
+    def __init__(self, color: str):
+        self.color = color  # 共用屬性
+
+    @abstractmethod
+    def area(self) -> float:  # 子類必須實作
+        pass
+
+    def describe(self) -> str:  # 有預設實作
+        return f"A {self.color} shape with area {self.area()}"
+
+# Python 沒有 "interface" 關鍵字，用 ABC + 全部 abstract 模擬
+class Serializable(ABC):  # 行為契約，沒有任何實作
+    @abstractmethod
+    def to_json(self) -> str: pass
+
+    @abstractmethod
+    def from_json(self, data: str) -> 'Serializable': pass
+</code></pre>
+<p><strong>何時用哪個：</strong>有共用邏輯 → Abstract Class。純定義行為規範 → Interface (全 abstract ABC)。Python 支援多重繼承所以界線較模糊；Java/C# 才嚴格區分。</p>
+</details>
+
+<details open>
+<summary>Aggregation（聚合）vs Composition（組合）</summary>
+<p><strong>生活比喻：</strong>組合 = 「心臟和身體」（身體消失，心臟也不存在了）。聚合 = 「教授和大學」（教授離開大學，教授還活著）。</p>
+<pre><code class="language-python"># Composition：Department 擁有 Employee，Department 刪除 → Employee 也刪除
+class Department:
+    def __init__(self, name: str):
+        self.name = name
+        self.employees = []  # Department 負責 Employee 的生命週期
+
+    def add_employee(self, name: str):
+        self.employees.append(Employee(name))  # 內部建立
+
+# Aggregation：University 引用 Professor，University 刪除 → Professor 還在
+class University:
+    def __init__(self):
+        self.professors = []  # 只是引用，不擁有
+
+    def add_professor(self, prof: 'Professor'):  # 外部傳入
+        self.professors.append(prof)
+</code></pre>
+</details>
+
+<details open>
+<summary>Encapsulation（封裝）</summary>
+<p><strong>生活比喻：</strong>你開車只需要方向盤和油門（公開介面），不需要知道引擎內部怎麼燃燒燃料（私有實作）。</p>
+<pre><code class="language-python">class BankAccount:
+    def __init__(self, balance: float):
+        self._balance = balance  # 私有：外部不該直接存取
+
+    def deposit(self, amount: float):  # 公開介面：有驗證邏輯
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        self._balance += amount
+
+    @property
+    def balance(self) -> float:  # 只讀存取
+        return self._balance
+</code></pre>
+</details>
+
+<details open>
+<summary>Coupling（耦合）vs Cohesion（內聚）</summary>
+<p><strong>生活比喻：</strong>高內聚 = 「瑞士刀的每個工具都跟切割有關」。低耦合 = 「換了新手機，舊的藍牙耳機照用」。</p>
+<p><strong>目標：</strong>高內聚（class 內的方法都圍繞同一職責）+ 低耦合（class 之間依賴少，修改一個不需連帶改其他的）。</p>
+</details>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解：什麼是 OOD 面試？</h4>
+<p><strong>生活比喻：</strong>如果 System Design 是設計一棟大樓（幾棟樓、怎麼連接、電梯幾部），OOD 就是設計一個房間的傢俱配置（桌子幾張、抽屜怎麼開、插座在哪）。</p>
+<p><strong>白話解釋：</strong>面試官給你一個真實世界的系統（停車場、電梯、棋盤遊戲），你要用物件導向的方式把它拆解成 classes、定義它們的關係和行為。</p>
+<p><strong>為什麼工作上需要：</strong>每天寫的 code 都要設計 class 結構。好的 OOD 讓 code 容易擴展、測試、維護。差的 OOD 讓你每次改一行就壞十行。</p>
+</div>
+
+<h3>1.1 SOLID 原則</h3>
+
+<table>
+<tr><th>原則</th><th>全名</th><th>一句話解釋</th><th>違反的後果</th></tr>
+<tr><td><strong>S</strong></td><td>Single Responsibility</td><td>一個 class 只負責一件事</td><td>改 A 功能卻壞了 B</td></tr>
+<tr><td><strong>O</strong></td><td>Open/Closed</td><td>對擴展開放，對修改封閉</td><td>加新功能要改舊 code</td></tr>
+<tr><td><strong>L</strong></td><td>Liskov Substitution</td><td>子類別可以完全替代父類別</td><td>用了子類別卻 crash</td></tr>
+<tr><td><strong>I</strong></td><td>Interface Segregation</td><td>不要強迫 class 實作不需要的方法</td><td>一堆 NotImplementedError</td></tr>
+<tr><td><strong>D</strong></td><td>Dependency Inversion</td><td>依賴抽象，不依賴具體實作</td><td>換一個 DB 要改幾十個檔案</td></tr>
+</table>
+
+<div class="real-world">
+<h4>🌍 真實世界中的 SOLID</h4>
+<ul>
+<li><strong>SRP in Stripe：</strong>PaymentIntent（管支付）、Charge（管扣款）、Refund（管退款）分開三個 class，各自獨立演進</li>
+<li><strong>OCP in AWS SDK：</strong>新增 S3 Intelligent-Tiering 存儲類別，不需要修改既有 S3Client 程式碼，只新增一個 StorageClass enum 值</li>
+<li><strong>LSP in Java Collections：</strong>ArrayList 和 LinkedList 都實作 List interface，任何接受 List 的方法都能無縫替換</li>
+<li><strong>ISP in React：</strong>React 不強迫每個 component 實作所有 lifecycle methods，只 override 需要的</li>
+<li><strong>DIP in Spring Boot：</strong>Service layer 依賴 Repository interface，不依賴 JpaRepository 具體實作，換 MongoDB 只需新 adapter</li>
+</ul>
+</div>
+
+<h3>1.2 面試常用 Design Patterns（Top 10）</h3>
+
+<table>
+<tr><th>#</th><th>Pattern</th><th>用途</th><th>OOD 題目範例</th></tr>
+<tr><td>1</td><td>Strategy</td><td>抽換演算法</td><td>Rate Limiter、Payment</td></tr>
+<tr><td>2</td><td>Observer</td><td>事件通知</td><td>Notification、Stock Price</td></tr>
+<tr><td>3</td><td>Factory</td><td>建立物件不暴露邏輯</td><td>Vehicle creation、Shape</td></tr>
+<tr><td>4</td><td>Singleton</td><td>全局唯一實例</td><td>Config、DB Connection Pool</td></tr>
+<tr><td>5</td><td>State</td><td>狀態轉換</td><td>Vending Machine、ATM</td></tr>
+<tr><td>6</td><td>Composite</td><td>樹形結構</td><td>File System、Menu</td></tr>
+<tr><td>7</td><td>Decorator</td><td>動態加功能</td><td>Middleware、Stream</td></tr>
+<tr><td>8</td><td>Iterator</td><td>遍歷集合</td><td>Feed Pagination</td></tr>
+<tr><td>9</td><td>Command</td><td>封裝操作為物件</td><td>Undo/Redo、Task Queue</td></tr>
+<tr><td>10</td><td>Template Method</td><td>定義骨架，子類別填細節</td><td>Game Loop、Parser</td></tr>
+</table>
+
+<div class="real-world">
+<h4>🌍 每個模式在哪些知名系統使用？</h4>
+<table>
+<tr><th>Pattern</th><th>真實系統案例</th></tr>
+<tr><td>Strategy</td><td>Stripe 支付處理器（Visa/MasterCard/PayPal 各一策略）、AWS SDK Retry Policy（ExponentialBackoff / FixedDelay / None）、React Router（不同 history 策略：BrowserHistory / HashHistory）</td></tr>
+<tr><td>Observer</td><td>React 的 useState (state 變 → re-render)、Kafka 消費者群組、Redis Pub/Sub、GitHub Webhooks</td></tr>
+<tr><td>Factory</td><td>Spring BeanFactory、Python logging.getLogger()、AWS CloudFormation（根據 Type 建立對應 resource）</td></tr>
+<tr><td>Singleton</td><td>Python logging.root、Django settings、Kubernetes API Server 的 etcd client</td></tr>
+<tr><td>State</td><td>TCP 連線（LISTEN/ESTABLISHED/CLOSE_WAIT）、AWS Step Functions、Git（working/staged/committed）</td></tr>
+<tr><td>Composite</td><td>React Component tree、DOM 結構、AWS Organizations（OU 樹）、Linux 檔案系統</td></tr>
+<tr><td>Decorator</td><td>Python @functools.wraps、Express.js middleware chain、Java I/O Streams（BufferedReader wrapping FileReader）</td></tr>
+<tr><td>Iterator</td><td>Python for-loop 背後的 __iter__/__next__、AWS SDK Paginator、GraphQL cursor-based pagination</td></tr>
+<tr><td>Command</td><td>Git commits（每個 commit 是一個 command）、Photoshop Undo/Redo、Celery task queue、Redux actions</td></tr>
+<tr><td>Template Method</td><td>Django CBV (View.dispatch → get/post)、JUnit test lifecycle (setUp → test → tearDown)、Python unittest</td></tr>
+</table>
+</div>
+
+<h3>1.3 OOD 面試 45 分鐘框架</h3>
+
+<pre><code>0-5 min:  Clarify Requirements（問清楚 scope）
+5-10 min: Identify Core Objects（找出主要 class）
+10-15 min: Define Relationships（繼承、組合、依賴）
+15-35 min: Implement Key Methods（寫核心邏輯）
+35-40 min: Design Patterns + SOLID Check
+40-45 min: Extensions + Follow-ups
+</code></pre>
+
+<h3>1.4 面試話術模板</h3>
+
+<pre><code>"Let me start by identifying the core objects in this system.
+I see [X], [Y], [Z] as the main entities.
+
+The relationship between them is:
+- X HAS-A Y (composition)
+- Z IS-A X (inheritance)
+
+For the [specific behavior], I'll use the Strategy pattern
+because we might need to swap algorithms at runtime.
+
+Let me code this up..."
+</code></pre>
+
+<div class="qa">
+<h4>📝 理解確認 Q&A</h4>
+<details open>
+<summary>Q1: 什麼時候用 Composition 而非 Inheritance？</summary>
+<p><strong>A:</strong> 當 "IS-A" 關係不明確時用 Composition。例如：Duck IS-A Bird ✓ 用繼承。Car HAS-A Engine ✓ 用組合。如果 Penguin IS-A Bird 但不能 fly()，就暴露了 Liskov 問題，應該用組合 + interface。經驗法則：<strong>Favor composition over inheritance</strong>。</p>
+</details>
+<details open>
+<summary>Q2: Strategy Pattern 和 Template Method 的差異？</summary>
+<p><strong>A:</strong> Strategy 用<strong>組合</strong>（inject 不同 strategy object），可以 runtime 切換。Template Method 用<strong>繼承</strong>（subclass override 步驟），compile time 決定。Strategy 更靈活，Template Method 更簡單。</p>
+</details>
+<details open>
+<summary>Q3: 面試中應該先寫 interface 還是直接寫 class？</summary>
+<p><strong>A:</strong> 先定義 interface/abstract class，展示你「依賴抽象」的思維（Dependency Inversion）。面試官會注意你是否先想清楚 contract 再填實作。</p>
+</details>
+</div>
+
+<div class="quiz">
+<h4>✅ 驗證測驗（本章）</h4>
+
+<details open>
+<summary>題目 1：以下哪個設計違反了 Liskov Substitution Principle？</summary>
+<pre><code class="language-python">class Bird:
+    def fly(self): ...
+class Penguin(Bird):
+    def fly(self):
+        raise NotImplementedError("Penguins can't fly!")
+</code></pre>
+<p><strong>答案：</strong>Penguin 繼承 Bird 但無法 fly()，任何期待 Bird 能飛的程式碼遇到 Penguin 就會爆炸。修正方式：將 fly() 抽到 FlyableBird interface，Bird 只保留共通行為（breathe, eat）。或用 Composition：Bird HAS-A FlyBehavior（Strategy Pattern），Penguin 的 FlyBehavior 是 NoFly。</p>
+</details>
+
+<details open>
+<summary>題目 2：Observer 和 Pub/Sub 的本質差異是什麼？</summary>
+<p><strong>答案：</strong>Observer 是<strong>同步、直接耦合</strong>——Subject 直接持有 Observer 的引用並呼叫方法。Pub/Sub 是<strong>異步、透過 broker 解耦</strong>——Publisher 不知道 Subscriber 是誰，中間有 message broker (e.g. Kafka, Redis)。面試中的 Observer Pattern 通常指同步版本；分散式系統用 Pub/Sub。</p>
+</details>
+
+<details open>
+<summary>題目 3：為什麼 Singleton 在現代開發中被認為是 anti-pattern？如何改善？</summary>
+<p><strong>答案：</strong>問題：(1) 隱藏依賴（不看 code 不知道誰用了它）(2) 不可測試（無法 mock）(3) Thread safety 複雜。改善：用 Dependency Injection 取代——在 constructor 注入唯一實例，而非全域存取。這樣可以在測試時注入 mock。Spring/FastAPI 的 DI container 就是這個概念。</p>
+</details>
+
+<details open>
+<summary>題目 4：Composition over Inheritance 的 3 個具體好處？</summary>
+<p><strong>答案：</strong>(1) <strong>靈活性</strong>：runtime 可換行為（Strategy），繼承 compile-time 固定。(2) <strong>避免菱形繼承</strong>：多重繼承的 MRO 問題，組合不會有。(3) <strong>更易測試</strong>：可以 mock 組合的部件，繼承的父類邏輯很難隔離。反例：如果 IS-A 關係清晰且不會變（Dog IS-A Animal），繼承仍然合理。</p>
+</details>
+
+<details open>
+<summary>題目 5：面試 45 分鐘內，什麼時候該停止釐清需求開始寫 code？</summary>
+<p><strong>答案：</strong>當你能回答以下 3 個問題時就該開始：(1) 系統的核心 actors 是誰？(2) 最重要的 3-4 個 use cases？(3) 明確的 out-of-scope（不做什麼）。超過 5 分鐘還在問需求 → 面試官會覺得你不夠果斷。技巧：主動提出假設「I'll assume X, let me know if that's wrong」然後往下走。</p>
+</details>
+</div>
+
+<div class="followup">
+<h4>💬 Follow-up 面試問題</h4>
+<details open>
+<summary>Q1: How would you decide between using inheritance vs composition in your design?</summary>
+<p><strong>A:</strong> I use the "IS-A" vs "HAS-A" test. If the relationship is truly "is a kind of" (Dog IS-A Animal), inheritance is appropriate. If it's "uses" or "contains" (Car HAS-A Engine), composition is better. I also check Liskov Substitution: if the subclass can't fully replace the parent in all contexts, I switch to composition. In practice, I favor composition because it's more flexible (can change at runtime) and avoids deep inheritance hierarchies.</p>
+</details>
+<details open>
+<summary>Q2: Can you give an example where a design pattern solved a real problem you faced?</summary>
+<p><strong>A:</strong> In our annotation platform, we had 7 different annotation template types. Initially each had its own rendering logic scattered across the codebase. I refactored to use the Strategy pattern: an AnnotationRenderer interface with concrete implementations (SVDRenderer, CaptionRenderer, etc.). Adding a new template type now requires just one new class without modifying existing code (Open/Closed Principle). This reduced our template onboarding time from weeks to days.</p>
+</details>
+<details open>
+<summary>Q3: What's the difference between Abstract Factory and Factory Method?</summary>
+<p><strong>A:</strong> Factory Method is a single method that creates one type of object (subclasses decide which). Abstract Factory is a family of related objects created together (e.g., UIFactory creates Button + TextField + Checkbox that all match a theme). Use Factory Method for single products, Abstract Factory for product families.</p>
+</details>
+<details open>
+<summary>Q4: When would you NOT use a design pattern?</summary>
+<p><strong>A:</strong> When it adds complexity without solving a real problem. If you only have one payment method, don't create a Strategy pattern. If nothing observes events, don't add Observer. Patterns are tools for anticipated change, not premature abstraction. YAGNI (You Aren't Gonna Need It) applies.</p>
+</details>
+<details open>
+<summary>Q5: How do you handle the tension between SOLID principles?</summary>
+<p><strong>A:</strong> They can conflict. Over-applying Single Responsibility creates too many tiny classes (harder to understand). Over-applying Interface Segregation creates interface explosion. The key is balance: apply principles where they reduce coupling at natural boundaries, not artificially. I focus on the pain points: if a class is hard to test, it probably violates SRP. If adding a feature requires modifying 10 files, it probably violates OCP.</p>
+</details>
+</div>
+
+<hr>
+
+<!-- ==================== CHAPTER 2 ==================== -->
+<h2>Chapter 2：Design Parking Lot 🅿️</h2>
+
+<div class="key-concepts">
+<h4>🔑 本章關鍵前置知識</h4>
+<ul>
+<li><strong>Singleton Pattern：</strong>確保全域只有一個停車場實例（Ch1 Pattern #4）</li>
+<li><strong>Enum：</strong>Python 的 Enum class 用於定義固定選項集合</li>
+<li><strong>Threading Lock：</strong>多線程環境下保護共享資源（同時兩台車搶同一車位）</li>
+<li><strong>Strategy Pattern：</strong>不同計費策略可以抽換（Ch1 Pattern #1）</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 術語詞彙表</h4>
+
+<details open>
+<summary>Singleton Pattern（單例模式）</summary>
+<p><strong>生活比喻：</strong>一個國家只有一個總統。不管你從哪裡呼叫「總統」，都是同一個人。</p>
+<pre><code class="language-python">class ParkingLot:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+# lot1 和 lot2 是同一個物件
+lot1 = ParkingLot()
+lot2 = ParkingLot()
+assert lot1 is lot2  # True!
+</code></pre>
+</details>
+
+<details open>
+<summary>Enum（列舉型別）</summary>
+<p><strong>生活比喻：</strong>紅綠燈只有三種狀態，不可能是「紫色」。Enum 就是限制一組合法值。</p>
+<pre><code class="language-python">from enum import Enum
+
+class VehicleType(Enum):
+    MOTORCYCLE = 1
+    CAR = 2
+    TRUCK = 3
+
+# 使用
+v = VehicleType.CAR
+print(v.value)  # 2
+print(v.name)   # "CAR"
+</code></pre>
+</details>
+
+<details open>
+<summary>Thread Safety（線程安全）</summary>
+<p><strong>生活比喻：</strong>停車場入口只有一道閘門，兩台車同時到不能兩台一起通過。Lock 就是閘門——一次只讓一個通過。</p>
+<pre><code class="language-python">import threading
+
+lock = threading.Lock()
+
+def park_car(spot, car):
+    with lock:  # 只有一個 thread 能執行這段
+        if spot.is_available():
+            spot.vehicle = car  # 安全！不會兩台車搶同一位
+</code></pre>
+</details>
+</div>
+
+<div class="why-pattern">
+<h4>🤔 為什麼選這些模式？從需求到設計的推導</h4>
+<p>面試題說：「Design a parking lot system」。讓我們從需求逆推模式選擇：</p>
+<table>
+<tr><th>需求</th><th>設計挑戰</th><th>模式選擇</th><th>推理</th></tr>
+<tr><td>全系統只有一個停車場</td><td>避免多實例造成資料不一致</td><td><strong>Singleton</strong></td><td>停車場是共享資源，全域唯一</td></tr>
+<tr><td>不同車型不同費率</td><td>計費邏輯可能變動（週末、VIP）</td><td><strong>Strategy</strong></td><td>計費演算法可抽換，不改核心 code</td></tr>
+<tr><td>同時多台車進出</td><td>Race condition（搶車位）</td><td><strong>Mutex/Lock</strong></td><td>保護共享資源的標準方案</td></tr>
+<tr><td>多種車位大小匹配</td><td>車輛→車位的匹配邏輯</td><td><strong>Polymorphism</strong></td><td>Vehicle 抽象類 + 子類別，can_fit() 多型判斷</td></tr>
+</table>
+<p><strong>面試時這樣說：</strong>「I'll use Singleton for the ParkingLot because there's only one physical lot and we need consistent state. For pricing, I'll use Strategy because pricing rules often change (weekday vs weekend, promotions). Thread safety with locks since multiple cars enter concurrently.」</p>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>你開車去百貨公司地下停車場。入口有閘門，螢幕顯示「大型車位剩 3 個、小型車位剩 15 個」。你拿票進去，找到位子停好。離開時插票、付錢、閘門開。</p>
+<p><strong>設計重點：</strong>多種車輛大小、多層樓、車位分配策略、計費邏輯。</p>
+</div>
+
+<h3>Requirements</h3>
+<ul>
+<li>支援多種車輛：Motorcycle, Car, Bus/Truck</li>
+<li>多層停車場，每層有多種大小的車位</li>
+<li>車位分配：大車只能停大位，小車可以停大位但不建議</li>
+<li>計費：按時間計費，不同車型不同費率</li>
+<li>入場/出場閘門管理</li>
+</ul>
+
+<h3>ASCII Class Diagram</h3>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│                    ParkingLot (Singleton)                │
+│  - floors: List[Floor]                                  │
+│  - entry_gates: List[Gate]                              │
+│  - exit_gates: List[Gate]                               │
+│  + park(vehicle) -> Ticket                              │
+│  + unpark(ticket) -> Payment                            │
+│  + get_available_spots(vehicle_type) -> int             │
+└─────────────────────────────────────────────────────────┘
+          │ has-many
+          ▼
+┌──────────────────────┐     ┌──────────────────────────┐
+│       Floor          │     │     ParkingSpot           │
+│  - floor_number      │     │  - spot_id               │
+│  - spots: List[Spot] │────▶│  - spot_type: SpotType   │
+│  + find_spot(type)   │     │  - vehicle: Vehicle|None  │
+└──────────────────────┘     │  + is_available() -> bool │
+                             │  + park(vehicle)          │
+                             │  + unpark() -> Vehicle    │
+                             └──────────────────────────┘
+                                        ▲
+┌──────────────────────┐     uses       │
+│   Vehicle (Abstract) │────────────────┘
+│  - license_plate     │
+│  - vehicle_type      │
+└──────────┬───────────┘
+           │ inheritance
+    ┌──────┼──────┐
+    ▼      ▼      ▼
+Motorcycle Car    Truck
+
+┌─────────────┐    ┌──────────────────┐
+│   Ticket    │    │    Payment       │
+│  - vehicle  │    │  - ticket        │
+│  - spot     │    │  - amount        │
+│  - entry_at │    │  - paid_at       │
+└─────────────┘    │  + calculate()   │
+                   └──────────────────┘
+</code></pre>
+
+<h3>Python 完整實作</h3>
+
+<pre><code class="language-python">from enum import Enum
+from datetime import datetime
+from typing import Optional, List
+import threading
+
+
+class VehicleType(Enum):
+    MOTORCYCLE = 1
+    CAR = 2
+    TRUCK = 3
+
+
+class SpotType(Enum):
+    SMALL = 1      # Motorcycle only
+    MEDIUM = 2     # Car or Motorcycle
+    LARGE = 3      # Any vehicle
+
+
+# ============ Vehicle Hierarchy ============
+
+class Vehicle:
+    def __init__(self, license_plate: str, vehicle_type: VehicleType):
+        self.license_plate = license_plate
+        self.vehicle_type = vehicle_type
+
+class Motorcycle(Vehicle):
+    def __init__(self, license_plate: str):
+        super().__init__(license_plate, VehicleType.MOTORCYCLE)
+
+class Car(Vehicle):
+    def __init__(self, license_plate: str):
+        super().__init__(license_plate, VehicleType.CAR)
+
+class Truck(Vehicle):
+    def __init__(self, license_plate: str):
+        super().__init__(license_plate, VehicleType.TRUCK)
+
+
+# ============ Parking Spot ============
+
+class ParkingSpot:
+    def __init__(self, spot_id: str, spot_type: SpotType, floor: int):
+        self.spot_id = spot_id
+        self.spot_type = spot_type
+        self.floor = floor
+        self.vehicle: Optional[Vehicle] = None
+        self._lock = threading.Lock()
+
+    def is_available(self) -> bool:
+        return self.vehicle is None
+
+    def can_fit(self, vehicle: Vehicle) -> bool:
+        """Check if this spot can accommodate the vehicle type."""
+        size_map = {
+            VehicleType.MOTORCYCLE: SpotType.SMALL,
+            VehicleType.CAR: SpotType.MEDIUM,
+            VehicleType.TRUCK: SpotType.LARGE,
+        }
+        required = size_map[vehicle.vehicle_type]
+        return self.spot_type.value >= required.value
+
+    def park(self, vehicle: Vehicle) -> bool:
+        with self._lock:
+            if not self.is_available() or not self.can_fit(vehicle):
+                return False
+            self.vehicle = vehicle
+            return True
+
+    def unpark(self) -> Optional[Vehicle]:
+        with self._lock:
+            vehicle = self.vehicle
+            self.vehicle = None
+            return vehicle
+
+
+# ============ Ticket & Payment ============
+
+class Ticket:
+    _counter = 0
+    _lock = threading.Lock()
+
+    def __init__(self, vehicle: Vehicle, spot: ParkingSpot):
+        with Ticket._lock:
+            Ticket._counter += 1
+            self.ticket_id = Ticket._counter
+        self.vehicle = vehicle
+        self.spot = spot
+        self.entry_time = datetime.now()
+        self.exit_time: Optional[datetime] = None
+        self.paid = False
+
+
+class PaymentCalculator:
+    """Strategy pattern: different pricing strategies."""
+    RATES = {
+        VehicleType.MOTORCYCLE: 1.0,   # $1/hour
+        VehicleType.CAR: 2.0,          # $2/hour
+        VehicleType.TRUCK: 4.0,        # $4/hour
+    }
+
+    @staticmethod
+    def calculate(ticket: Ticket) -> float:
+        if ticket.exit_time is None:
+            ticket.exit_time = datetime.now()
+        duration = (ticket.exit_time - ticket.entry_time).total_seconds() / 3600
+        hours = max(1, int(duration) + (1 if duration % 1 > 0 else 0))  # Round up
+        rate = PaymentCalculator.RATES[ticket.vehicle.vehicle_type]
+        return hours * rate
+
+
+# ============ Floor ============
+
+class Floor:
+    def __init__(self, floor_number: int, spots: List[ParkingSpot]):
+        self.floor_number = floor_number
+        self.spots = spots
+
+    def find_available_spot(self, vehicle: Vehicle) -> Optional[ParkingSpot]:
+        """Find the smallest available spot that fits the vehicle (best fit)."""
+        candidates = [s for s in self.spots if s.is_available() and s.can_fit(vehicle)]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda s: s.spot_type.value)
+        return candidates[0]
+
+    def available_spots_count(self, vehicle_type: VehicleType) -> int:
+        dummy = Vehicle("", vehicle_type)
+        return sum(1 for s in self.spots if s.is_available() and s.can_fit(dummy))
+
+
+# ============ Parking Lot (Singleton) ============
+
+class ParkingLot:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+
+    def __init__(self, name: str = "Default", floors: List[Floor] = None):
+        if hasattr(self, '_initialized'):
+            return
+        self._initialized = True
+        self.name = name
+        self.floors = floors or []
+        self.active_tickets: dict = {}  # license_plate -> Ticket
+        self._lock = threading.Lock()
+
+    def park(self, vehicle: Vehicle) -> Optional[Ticket]:
+        """Find a spot and issue a ticket."""
+        with self._lock:
+            if vehicle.license_plate in self.active_tickets:
+                return None  # Already parked
+
+            for floor in self.floors:
+                spot = floor.find_available_spot(vehicle)
+                if spot:
+                    if spot.park(vehicle):
+                        ticket = Ticket(vehicle, spot)
+                        self.active_tickets[vehicle.license_plate] = ticket
+                        return ticket
+            return None  # No spot available
+
+    def unpark(self, license_plate: str) -> Optional[float]:
+        """Process exit: calculate payment and free the spot."""
+        with self._lock:
+            ticket = self.active_tickets.get(license_plate)
+            if not ticket:
+                return None
+
+            ticket.exit_time = datetime.now()
+            amount = PaymentCalculator.calculate(ticket)
+            ticket.spot.unpark()
+            del self.active_tickets[license_plate]
+            return amount
+
+    def get_available_count(self, vehicle_type: VehicleType) -> int:
+        return sum(f.available_spots_count(vehicle_type) for f in self.floors)
+
+    def display_board(self) -> dict:
+        """Display available spots per type per floor."""
+        board = {}
+        for floor in self.floors:
+            board[f"Floor {floor.floor_number}"] = {
+                "Motorcycle": floor.available_spots_count(VehicleType.MOTORCYCLE),
+                "Car": floor.available_spots_count(VehicleType.CAR),
+                "Truck": floor.available_spots_count(VehicleType.TRUCK),
+            }
+        return board
+
+
+# ============ Usage Example ============
+
+if __name__ == "__main__":
+    floor1_spots = (
+        [ParkingSpot(f"1-S{i}", SpotType.SMALL, 1) for i in range(5)] +
+        [ParkingSpot(f"1-M{i}", SpotType.MEDIUM, 1) for i in range(10)] +
+        [ParkingSpot(f"1-L{i}", SpotType.LARGE, 1) for i in range(3)]
+    )
+    floor2_spots = (
+        [ParkingSpot(f"2-M{i}", SpotType.MEDIUM, 2) for i in range(15)] +
+        [ParkingSpot(f"2-L{i}", SpotType.LARGE, 2) for i in range(5)]
+    )
+
+    lot = ParkingLot("Mall Parking", [Floor(1, floor1_spots), Floor(2, floor2_spots)])
+
+    car = Car("ABC-1234")
+    truck = Truck("TRK-5678")
+    moto = Motorcycle("MOT-9999")
+
+    t1 = lot.park(car)
+    t2 = lot.park(truck)
+    t3 = lot.park(moto)
+
+    print(f"Car parked at spot: {t1.spot.spot_id}")
+    print(f"Truck parked at spot: {t2.spot.spot_id}")
+    print(f"Motorcycle parked at spot: {t3.spot.spot_id}")
+    print(f"Available for cars: {lot.get_available_count(VehicleType.CAR)}")
+
+    amount = lot.unpark("ABC-1234")
+    print(f"Car payment: ${amount}")
+</code></pre>
+
+<h3>SOLID 分析</h3>
+<table>
+<tr><th>原則</th><th>如何遵守</th></tr>
+<tr><td>SRP</td><td>ParkingSpot 只管車位狀態，PaymentCalculator 只管計費，Floor 只管找位</td></tr>
+<tr><td>OCP</td><td>加新車型只需新增 VehicleType enum + Vehicle 子類別，不改現有 code</td></tr>
+<tr><td>LSP</td><td>Motorcycle/Car/Truck 都能替代 Vehicle 使用</td></tr>
+<tr><td>ISP</td><td>Vehicle interface 簡單，只有 license_plate 和 type</td></tr>
+<tr><td>DIP</td><td>ParkingLot 依賴 Vehicle 抽象，不依賴具體 Car/Truck</td></tr>
+</table>
+
+<div class="real-world">
+<h4>🌍 真實世界停車系統案例</h4>
+<ul>
+<li><strong>Costco 停車場：</strong>使用攝影機 + ML 偵測空位，LED 顯示板即時更新 → 對應我們的 display_board()</li>
+<li><strong>SpotHero (SaaS)：</strong>預約制停車，需要加入 Reservation class + 時段管理 + cancellation policy</li>
+<li><strong>Tesla Summon：</strong>車自己找位停，需要加入 PathFinding 和 SpotNavigation 組件</li>
+<li><strong>機場停車場（多 terminal）：</strong>對應我們的 multi-floor 設計，加上 shuttle service 邏輯</li>
+</ul>
+</div>
+
+<div class="quiz">
+<h4>✅ 驗證測驗（Chapter 2）</h4>
+
+<details open>
+<summary>題目 1：如果我們不用 Singleton，直接用全域變數 `lot = ParkingLot()` 有什麼問題？</summary>
+<p><strong>答案：</strong>(1) 全域變數無法防止別人建立第二個 ParkingLot（`lot2 = ParkingLot("other")`），造成資料不一致。(2) 全域變數沒有 lazy initialization（import 時就建立）。(3) 測試困難——無法在每個 test case 重置。Singleton 至少保證唯一性。但更好的方案是 DI Container（只建立一個，注入到需要的地方），避免 Singleton 的全域存取問題。</p>
+</details>
+
+<details open>
+<summary>題目 2：can_fit() 為什麼放在 ParkingSpot 而不是 Vehicle？</summary>
+<p><strong>答案：</strong>SRP 原則——「車位是否能容納某車」是<strong>車位的職責</strong>（車位知道自己的尺寸限制），不是車的職責（車不應該知道停車場的內部規則）。如果反過來，Vehicle.can_park_at(spot) 就讓車知道了停車場的實作細節，耦合增加。另外，如果新增「殘障車位只能停殘障車牌」的邏輯，應該在 ParkingSpot 的子類別處理。</p>
+</details>
+
+<details open>
+<summary>題目 3：這個設計中，PaymentCalculator 用 static method 有什麼缺點？如何改進？</summary>
+<p><strong>答案：</strong>缺點：(1) 無法在測試中 mock 計費邏輯。(2) 無法 runtime 切換策略（週末漲價、VIP 折扣）。改進：定義 PricingStrategy interface（abstract），WeekdayPricing / WeekendPricing / VIPPricing 各自實作。ParkingLot 持有 current_strategy 引用，可動態切換。這就是完整的 Strategy Pattern。</p>
+</details>
+
+<details open>
+<summary>題目 4：如果停車場有 10,000 個車位，find_available_spot 的線性搜尋有什麼效能問題？如何優化？</summary>
+<p><strong>答案：</strong>目前是 O(N) 每次搜尋。優化方案：(1) 維護 available_spots 的 priority queue（按距離入口排序），park 時 pop、unpark 時 push。(2) 按 SpotType 分桶，各維護一個 free list。(3) 用 bitmap 追蹤狀態，O(1) 找到第一個空位（bit scan）。真實系統（如 ParkingCloud SaaS）用 zone-based 分桶 + Redis sorted set。</p>
+</details>
+</div>
+
+<div class="followup">
+<h4>💬 Follow-up 面試問題</h4>
+<details open>
+<summary>Q1: How would you handle a multi-entry/multi-exit parking lot?</summary>
+<p><strong>A:</strong> Add Gate class with gate_type (ENTRY/EXIT) and gate_id. Each gate has its own thread handling vehicles. The ParkingLot.park() already uses locks for thread safety. For distributed systems (multiple physical buildings), use a central coordinator service or distribute spot allocation per zone to reduce contention.</p>
+</details>
+<details open>
+<summary>Q2: How would you implement different pricing strategies (weekday/weekend, premium spots)?</summary>
+<p><strong>A:</strong> Use Strategy pattern: define a PricingStrategy interface with calculate(ticket) method. Implement WeekdayPricing, WeekendPricing, PremiumPricing. The ParkingLot holds a reference to the active strategy, which can be swapped at runtime. For spot-level pricing, each ParkingSpot holds its own PricingStrategy.</p>
+</details>
+<details open>
+<summary>Q3: How would you add electric vehicle charging spots?</summary>
+<p><strong>A:</strong> Add SpotType.EV_CHARGING. Create EVChargingSpot subclass of ParkingSpot with additional fields (charger_type, power_kw, charging_session). EV vehicles prefer EV spots but can use regular spots. Billing adds charging cost on top of parking time.</p>
+</details>
+<details open>
+<summary>Q4: How would you make this distributed across multiple parking structures?</summary>
+<p><strong>A:</strong> Replace Singleton with a ParkingService that manages multiple ParkingLot instances. Use a load balancer to route vehicles to the nearest lot with availability. Each lot independently manages its spots. A central dashboard aggregates availability across all lots.</p>
+</details>
+<details open>
+<summary>Q5: What if two cars arrive simultaneously for the last spot?</summary>
+<p><strong>A:</strong> The threading.Lock in park() ensures mutual exclusion. Only one thread acquires the lock, parks successfully, and gets a ticket. The other gets None (no spot available). In a distributed system, use Redis SETNX or database row-level locking for the same guarantee.</p>
+</details>
+</div>
+
+<hr>
+</code></pre>
+
+<!-- ==================== CHAPTER 3 ==================== -->
+<h2>Chapter 3：Design Library Management System 📚</h2>
+
+<div class="key-concepts">
+<h4>🔑 本章關鍵前置知識</h4>
+<ul>
+<li><strong>Observer Pattern：</strong>書歸還時通知預約者（事件驅動通知）</li>
+<li><strong>Queue / Deque：</strong>預約排隊用先進先出（FIFO）</li>
+<li><strong>Composition vs Inheritance：</strong>Book 和 BookItem 是 1:N 的組合關係</li>
+<li><strong>Enum 狀態管理：</strong>書籍狀態（可借/已借/預約中/遺失）</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 術語詞彙表</h4>
+
+<details open>
+<summary>Observer Pattern（觀察者模式）</summary>
+<p><strong>生活比喻：</strong>你訂閱了一個 YouTube 頻道。頻道發新影片（事件），所有訂閱者自動收到通知。你不需要每天手動去檢查。</p>
+<pre><code class="language-python">from abc import ABC, abstractmethod
+
+class EventListener(ABC):  # Observer
+    @abstractmethod
+    def notify(self, event: str, data: dict): pass
+
+class EmailNotifier(EventListener):
+    def notify(self, event, data):
+        print(f"Email: {event} - {data}")
+
+class Library:  # Subject
+    def __init__(self):
+        self._listeners: list = []
+
+    def subscribe(self, listener: EventListener):
+        self._listeners.append(listener)
+
+    def return_book(self, book):
+        # ... return logic ...
+        for listener in self._listeners:
+            listener.notify("BOOK_RETURNED", {"book": book})
+</code></pre>
+</details>
+
+<details open>
+<summary>Association（關聯）vs Composition（組合）</summary>
+<p><strong>本題的關鍵區分：</strong></p>
+<ul>
+<li><strong>Book ↔ BookItem：</strong>Composition（BookItem 離開 Book 就沒意義，書的副本屬於那本書）</li>
+<li><strong>Member ↔ BookItem：</strong>Association（會員借了書，但會員和書是獨立實體）</li>
+<li><strong>BookItem ↔ Reservation：</strong>Association（預約是暫時的關係）</li>
+</ul>
+</details>
+
+<details open>
+<summary>FIFO Queue（先進先出佇列）</summary>
+<p><strong>生活比喻：</strong>排隊買演唱會門票——先排的人先買到。圖書館預約也是：先預約的人優先拿到歸還的書。</p>
+<pre><code class="language-python">from collections import deque
+
+reservation_queue = deque()
+reservation_queue.append("Alice")   # 先預約
+reservation_queue.append("Bob")     # 後預約
+next_person = reservation_queue.popleft()  # "Alice" 先拿到
+</code></pre>
+</details>
+</div>
+
+<div class="why-pattern">
+<h4>🤔 為什麼選這些模式？</h4>
+<table>
+<tr><th>需求</th><th>設計挑戰</th><th>模式選擇</th><th>推理</th></tr>
+<tr><td>書歸還時通知預約者</td><td>歸還邏輯不應該知道有多少人在等</td><td><strong>Observer</strong></td><td>解耦：歸還操作只 fire 事件，誰接收由 subscriber 決定</td></tr>
+<tr><td>Book vs BookItem (1:N)</td><td>一本《哈利波特》可以有 5 本副本</td><td><strong>Composition</strong></td><td>BookItem 的生命週期由 Book 管理</td></tr>
+<tr><td>不同會員等級不同借書上限</td><td>Standard=5, Premium=10</td><td><strong>Enum + Property</strong></td><td>AccountType.value 直接代表限額</td></tr>
+<tr><td>搜尋功能（書名/作者/ISBN）</td><td>多種搜尋維度</td><td><strong>索引 + Dict</strong></td><td>按不同 key 建立 lookup table，O(1) 搜尋</td></tr>
+</table>
+<p><strong>面試時這樣說：</strong>「The key challenge is the notification system when a book is returned. I'll use Observer pattern so the return operation doesn't need to know about reservations, emails, or analytics — it just fires a BOOK_RETURNED event. Also, I distinguish Book (metadata) from BookItem (physical copy) because one title can have multiple copies in different states.」</p>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>你去圖書館，用會員卡借一本書。圖書館員掃條碼，系統記錄「這本書被你借走了」。14 天後沒還，系統算逾期罰款。你也可以先預約一本被別人借走的書。</p>
+<p><strong>設計重點：</strong>書籍管理（多本同一書）、會員借還、預約排隊、逾期罰款、搜尋功能。</p>
+</div>
+
+<h3>Requirements</h3>
+<ul>
+<li>書籍：一本書可以有多個副本（Book vs BookItem）</li>
+<li>會員：借書上限（例如 5 本）、不同會員等級</li>
+<li>借還：借書期限 14 天，可續借一次</li>
+<li>預約：書被借走時可預約，歸還時通知下一位</li>
+<li>罰款：逾期每天 $1</li>
+<li>搜尋：按書名、作者、ISBN 搜尋</li>
+</ul>
+
+<h3>Python 完整實作</h3>
+
+<pre><code class="language-python">from enum import Enum
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict
+from collections import deque
+from abc import ABC, abstractmethod
+
+
+class BookStatus(Enum):
+    AVAILABLE = "available"
+    BORROWED = "borrowed"
+    RESERVED = "reserved"
+    LOST = "lost"
+
+
+class MemberStatus(Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+
+
+class AccountType(Enum):
+    STANDARD = 5    # Max 5 books
+    PREMIUM = 10    # Max 10 books
+
+
+# ============ Book ============
+
+class Book:
+    """Represents a book title (not a physical copy)."""
+    def __init__(self, isbn: str, title: str, author: str, category: str):
+        self.isbn = isbn
+        self.title = title
+        self.author = author
+        self.category = category
+        self.items: List['BookItem'] = []
+
+    def add_item(self, item: 'BookItem'):
+        self.items.append(item)
+
+    def available_copies(self) -> int:
+        return sum(1 for item in self.items if item.status == BookStatus.AVAILABLE)
+
+
+class BookItem:
+    """A physical copy of a book."""
+    def __init__(self, barcode: str, book: Book):
+        self.barcode = barcode
+        self.book = book
+        self.status = BookStatus.AVAILABLE
+        self.due_date: Optional[datetime] = None
+        self.borrowed_by: Optional['Member'] = None
+
+
+# ============ Member ============
+
+class Member:
+    def __init__(self, member_id: str, name: str, account_type: AccountType = AccountType.STANDARD):
+        self.member_id = member_id
+        self.name = name
+        self.account_type = account_type
+        self.status = MemberStatus.ACTIVE
+        self.borrowed_items: List[BookItem] = []
+        self.total_fine: float = 0.0
+
+    @property
+    def max_books(self) -> int:
+        return self.account_type.value
+
+    def can_borrow(self) -> bool:
+        return (self.status == MemberStatus.ACTIVE and
+                len(self.borrowed_items) < self.max_books)
+
+
+# ============ Notification (Observer) ============
+
+class NotificationService(ABC):
+    @abstractmethod
+    def send(self, member: Member, message: str): pass
+
+class EmailNotification(NotificationService):
+    def send(self, member: Member, message: str):
+        print(f"[Email to {member.name}]: {message}")
+
+class SMSNotification(NotificationService):
+    def send(self, member: Member, message: str):
+        print(f"[SMS to {member.name}]: {message}")
+
+
+# ============ Library System ============
+
+class Library:
+    def __init__(self):
+        self.books: Dict[str, Book] = {}       # isbn -> Book
+        self.members: Dict[str, Member] = {}   # member_id -> Member
+        self.reservations: Dict[str, deque] = {}  # isbn -> queue of Member
+        self.notifications: List[NotificationService] = []
+        # Search indices
+        self._title_index: Dict[str, List[Book]] = {}
+        self._author_index: Dict[str, List[Book]] = {}
+
+    def add_notification_service(self, service: NotificationService):
+        self.notifications.append(service)
+
+    def add_book(self, book: Book):
+        self.books[book.isbn] = book
+        # Build search indices
+        title_key = book.title.lower()
+        self._title_index.setdefault(title_key, []).append(book)
+        author_key = book.author.lower()
+        self._author_index.setdefault(author_key, []).append(book)
+
+    def register_member(self, member: Member):
+        self.members[member.member_id] = member
+
+    def borrow_book(self, member_id: str, isbn: str) -> Optional[BookItem]:
+        member = self.members.get(member_id)
+        book = self.books.get(isbn)
+        if not member or not book or not member.can_borrow():
+            return None
+
+        # Find available copy
+        for item in book.items:
+            if item.status == BookStatus.AVAILABLE:
+                item.status = BookStatus.BORROWED
+                item.due_date = datetime.now() + timedelta(days=14)
+                item.borrowed_by = member
+                member.borrowed_items.append(item)
+                return item
+        return None  # No available copy
+
+    def return_book(self, member_id: str, barcode: str) -> float:
+        member = self.members.get(member_id)
+        if not member:
+            return 0.0
+
+        item = next((i for i in member.borrowed_items if i.barcode == barcode), None)
+        if not item:
+            return 0.0
+
+        # Calculate fine
+        fine = 0.0
+        if datetime.now() > item.due_date:
+            overdue_days = (datetime.now() - item.due_date).days
+            fine = overdue_days * 1.0  # $1/day
+            member.total_fine += fine
+
+        # Reset book item
+        item.status = BookStatus.AVAILABLE
+        item.due_date = None
+        item.borrowed_by = None
+        member.borrowed_items.remove(item)
+
+        # Check reservations (Observer notification)
+        isbn = item.book.isbn
+        if isbn in self.reservations and self.reservations[isbn]:
+            next_member = self.reservations[isbn].popleft()
+            for svc in self.notifications:
+                svc.send(next_member, f"'{item.book.title}' is now available!")
+
+        return fine
+
+    def reserve_book(self, member_id: str, isbn: str) -> bool:
+        member = self.members.get(member_id)
+        book = self.books.get(isbn)
+        if not member or not book:
+            return False
+        if book.available_copies() > 0:
+            return False  # No need to reserve, just borrow
+        self.reservations.setdefault(isbn, deque()).append(member)
+        return True
+
+    def search_by_title(self, title: str) -> List[Book]:
+        return self._title_index.get(title.lower(), [])
+
+    def search_by_author(self, author: str) -> List[Book]:
+        return self._author_index.get(author.lower(), [])
+
+    def search_by_isbn(self, isbn: str) -> Optional[Book]:
+        return self.books.get(isbn)
+
+
+# ============ Usage ============
+if __name__ == "__main__":
+    lib = Library()
+    lib.add_notification_service(EmailNotification())
+
+    # Add books
+    hp = Book("978-0-7432-7356-5", "Harry Potter", "J.K. Rowling", "Fiction")
+    hp.add_item(BookItem("HP-001", hp))
+    hp.add_item(BookItem("HP-002", hp))
+    lib.add_book(hp)
+
+    # Register members
+    alice = Member("M001", "Alice", AccountType.PREMIUM)
+    bob = Member("M002", "Bob")
+    lib.register_member(alice)
+    lib.register_member(bob)
+
+    # Borrow
+    item = lib.borrow_book("M001", "978-0-7432-7356-5")
+    print(f"Alice borrowed: {item.barcode}, due: {item.due_date}")
+
+    # Reserve (Bob reserves when all copies are borrowed)
+    lib.borrow_book("M002", "978-0-7432-7356-5")  # borrow 2nd copy
+    lib.reserve_book("M001", "978-0-7432-7356-5")  # Alice reserves
+
+    # Return → triggers notification
+    lib.return_book("M002", "HP-002")
+</code></pre>
+
+<div class="real-world">
+<h4>🌍 真實世界圖書館系統案例</h4>
+<ul>
+<li><strong>Amazon Kindle Unlimited：</strong>借書上限 20 本，歸還後才能借新的 → 完全對應我們的 max_books 設計</li>
+<li><strong>OCLC WorldCat：</strong>全球最大圖書目錄，Book (MARC record) vs BookItem (holdings) 就是我們的設計</li>
+<li><strong>Libby (OverDrive)：</strong>圖書館電子書預約系統，wait queue 用 FIFO，到期自動歸還 → 我們的 reservation queue</li>
+<li><strong>Netflix DVD 時代：</strong>DVD queue 系統就是 reservation + availability notification 的大規模版本</li>
+</ul>
+</div>
+
+<div class="quiz">
+<h4>✅ 驗證測驗（Chapter 3）</h4>
+
+<details open>
+<summary>題目 1：為什麼要區分 Book 和 BookItem？直接用一個 Book class 不行嗎？</summary>
+<p><strong>答案：</strong>不行。一本《哈利波特》圖書館可能有 5 本實體副本，每本有不同狀態（1 本被借、1 本遺失、3 本在架上）。如果只有 Book，你無法追蹤「哪一本被誰借了」。這是 <strong>Type-Instance Pattern</strong>：Book 是 Type（描述性資訊），BookItem 是 Instance（實體追蹤）。真實系統如 Amazon 也區分 Product（商品頁）和 Inventory Item（倉庫裡的實體商品）。</p>
+</details>
+
+<details open>
+<summary>題目 2：notification service 用 list 存多個 notifier，這是什麼模式？與 if-else 判斷有什麼差別？</summary>
+<p><strong>答案：</strong>Observer Pattern（更精確地說是 Publisher-Subscriber 的同步版本）。差別：if-else 寫法（`if email: send_email(); if sms: send_sms()`）每加一個通知管道要改源碼（違反 OCP）。Observer 寫法只需 `add_notification_service(new_channel)`，完全不動 return_book() 的邏輯。這就是「對擴展開放，對修改封閉」。</p>
+</details>
+
+<details open>
+<summary>題目 3：如果有 100 萬本書，search_by_title 的 dict lookup 是 O(1)，但如果要支援「模糊搜尋」（如搜 "Harry" 能找到 "Harry Potter"）怎麼辦？</summary>
+<p><strong>答案：</strong>Dict exact match 不支援模糊搜尋。解決方案：(1) 用 Trie (prefix tree) 支援 prefix search。(2) 用 Inverted Index（每個 word → list of books），搜 "Harry" 回傳所有含 "Harry" 的書。(3) 用 Elasticsearch/Lucene（真實系統的選擇）支援全文檢索。面試中提 Trie 或 Inverted Index 即可展示深度。</p>
+</details>
+
+<details open>
+<summary>題目 4：如果兩個人同時歸還同一本書預約的最後一位會員怎麼辦？有 race condition 嗎？</summary>
+<p><strong>答案：</strong>有！deque.popleft() 不是 thread-safe 的。如果兩個 return 同時 fire，可能 popleft 兩次但 queue 只有一個人。修正：reservation 操作加 Lock，或用 threading.Queue（thread-safe built-in）。在分散式系統中，用 Redis LPOP (atomic) 或 SQS FIFO queue。</p>
+</details>
+</div>
+
+<div class="followup">
+<h4>💬 Follow-up 面試問題</h4>
+<details open>
+<summary>Q1: How would you handle book renewals (extensions)?</summary>
+<p><strong>A:</strong> Add renew_count to BookItem (default 0, max 1). renew_book() checks: (1) not already renewed, (2) no reservations pending for this ISBN, (3) not overdue. If OK, extend due_date by 14 more days and increment renew_count.</p>
+</details>
+<details open>
+<summary>Q2: How would you handle different fine policies (grace period, caps)?</summary>
+<p><strong>A:</strong> Strategy pattern: FineCalculator interface with calculate(due_date, return_date). Implementations: StandardFine ($1/day), GracePeriodFine (3 days grace, then $1/day), CappedFine (max $25). Library holds the active strategy.</p>
+</details>
+<details open>
+<summary>Q3: How would you scale to a network of libraries (inter-library loans)?</summary>
+<p><strong>A:</strong> Add a LibraryNetwork class that aggregates multiple Library instances. When a book isn't available locally, search_network() queries other branches. Transfer creates a TransferRequest (similar to a reservation but cross-library). Each library maintains its own data; the network is a coordinator.</p>
+</details>
+<details open>
+<summary>Q4: How would you implement a recommendation system?</summary>
+<p><strong>A:</strong> Track borrowing history per member. Use collaborative filtering: "Members who borrowed X also borrowed Y." Add a RecommendationEngine class (Strategy pattern) that can be swapped between ContentBased, Collaborative, and Hybrid strategies.</p>
+</details>
+<details open>
+<summary>Q5: How would you add a waitlist priority system (faculty > student > public)?</summary>
+<p><strong>A:</strong> Replace deque with a priority queue (heapq). Each reservation includes a priority score based on AccountType. When a book is returned, heappop gives the highest-priority member. Tie-break by reservation timestamp (earlier = higher priority).</p>
+</details>
+</div>
+
+<hr>
+
+<!-- ==================== CHAPTER 4 ==================== -->
+<h2>Chapter 4：Design Elevator System 🛗</h2>
+
+<div class="key-concepts">
+<h4>🔑 本章關鍵前置知識</h4>
+<ul>
+<li><strong>State Pattern：</strong>電梯有多種狀態（閒置/上行/下行/維修），不同狀態下行為不同</li>
+<li><strong>Strategy Pattern：</strong>調度演算法可抽換（SCAN、最短時間優先、分區調度）</li>
+<li><strong>Enum + State Machine：</strong>狀態轉換圖（哪些狀態可以轉到哪些狀態）</li>
+<li><strong>Observer：</strong>電梯到達樓層時通知等候者</li>
+</ul>
+</div>
+
+<div class="glossary">
+<h4>📖 術語詞彙表</h4>
+
+<details open>
+<summary>State Pattern（狀態模式）</summary>
+<p><strong>生活比喻：</strong>手機的「飛航模式」。開啟飛航模式後，打電話、收訊息的行為全部改變（不響應）。不是用 if-else 判斷，而是整個行為物件替換了。</p>
+<pre><code class="language-python">from abc import ABC, abstractmethod
+
+class ElevatorState(ABC):
+    @abstractmethod
+    def handle_request(self, elevator, floor: int): pass
+
+class IdleState(ElevatorState):
+    def handle_request(self, elevator, floor):
+        if floor == elevator.current_floor:
+            elevator.open_door()
+        elif floor > elevator.current_floor:
+            elevator.state = MovingUpState()
+            elevator.move_to(floor)
+        else:
+            elevator.state = MovingDownState()
+            elevator.move_to(floor)
+
+class MovingUpState(ElevatorState):
+    def handle_request(self, elevator, floor):
+        if floor > elevator.current_floor:
+            elevator.add_stop(floor)  # 順路加入
+        else:
+            elevator.pending_requests.append(floor)  # 等回程再處理
+</code></pre>
+</details>
+
+<details open>
+<summary>Scheduling Algorithm（調度演算法）</summary>
+<p><strong>生活比喻：</strong>電梯調度就像「接送小孩的校車路線」——是先送最近的一站，還是走固定路線一路送到底再折返？</p>
+<ul>
+<li><strong>FCFS（先到先服務）：</strong>誰先按誰先到，簡單但不效率</li>
+<li><strong>SCAN（掃描/電梯算法）：</strong>像掃地機器人，往一個方向走到底再折返，沿途停靠所有請求</li>
+<li><strong>LOOK：</strong>改良 SCAN，不走到底，走到最遠請求就折返</li>
+</ul>
+</details>
+
+<details open>
+<summary>Thread Pool / Concurrent Requests</summary>
+<p><strong>本題的並發挑戰：</strong>多人同時按電梯按鈕 → 多個 request 同時到達 → 需要 thread-safe 的 request queue。用 threading.Lock 或 queue.PriorityQueue 保護。</p>
+</details>
+</div>
+
+<div class="why-pattern">
+<h4>🤔 為什麼選這些模式？</h4>
+<table>
+<tr><th>需求</th><th>設計挑戰</th><th>模式選擇</th><th>推理</th></tr>
+<tr><td>電梯有多種運行狀態</td><td>Idle/Up/Down/Maintenance 行為完全不同</td><td><strong>State</strong></td><td>避免巨大 if-else，狀態切換清晰</td></tr>
+<tr><td>調度策略可能改變</td><td>尖峰用不同算法</td><td><strong>Strategy</strong></td><td>SCAN/LOOK/Nearest 可 runtime 切換</td></tr>
+<tr><td>多部電梯協調</td><td>如何分配請求給最適合的電梯</td><td><strong>Dispatcher (Mediator)</strong></td><td>中央調度器解耦電梯之間的依賴</td></tr>
+<tr><td>到達樓層通知</td><td>顯示面板、警報、開門</td><td><strong>Observer</strong></td><td>電梯到達 → 通知多個系統</td></tr>
+</table>
+<p><strong>面試時這樣說：</strong>「I'll use State pattern for each elevator because behavior in Idle vs Moving states is fundamentally different. For scheduling, Strategy lets us swap between SCAN and Nearest-First based on traffic. A central Dispatcher acts as Mediator to coordinate multiple elevators without them needing to know about each other.」</p>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>你在 10 樓按了向下按鈕。大樓有 3 部電梯，系統要決定「派哪一部來最快？」。如果一部在 8 樓往下走、一部在 2 樓往上走、一部在 10 樓閒置——答案很明顯是第三部。這就是 Elevator Dispatcher 的核心工作。</p>
+<p><strong>設計重點：</strong>多部電梯調度、方向優化、開關門邏輯、樓層按鈕管理。</p>
+</div>
+
+<h3>Python 完整實作</h3>
+
+<pre><code class="language-python">from enum import Enum
+from typing import List, Optional
+from abc import ABC, abstractmethod
+import heapq
+import threading
+
+
+class Direction(Enum):
+    UP = 1
+    DOWN = -1
+    IDLE = 0
+
+
+class DoorState(Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+# ============ Request ============
+
+class ElevatorRequest:
+    def __init__(self, floor: int, direction: Direction, timestamp: float = 0):
+        self.floor = floor
+        self.direction = direction
+        self.timestamp = timestamp
+
+    def __lt__(self, other):
+        return self.floor < other.floor
+
+
+# ============ Elevator ============
+
+class Elevator:
+    def __init__(self, elevator_id: int, min_floor: int = 1, max_floor: int = 20):
+        self.id = elevator_id
+        self.current_floor = 1
+        self.direction = Direction.IDLE
+        self.door = DoorState.CLOSED
+        self.min_floor = min_floor
+        self.max_floor = max_floor
+        self.stops: List[int] = []  # Sorted stops in current direction
+        self._lock = threading.Lock()
+
+    def add_stop(self, floor: int):
+        with self._lock:
+            if floor not in self.stops:
+                self.stops.append(floor)
+                self.stops.sort(reverse=(self.direction == Direction.DOWN))
+
+    def move(self):
+        """Simulate one step of movement."""
+        with self._lock:
+            if not self.stops:
+                self.direction = Direction.IDLE
+                return
+
+            next_stop = self.stops[0]
+            if self.current_floor < next_stop:
+                self.current_floor += 1
+                self.direction = Direction.UP
+            elif self.current_floor > next_stop:
+                self.current_floor -= 1
+                self.direction = Direction.DOWN
+
+            if self.current_floor == next_stop:
+                self.stops.pop(0)
+                self.open_door()
+
+    def open_door(self):
+        self.door = DoorState.OPEN
+        print(f"Elevator {self.id}: Door OPEN at floor {self.current_floor}")
+
+    def close_door(self):
+        self.door = DoorState.CLOSED
+
+    def distance_to(self, floor: int) -> int:
+        return abs(self.current_floor - floor)
+
+    def is_idle(self) -> bool:
+        return self.direction == Direction.IDLE
+
+
+# ============ Scheduling Strategy ============
+
+class SchedulingStrategy(ABC):
+    @abstractmethod
+    def select_elevator(self, elevators: List[Elevator], request: ElevatorRequest) -> Elevator:
+        pass
+
+
+class NearestElevatorStrategy(SchedulingStrategy):
+    """Assign to the nearest idle or same-direction elevator."""
+    def select_elevator(self, elevators: List[Elevator], request: ElevatorRequest) -> Elevator:
+        best = None
+        best_score = float('inf')
+        for e in elevators:
+            if e.is_idle():
+                score = e.distance_to(request.floor)
+            elif e.direction == request.direction:
+                # Same direction and hasn't passed the floor
+                if (e.direction == Direction.UP and e.current_floor <= request.floor) or \
+                   (e.direction == Direction.DOWN and e.current_floor >= request.floor):
+                    score = e.distance_to(request.floor)
+                else:
+                    score = float('inf')
+            else:
+                score = float('inf')
+
+            if score < best_score:
+                best_score = score
+                best = e
+        return best or elevators[0]
+
+
+class SCANStrategy(SchedulingStrategy):
+    """SCAN (elevator algorithm): continue in same direction, serve all stops."""
+    def select_elevator(self, elevators: List[Elevator], request: ElevatorRequest) -> Elevator:
+        # Find elevator going in the right direction that will pass this floor
+        for e in elevators:
+            if e.direction == request.direction:
+                if request.direction == Direction.UP and e.current_floor <= request.floor:
+                    return e
+                if request.direction == Direction.DOWN and e.current_floor >= request.floor:
+                    return e
+        # Fallback: nearest idle
+        idle = [e for e in elevators if e.is_idle()]
+        if idle:
+            return min(idle, key=lambda e: e.distance_to(request.floor))
+        return min(elevators, key=lambda e: e.distance_to(request.floor))
+
+
+# ============ Elevator System (Dispatcher) ============
+
+class ElevatorSystem:
+    def __init__(self, num_elevators: int = 3, num_floors: int = 20):
+        self.elevators = [Elevator(i, 1, num_floors) for i in range(num_elevators)]
+        self.strategy: SchedulingStrategy = NearestElevatorStrategy()
+        self.num_floors = num_floors
+
+    def set_strategy(self, strategy: SchedulingStrategy):
+        self.strategy = strategy
+
+    def request_elevator(self, floor: int, direction: Direction):
+        """External button press (hallway)."""
+        request = ElevatorRequest(floor, direction)
+        elevator = self.strategy.select_elevator(self.elevators, request)
+        elevator.add_stop(floor)
+        print(f"Request floor {floor} {direction.name} → Elevator {elevator.id} "
+              f"(currently at {elevator.current_floor})")
+
+    def request_floor(self, elevator_id: int, floor: int):
+        """Internal button press (inside elevator)."""
+        self.elevators[elevator_id].add_stop(floor)
+
+    def step(self):
+        """Simulate one time step for all elevators."""
+        for e in self.elevators:
+            e.move()
+
+    def status(self) -> str:
+        lines = []
+        for e in self.elevators:
+            lines.append(f"E{e.id}: Floor {e.current_floor}, "
+                        f"Dir={e.direction.name}, Stops={e.stops}")
+        return "\n".join(lines)
+
+
+# ============ Usage ============
+if __name__ == "__main__":
+    system = ElevatorSystem(num_elevators=3, num_floors=20)
+
+    system.request_elevator(5, Direction.UP)
+    system.request_elevator(8, Direction.DOWN)
+    system.request_elevator(3, Direction.UP)
+
+    print(system.status())
+    for _ in range(10):
+        system.step()
+    print(system.status())
+</code></pre>
+
+<div class="real-world">
+<h4>🌍 真實世界電梯系統案例</h4>
+<ul>
+<li><strong>KONE DX (智慧電梯)：</strong>使用 AI 預測流量，尖峰時段切換到 Zone-Based 策略（低樓層一組電梯、高樓層另一組）→ 對應我們的 Strategy 切換</li>
+<li><strong>Otis Compass (目的地調度)：</strong>乘客先在大廳輸入目標樓層，系統分配電梯號碼（不是上/下按鈕）→ 這需要改我們的 Request model，加入 destination_floor</li>
+<li><strong>台北 101：</strong>高速電梯 + 分區調度（B5-60F 快速梯 + 60-89F 接駁梯）→ 對應多個 ElevatorSystem，各管自己的樓層區間</li>
+<li><strong>AWS Step Functions：</strong>狀態機概念完全相同——從一個 state 到另一個 state，有 transition rules</li>
+</ul>
+</div>
+
+<div class="quiz">
+<h4>✅ 驗證測驗（Chapter 4）</h4>
+
+<details open>
+<summary>題目 1：State Pattern vs 用 if self.direction == UP: ... elif ... 有什麼本質差異？</summary>
+<p><strong>答案：</strong>if-else 把所有狀態邏輯塞在一個方法裡（God Method），加新狀態要改所有分支（違反 OCP）。State Pattern 把每個狀態的邏輯封裝在獨立 class 中，加新狀態（如 EmergencyState）只需新增一個 class 並定義其轉換規則。另外 State Pattern 讓狀態轉換是<strong>顯式的</strong>（`self.state = MovingUpState()`），比隱式 flag 修改更易追蹤 bug。</p>
+</details>
+
+<details open>
+<summary>題目 2：NearestElevatorStrategy 在什麼場景會表現不好？</summary>
+<p><strong>答案：</strong>Starvation（飢餓）場景：如果大樓底層不斷有人按電梯（上班尖峰），所有電梯都被派到 1F，高樓層的人永遠等不到。解決：加入 fairness weight（等待時間越長，priority 越高），或用 Zone-Based 策略分配固定電梯給高樓層。真實系統（如 ThyssenKrupp MAX）用 ML 預測避免此問題。</p>
+</details>
+
+<details open>
+<summary>題目 3：如何處理「超重」情況？這影響哪些 class？</summary>
+<p><strong>答案：</strong>Elevator 加入 `current_weight` 和 `max_weight` 屬性。Door 的 close() 方法在超重時不關門（State 行為改變）。SchedulingStrategy 排除已超重的電梯。注意這不需要改 ElevatorSystem 或 ElevatorRequest——只影響 Elevator 自己的行為（SRP 的好處！）。</p>
+</details>
+
+<details open>
+<summary>題目 4：在分散式系統中（50 層大樓、8 部電梯），Dispatcher 如何避免成為瓶頸？</summary>
+<p><strong>答案：</strong>(1) Sharding：按樓層分區，每區有自己的 sub-dispatcher（Zone 1 管 1-15F，Zone 2 管 16-30F）。(2) 去中心化：每部電梯自行決定是否接受 request（gossip protocol），dispatcher 只做初始分配。(3) Eventually Consistent：允許短暫的非最優分配，電梯之間異步同步 workload 資訊。</p>
+</details>
+</div>
+
+<div class="followup">
+<h4>💬 Follow-up 面試問題</h4>
+<details open>
+<summary>Q1: How would you handle VIP/express floors?</summary>
+<p><strong>A:</strong> Add priority to ElevatorRequest. Dedicated express elevators serve only certain floors (skip middle floors). VIP requests get higher priority in the scheduling algorithm. Can use a separate priority queue per elevator.</p>
+</details>
+<details open>
+<summary>Q2: How would you handle emergency evacuation?</summary>
+<p><strong>A:</strong> Add EmergencyState that overrides all normal behavior: all elevators go to ground floor, doors open, ignore all requests. This is a State pattern transition triggered by a fire alarm signal. The Dispatcher switches all elevators to EmergencyState atomically.</p>
+</details>
+<details open>
+<summary>Q3: How would you optimize for morning rush (everyone going up from lobby)?</summary>
+<p><strong>A:</strong> Switch to UpPeakStrategy: all elevators return to lobby when idle (instead of staying at last floor). Use batch loading: collect multiple passengers at lobby before departing. KONE calls this "morning up-peak mode."</p>
+</details>
+<details open>
+<summary>Q4: How would you add predictive scheduling (knowing patterns)?</summary>
+<p><strong>A:</strong> Collect historical data: which floors are busy at which times. Pre-position idle elevators at predicted high-demand floors. Machine learning model predicts next N requests. This is exactly what Otis's "Compass" and ThyssenKrupp's "MAX" systems do.</p>
+</details>
+<details open>
+<summary>Q5: How would you unit test the scheduling strategies?</summary>
+<p><strong>A:</strong> Create deterministic test scenarios: 3 elevators at known positions, fire a request, assert which elevator is selected. Mock the time/movement. Test edge cases: all elevators busy, request at min/max floor, simultaneous requests. Strategy pattern makes this trivial — inject test strategy without changing system code.</p>
+</details>
+</div>
+
+<hr>
+
+<h2>Chapter 5：Design Vending Machine 🥤</h2>
+
+<div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:16px;margin:16px 0;border-radius:4px;">
+<h4>📋 前置知識速覽（本章自成體系）</h4>
+<ul>
+<li><strong>State Pattern（狀態模式）：</strong>物件的行為隨內部狀態改變。比喻：交通號誌——紅燈時「停」，綠燈時「行」，同一個號誌不同時間有不同行為</li>
+<li><strong>Finite State Machine（有限狀態機）：</strong>系統在任何時刻只會處於有限個狀態之一，根據輸入在狀態之間轉換。比喻：ATM 機——等待插卡 → 輸入密碼 → 選擇操作 → 出鈔</li>
+<li><strong>Encapsulation（封裝）：</strong>把資料和操作資料的方法包在一起，外界只能透過定義好的接口互動。比喻：自動販賣機——你只能投幣和按按鈕，不能打開機器自己拿</li>
+</ul>
+</div>
+
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:16px 0;border-radius:4px;">
+<h4>📖 本章術語表</h4>
+<table>
+<tr><th>術語</th><th>白話解釋</th><th>比喻</th><th>真實例子</th></tr>
+<tr><td>State Pattern</td><td>把每個狀態封裝成一個 class，狀態切換時整個行為跟著變</td><td>紅綠燈：紅燈狀態的「行為」是阻止通行，綠燈狀態的「行為」是放行</td><td>TCP connection (LISTEN→SYN_SENT→ESTABLISHED→CLOSED)</td></tr>
+<tr><td>Context</td><td>持有當前狀態的物件，委託行為給 state object</td><td>自動販賣機本身——它持有「目前是閒置/已投幣/出貨中」</td><td>VendingMachine class 持有 state field</td></tr>
+<tr><td>Transition</td><td>從一個狀態切換到另一個狀態的動作</td><td>投入硬幣 → 從「閒置」切換到「已投幣」</td><td>insert_coin() 把 state 從 IdleState 換成 HasMoneyState</td></tr>
+<tr><td>Enum</td><td>一組固定的常數值（列舉型別）</td><td>硬幣面額只有固定幾種（1元、5元、10元、50元）</td><td>Python: class Coin(Enum): QUARTER=25, DOLLAR=100</td></tr>
+</table>
+</div>
+
+<div style="background:#e8f5e9;border-left:4px solid #4caf50;padding:16px;margin:16px 0;border-radius:4px;">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>你走到自動販賣機前。投入硬幣，螢幕顯示餘額。選擇飲料按鈕。如果錢夠，飲料掉出來，找零。如果錢不夠，顯示「餘額不足」。你也可以按退幣鍵拿回所有硬幣。</p>
+<p><strong>為什麼用 State Pattern：</strong>因為販賣機在「閒置」「已投幣」「出貨中」三個狀態下，<strong>同一個按鈕</strong>有完全不同的行為。如果用一堆 if-else 判斷狀態，會變成 spaghetti code。State Pattern 讓每個狀態自己知道該怎麼做。</p>
+</div>
+
+<div class="seedling">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>你走到自動販賣機前。投入硬幣，螢幕顯示餘額。選擇飲料按鈕。如果錢夠，飲料掉出來，找零。如果錢不夠，顯示「餘額不足」。你也可以按退幣鍵拿回所有硬幣。</p>
+<p><strong>設計重點：</strong>State Pattern（閒置→投幣→選擇→出貨→找零）、庫存管理、多種支付方式。</p>
+</div>
+
+<h3>Python 完整實作（State Pattern）</h3>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Dict, Optional, List
+
+
+class Coin(Enum):
+    PENNY = 1
+    NICKEL = 5
+    DIME = 10
+    QUARTER = 25
+    DOLLAR = 100
+
+
+# ============ Product ============
+
+class Product:
+    def __init__(self, name: str, price: int, quantity: int):
+        self.name = name
+        self.price = price          # In cents
+        self.quantity = quantity
+
+
+# ============ State Pattern ============
+
+class VendingState(ABC):
+    """Abstract state for the vending machine FSM."""
+
+    @abstractmethod
+    def insert_coin(self, machine: 'VendingMachine', coin: Coin) -> str:
+        pass
+
+    @abstractmethod
+    def select_product(self, machine: 'VendingMachine', product_code: str) -> str:
+        pass
+
+    @abstractmethod
+    def dispense(self, machine: 'VendingMachine') -> str:
+        pass
+
+    @abstractmethod
+    def cancel(self, machine: 'VendingMachine') -> str:
+        pass
+
+
+class IdleState(VendingState):
+    """Waiting for coins."""
+
+    def insert_coin(self, machine: 'VendingMachine', coin: Coin) -> str:
+        machine.balance += coin.value
+        machine.state = HasMoneyState()
+        return f"Inserted {coin.name}. Balance: ${machine.balance/100:.2f}"
+
+    def select_product(self, machine: 'VendingMachine', product_code: str) -> str:
+        return "Please insert coins first."
+
+    def dispense(self, machine: 'VendingMachine') -> str:
+        return "Please insert coins and select a product."
+
+    def cancel(self, machine: 'VendingMachine') -> str:
+        return "No transaction to cancel."
+
+
+class HasMoneyState(VendingState):
+    """Has money, waiting for product selection or more coins."""
+
+    def insert_coin(self, machine: 'VendingMachine', coin: Coin) -> str:
+        machine.balance += coin.value
+        return f"Inserted {coin.name}. Balance: ${machine.balance/100:.2f}"
+
+    def select_product(self, machine: 'VendingMachine', product_code: str) -> str:
+        product = machine.inventory.get(product_code)
+        if not product:
+            return f"Invalid product code: {product_code}"
+        if product.quantity == 0:
+            return f"'{product.name}' is sold out."
+        if machine.balance < product.price:
+            diff = product.price - machine.balance
+            return f"Insufficient balance. Need ${diff/100:.2f} more."
+
+        machine.selected_product = product_code
+        machine.state = DispensingState()
+        return machine.state.dispense(machine)
+
+    def dispense(self, machine: 'VendingMachine') -> str:
+        return "Please select a product first."
+
+    def cancel(self, machine: 'VendingMachine') -> str:
+        refund = machine.balance
+        machine.balance = 0
+        machine.state = IdleState()
+        return f"Transaction cancelled. Refund: ${refund/100:.2f}"
+
+
+class DispensingState(VendingState):
+    """Dispensing product and making change."""
+
+    def insert_coin(self, machine: 'VendingMachine', coin: Coin) -> str:
+        return "Please wait, dispensing in progress."
+
+    def select_product(self, machine: 'VendingMachine', product_code: str) -> str:
+        return "Please wait, dispensing in progress."
+
+    def dispense(self, machine: 'VendingMachine') -> str:
+        product = machine.inventory[machine.selected_product]
+        product.quantity -= 1
+        change = machine.balance - product.price
+        machine.balance = 0
+        machine.selected_product = None
+        machine.state = IdleState()
+
+        msg = f"🥤 Dispensed: {product.name}!"
+        if change > 0:
+            msg += f" Change: ${change/100:.2f}"
+        return msg
+
+    def cancel(self, machine: 'VendingMachine') -> str:
+        return "Cannot cancel during dispensing."
+
+
+# ============ Vending Machine ============
+
+class VendingMachine:
+    def __init__(self):
+        self.inventory: Dict[str, Product] = {}
+        self.balance: int = 0  # In cents
+        self.state: VendingState = IdleState()
+        self.selected_product: Optional[str] = None
+
+    def add_product(self, code: str, product: Product):
+        self.inventory[code] = product
+
+    def restock(self, code: str, quantity: int):
+        if code in self.inventory:
+            self.inventory[code].quantity += quantity
+
+    def insert_coin(self, coin: Coin) -> str:
+        return self.state.insert_coin(self, coin)
+
+    def select_product(self, code: str) -> str:
+        return self.state.select_product(self, code)
+
+    def cancel(self) -> str:
+        return self.state.cancel(self)
+
+    def display(self) -> List[str]:
+        lines = ["=== Vending Machine ==="]
+        for code, product in self.inventory.items():
+            status = "SOLD OUT" if product.quantity == 0 else f"${product.price/100:.2f}"
+            lines.append(f"  [{code}] {product.name:.<20} {status} (qty: {product.quantity})")
+        lines.append(f"  Balance: ${self.balance/100:.2f}")
+        lines.append(f"  State: {type(self.state).__name__}")
+        return lines
+
+
+# ============ Usage ============
+
+if __name__ == "__main__":
+    vm = VendingMachine()
+    vm.add_product("A1", Product("Cola", 150, 5))
+    vm.add_product("A2", Product("Water", 100, 10))
+    vm.add_product("B1", Product("Chips", 200, 3))
+    vm.add_product("B2", Product("Candy", 75, 8))
+
+    print(vm.insert_coin(Coin.DOLLAR))      # Inserted DOLLAR. Balance: $1.00
+    print(vm.insert_coin(Coin.QUARTER))     # Inserted QUARTER. Balance: $1.25
+    print(vm.select_product("A1"))          # 🥤 Dispensed: Cola! Change: $0.25 (was missing 25c for $1.50 -> actually not enough!)
+    # Let's fix: need $1.50 for Cola
+    print(vm.insert_coin(Coin.DOLLAR))
+    print(vm.insert_coin(Coin.DOLLAR))
+    print(vm.select_product("A1"))          # Dispensed Cola, change $0.50
+</code></pre>
+
+<h3>State Machine 圖</h3>
+<pre><code>
+┌──────────┐  insert_coin   ┌──────────────┐  select_product  ┌────────────┐
+│   IDLE   │ ──────────────▶│  HAS_MONEY   │ ───────────────▶ │ DISPENSING │
+│          │                │              │   (if enough $)   │            │
+└──────────┘                └──────────────┘                  └────────────┘
+     ▲                           │                                  │
+     │         cancel            │                                  │
+     │◀──────────────────────────┘                                  │
+     │                                                              │
+     │◀─────────────────────────────────────────────────────────────┘
+                            dispense complete
+</code></pre>
+
+<div class="followup">
+<h4>💬 Follow-up 面試問題</h4>
+<details open>
+<summary>Q1: How would you add credit card/mobile payment?</summary>
+<p><strong>A:</strong> Strategy pattern for PaymentMethod: CoinPayment, CardPayment, MobilePayment. Each implements authorize(amount) -> bool and charge(amount). The HasMoneyState becomes HasPaymentState. Card/mobile can authorize the full amount upfront.</p>
+</details>
+<details open>
+<summary>Q2: How would you handle the "exact change only" scenario?</summary>
+<p><strong>A:</strong> Track available change in the machine (coins inventory). Before dispensing, check if machine can make change. If not, display "EXACT CHANGE ONLY" and reject selections where change would be needed. Add a CoinInventory class that tracks available coins by denomination.</p>
+</details>
+<details open>
+<summary>Q3: How would you make this thread-safe for concurrent users?</summary>
+<p><strong>A:</strong> In a physical machine, only one user at a time (single interface). But for a virtual/API version: wrap state transitions in a lock. Use the State pattern itself as the guard: if state is DispensingState, all other operations return "busy". For distributed machines: use optimistic locking on inventory count.</p>
+</details>
+<details open>
+<summary>Q4: How would you add an admin/maintenance mode?</summary>
+<p><strong>A:</strong> Add MaintenanceState to the FSM. Admin key/code triggers transition. In MaintenanceState: restock, collect money, view logs are available. All customer operations return "Out of Service". Transition back to IdleState on admin exit.</p>
+</details>
+<details open>
+<summary>Q5: How would you implement a combo deal (buy 2 get 1 free)?</summary>
+<p><strong>A:</strong> Add a PromotionEngine class (Strategy pattern) that applies pricing rules. The machine checks promotions before calculating final price. Promotions can be: BuyNGetMFree, PercentDiscount, BundleDeal. Stored in a promotions list, evaluated in order. This separates pricing logic from core machine behavior (SRP).</p>
+</details>
+</div>
+
+
+
+
+
+<div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:16px;margin:16px 0;border-radius:4px;">
+<h4>🧪 Ch5 驗證測驗</h4>
+<details open><summary>Q1: State Pattern 和一堆 if-else 有什麼本質差別？何時該用 State Pattern？</summary>
+<p><strong>A:</strong> if-else 把所有狀態邏輯塞在同一個函數裡，狀態越多越難維護（cyclomatic complexity 指數增長）。State Pattern 把每個狀態封裝成獨立 class，加新狀態只需新增一個 class（OCP）。<strong>經驗法則：當狀態 ≥ 3 個且各狀態行為差異大時用 State Pattern。</strong>如果只有 2 個狀態（開/關），if-else 就夠了。</p>
+</details>
+<details open><summary>Q2: 販賣機出貨失敗（卡住了）應該怎麼處理？系統應該切換到什麼狀態？</summary>
+<p><strong>A:</strong> 加一個 <code>MalfunctionState</code>。所有操作都返回 "Out of Service"。觸發告警通知維修人員。用戶的錢應該退還（記錄 balance 在 Ticket 裡，維修時可根據 log 退款）。修好後管理員手動切換回 IdleState。</p>
+</details>
+<details open><summary>Q3: 如果要支援「買兩瓶打 8 折」的促銷，應該改哪裡？用什麼 Pattern？</summary>
+<p><strong>A:</strong> 加 PromotionEngine（Strategy pattern）。DispensingState 在計算價格前先問 PromotionEngine 有沒有適用的促銷。這樣促銷邏輯和核心販賣邏輯分離（SRP）。不需要改 State Machine 本身。</p>
+</details>
+</div>
+<hr>
+
+
+<h1>🎯 OOD 面試攻略 Part 2：進階設計題 Ch6-Ch15</h1>
+
+<div class="toc">
+<h3>📖 目錄</h3>
+<ul>
+<li><a href="#ch6">Ch6: Design Chess Game ♟️</a></li>
+<li><a href="#ch7">Ch7: Design Hotel Booking 🏨</a></li>
+<li><a href="#ch8">Ch8: Design ATM Machine 🏧</a></li>
+<li><a href="#ch9">Ch9: Design File System 📁</a></li>
+<li><a href="#ch10">Ch10: Design Social Media Feed 📱</a></li>
+<li><a href="#ch11">Ch11: Design Amazon Locker 📦</a></li>
+<li><a href="#ch12">Ch12: Design Movie Ticket Booking 🎬</a></li>
+<li><a href="#ch13">Ch13: Design Card Game (Blackjack) 🃏</a></li>
+<li><a href="#ch14">Ch14: Design Splitwise 💰</a></li>
+<li><a href="#ch15">Ch15: Design Rate Limiter ⚡</a></li>
+<li><a href="#summary">總結：OOD 模式地圖 + SOLID + 面試節奏</a></li>
+</ul>
+</div>
+
+<!-- ==================== CH6 ==================== -->
+<h2 id="ch6">Ch6: Design Chess Game ♟️</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Polymorphism（多型）：</strong>同一個方法名，不同子類別有不同實作。比喻：「移動」這個動作——車子是開、船是航行、飛機是飛。真實例子：每個棋子的 get_valid_moves() 回傳不同結果</li>
+<li><strong>Abstract Class：</strong>不能直接建立實例的類別，定義子類別必須實作的方法。比喻：「交通工具」是抽象的——你不能買一個「交通工具」，只能買車/船/飛機</li>
+<li><strong>Template Method：</strong>父類別定義骨架流程，子類別填入細節。比喻：考試都是「拿卷子→寫題目→交卷」，但每科寫的內容不同</li>
+</ul></div>
+
+<p><span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">Template Method</span> <span class="pattern-tag">Polymorphism</span> <span class="solid-tag">OCP</span> <span class="solid-tag">LSP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>西洋棋就像一個「規則引擎」——每種棋子有自己獨特的走法（多型），棋盤是狀態容器，每一步需要驗證合法性。</p>
+<p><strong>白話解釋：</strong>我們要設計一個系統，能追蹤棋盤上每顆棋子的位置，驗證每一步是否合法（包含將軍/將殺判斷），並且容易新增特殊規則（入堡、吃過路兵）。</p>
+<p><strong>為什麼工作上需要：</strong>Chess Game 是展示 <strong>繼承+多型</strong> 最經典的題目。面試官想看你能否用 abstract base class 建立棋子層級，並用 polymorphism 處理不同走法。</p>
+<p><strong>先備知識：</strong>ABC（抽象基類）、多型、座標系統、矩陣操作</p>
+</div>
+
+<h3>核心概念：為什麼 Chess 是多型的最佳展示？</h3>
+<p>每種棋子的 <code>get_valid_moves()</code> 行為完全不同，但對外介面一致。這是 Liskov Substitution Principle 的教科書案例：任何接受 <code>Piece</code> 的地方，放入 <code>Knight</code> 或 <code>Bishop</code> 都能正確運作。</p>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from enum import Enum
+from typing import List, Tuple, Optional
+
+class Color(Enum):
+    WHITE = "white"
+    BLACK = "black"
+
+class Position:
+    def __init__(self, row: int, col: int):
+        self.row = row
+        self.col = col
+
+    def is_valid(self) -> bool:
+        return 0 <= self.row < 8 and 0 <= self.col < 8
+
+    def __eq__(self, other):
+        return self.row == other.row and self.col == other.col
+
+    def __hash__(self):
+        return hash((self.row, self.col))
+
+    def __repr__(self):
+        return f"({self.row},{self.col})"
+
+
+class Piece(ABC):
+    """棋子抽象基類 — 所有棋子共享的介面"""
+    def __init__(self, color: Color, position: Position):
+        self.color = color
+        self.position = position
+        self.has_moved = False
+
+    @abstractmethod
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        """多型核心：每種棋子實作自己的走法"""
+        pass
+
+    @abstractmethod
+    def symbol(self) -> str:
+        pass
+
+    def can_move_to(self, pos: Position, board: 'Board') -> bool:
+        return pos in self.get_valid_moves(board)
+
+
+class King(Piece):
+    def symbol(self) -> str:
+        return "♔" if self.color == Color.WHITE else "♚"
+
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        moves = []
+        directions = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
+        for dr, dc in directions:
+            new_pos = Position(self.position.row + dr, self.position.col + dc)
+            if new_pos.is_valid():
+                target = board.get_piece(new_pos)
+                if target is None or target.color != self.color:
+                    moves.append(new_pos)
+        # Castling (simplified)
+        if not self.has_moved:
+            moves.extend(self._get_castling_moves(board))
+        return moves
+
+    def _get_castling_moves(self, board: 'Board') -> List[Position]:
+        moves = []
+        row = self.position.row
+        # King-side castling
+        rook = board.get_piece(Position(row, 7))
+        if (rook and not rook.has_moved and
+            all(board.get_piece(Position(row, c)) is None for c in [5, 6])):
+            moves.append(Position(row, 6))
+        # Queen-side castling
+        rook = board.get_piece(Position(row, 0))
+        if (rook and not rook.has_moved and
+            all(board.get_piece(Position(row, c)) is None for c in [1, 2, 3])):
+            moves.append(Position(row, 2))
+        return moves
+
+
+class Knight(Piece):
+    def symbol(self) -> str:
+        return "♘" if self.color == Color.WHITE else "♞"
+
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        moves = []
+        jumps = [(-2,-1),(-2,1),(-1,-2),(-1,2),(1,-2),(1,2),(2,-1),(2,1)]
+        for dr, dc in jumps:
+            new_pos = Position(self.position.row + dr, self.position.col + dc)
+            if new_pos.is_valid():
+                target = board.get_piece(new_pos)
+                if target is None or target.color != self.color:
+                    moves.append(new_pos)
+        return moves
+
+
+class Rook(Piece):
+    def symbol(self) -> str:
+        return "♖" if self.color == Color.WHITE else "♜"
+
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        return self._get_line_moves(board, [(0,1),(0,-1),(1,0),(-1,0)])
+
+    def _get_line_moves(self, board: 'Board', directions) -> List[Position]:
+        moves = []
+        for dr, dc in directions:
+            r, c = self.position.row + dr, self.position.col + dc
+            while 0 <= r < 8 and 0 <= c < 8:
+                pos = Position(r, c)
+                target = board.get_piece(pos)
+                if target is None:
+                    moves.append(pos)
+                elif target.color != self.color:
+                    moves.append(pos)
+                    break
+                else:
+                    break
+                r, c = r + dr, c + dc
+        return moves
+
+
+class Bishop(Piece):
+    def symbol(self) -> str:
+        return "♗" if self.color == Color.WHITE else "♝"
+
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        return self._get_line_moves(board, [(1,1),(1,-1),(-1,1),(-1,-1)])
+
+    def _get_line_moves(self, board, directions):
+        moves = []
+        for dr, dc in directions:
+            r, c = self.position.row + dr, self.position.col + dc
+            while 0 <= r < 8 and 0 <= c < 8:
+                pos = Position(r, c)
+                target = board.get_piece(pos)
+                if target is None:
+                    moves.append(pos)
+                elif target.color != self.color:
+                    moves.append(pos)
+                    break
+                else:
+                    break
+                r, c = r + dr, c + dc
+        return moves
+
+
+class Queen(Piece):
+    def symbol(self) -> str:
+        return "♕" if self.color == Color.WHITE else "♛"
+
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        directions = [(0,1),(0,-1),(1,0),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]
+        moves = []
+        for dr, dc in directions:
+            r, c = self.position.row + dr, self.position.col + dc
+            while 0 <= r < 8 and 0 <= c < 8:
+                pos = Position(r, c)
+                target = board.get_piece(pos)
+                if target is None:
+                    moves.append(pos)
+                elif target.color != self.color:
+                    moves.append(pos)
+                    break
+                else:
+                    break
+                r, c = r + dr, c + dc
+        return moves
+
+
+class Pawn(Piece):
+    def symbol(self) -> str:
+        return "♙" if self.color == Color.WHITE else "♟"
+
+    def get_valid_moves(self, board: 'Board') -> List[Position]:
+        moves = []
+        direction = -1 if self.color == Color.WHITE else 1
+        # Forward one
+        one_ahead = Position(self.position.row + direction, self.position.col)
+        if one_ahead.is_valid() and board.get_piece(one_ahead) is None:
+            moves.append(one_ahead)
+            # Forward two (first move)
+            if not self.has_moved:
+                two_ahead = Position(self.position.row + 2*direction, self.position.col)
+                if two_ahead.is_valid() and board.get_piece(two_ahead) is None:
+                    moves.append(two_ahead)
+        # Diagonal capture
+        for dc in [-1, 1]:
+            cap_pos = Position(self.position.row + direction, self.position.col + dc)
+            if cap_pos.is_valid():
+                target = board.get_piece(cap_pos)
+                if target and target.color != self.color:
+                    moves.append(cap_pos)
+        return moves
+
+
+class Board:
+    def __init__(self):
+        self.grid: List[List[Optional[Piece]]] = [[None]*8 for _ in range(8)]
+        self._setup_pieces()
+
+    def _setup_pieces(self):
+        # Black pieces (row 0-1)
+        order = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+        for col, PieceClass in enumerate(order):
+            self.grid[0][col] = PieceClass(Color.BLACK, Position(0, col))
+            self.grid[1][col] = Pawn(Color.BLACK, Position(1, col))
+        # White pieces (row 6-7)
+        for col, PieceClass in enumerate(order):
+            self.grid[7][col] = PieceClass(Color.WHITE, Position(7, col))
+            self.grid[6][col] = Pawn(Color.WHITE, Position(6, col))
+
+    def get_piece(self, pos: Position) -> Optional[Piece]:
+        if pos.is_valid():
+            return self.grid[pos.row][pos.col]
+        return None
+
+    def move_piece(self, from_pos: Position, to_pos: Position) -> bool:
+        piece = self.get_piece(from_pos)
+        if piece is None:
+            return False
+        self.grid[to_pos.row][to_pos.col] = piece
+        self.grid[from_pos.row][from_pos.col] = None
+        piece.position = to_pos
+        piece.has_moved = True
+        return True
+
+    def find_king(self, color: Color) -> Position:
+        for r in range(8):
+            for c in range(8):
+                p = self.grid[r][c]
+                if isinstance(p, King) and p.color == color:
+                    return p.position
+        raise ValueError("King not found")
+
+    def is_in_check(self, color: Color) -> bool:
+        king_pos = self.find_king(color)
+        opponent = Color.BLACK if color == Color.WHITE else Color.WHITE
+        for r in range(8):
+            for c in range(8):
+                p = self.grid[r][c]
+                if p and p.color == opponent:
+                    if king_pos in p.get_valid_moves(self):
+                        return True
+        return False
+
+    def is_checkmate(self, color: Color) -> bool:
+        if not self.is_in_check(color):
+            return False
+        # Try all possible moves for this color
+        for r in range(8):
+            for c in range(8):
+                p = self.grid[r][c]
+                if p and p.color == color:
+                    for move in p.get_valid_moves(self):
+                        # Simulate move
+                        captured = self.get_piece(move)
+                        orig_pos = p.position
+                        self.move_piece(orig_pos, move)
+                        still_in_check = self.is_in_check(color)
+                        # Undo
+                        self.move_piece(move, orig_pos)
+                        self.grid[move.row][move.col] = captured
+                        p.has_moved = False  # simplified undo
+                        if not still_in_check:
+                            return False
+        return True
+
+
+class ChessGame:
+    def __init__(self):
+        self.board = Board()
+        self.current_turn = Color.WHITE
+        self.move_history: List[Tuple[Position, Position]] = []
+        self.is_over = False
+
+    def make_move(self, from_pos: Position, to_pos: Position) -> bool:
+        piece = self.board.get_piece(from_pos)
+        if not piece or piece.color != self.current_turn:
+            return False
+        if not piece.can_move_to(to_pos, self.board):
+            return False
+
+        # Simulate to check if move leaves king in check
+        captured = self.board.get_piece(to_pos)
+        self.board.move_piece(from_pos, to_pos)
+        if self.board.is_in_check(self.current_turn):
+            # Undo - illegal move
+            self.board.move_piece(to_pos, from_pos)
+            self.board.grid[to_pos.row][to_pos.col] = captured
+            return False
+
+        self.move_history.append((from_pos, to_pos))
+        # Switch turn
+        self.current_turn = Color.BLACK if self.current_turn == Color.WHITE else Color.WHITE
+        # Check for checkmate
+        if self.board.is_checkmate(self.current_turn):
+            self.is_over = True
+        return True
+
+
+# === 使用範例 ===
+game = ChessGame()
+print(game.make_move(Position(6,4), Position(4,4)))  # e2->e4: True
+print(game.make_move(Position(1,4), Position(3,4)))  # e7->e5: True
+print(f"Is black in check? {game.board.is_in_check(Color.BLACK)}")
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: 為什麼 Piece 用 ABC 而不是普通 class？</strong></p>
+<p>A: 因為 <code>get_valid_moves()</code> 沒有通用實作——每種棋子的走法完全不同。ABC 強制子類必須實作此方法，否則無法實例化。這保證了多型的安全性。</p>
+<p><strong>Q2: is_checkmate 的時間複雜度是多少？</strong></p>
+<p>A: O(N × M × K)，N=己方棋子數(≤16)，M=每顆棋子最大合法步數(≤27 for Queen)，K=對手棋子數。最差約 O(16 × 27 × 16) ≈ O(6912)，完全可接受。</p>
+<p><strong>Q3: 入堡（Castling）為什麼放在 King 而不是 Board？</strong></p>
+<p>A: SRP——入堡是 King 的特殊移動行為，由 King 知道自己能否入堡最自然。Board 只負責管理格子狀態。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何加入「吃過路兵」(En Passant)？</strong><br>
+A: 在 Game 層記錄上一步是否為 Pawn 前進兩格。Pawn 的 get_valid_moves 額外檢查相鄰列是否有剛移動兩格的敵方 Pawn。需要在 Game 層維護 <code>last_double_pawn_move: Optional[Position]</code>。</p>
+
+<p><strong>2. 如何處理 Pawn Promotion？</strong><br>
+A: 當 Pawn 到達對面底線時，Board.move_piece 觸發 callback/event 要求選擇升變棋子。可用 Strategy Pattern：<code>PromotionStrategy.choose()</code> 回傳新棋子類型。</p>
+
+<p><strong>3. 如何支援 Undo/Redo？</strong><br>
+A: Command Pattern——每個 Move 封裝成 Command 物件（含 from, to, captured_piece, was_first_move），Undo 就是 reverse 執行。維護兩個 stack：undo_stack 和 redo_stack。</p>
+
+<p><strong>4. 如何加入計時器（Chess Clock）？</strong><br>
+A: 新增 <code>ChessClock</code> 類（Observer），每次 make_move 成功後切換計時器。Clock 獨立於 Game 邏輯（SRP）。timeout 觸發 GameOver event。</p>
+
+<p><strong>5. 如何做到 Thread-Safe 的多人線上西洋棋？</strong><br>
+A: make_move 加鎖（Lock/Mutex），Board 狀態用 immutable snapshot 給觀察者。網路層用 WebSocket 推送。可引入 Event Sourcing——所有 move 存為事件流，客戶端 replay 得到棋盤狀態。</p>
+</div>
+
+<!-- ==================== CH7 ==================== -->
+<h2 id="ch7">Ch7: Design Hotel Booking System 🏨</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Observer Pattern：</strong>當某物狀態改變時，自動通知所有關注者。比喻：YouTube 訂閱——你不用每天去看頻道有沒有新片，系統會通知你。真實例子：Stripe webhook 通知商家付款狀態變更</li>
+<li><strong>Strategy Pattern（定價策略）：</strong>把演算法抽成可替換的物件。真實例子：Uber surge pricing、航空公司動態定價</li>
+</ul></div>
+
+<p><span class="pattern-tag">Observer Pattern</span> <span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">Factory Pattern</span> <span class="solid-tag">SRP</span> <span class="solid-tag">DIP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>訂飯店就像「座位預約系統」——房間有不同類型和價格，客人預訂後要通知清潔部門、前台、帳務，任何一環斷掉都不行。</p>
+<p><strong>白話解釋：</strong>系統要管理房間庫存、處理預訂/取消、計算費用（含稅/折扣）、並在狀態變化時通知相關方。核心挑戰：防止超賣（concurrency）和靈活的價格策略。</p>
+<p><strong>為什麼工作上需要：</strong>展示 Observer（通知系統）、Strategy（定價策略）、Factory（房間創建）的組合運用。面試官想看你能否解耦「業務邏輯」與「通知機制」。</p>
+<p><strong>先備知識：</strong>日期處理、Observer pattern、Strategy pattern</p>
+</div>
+
+<h3>核心概念：Observer 如何解耦通知邏輯？</h3>
+<p>當預訂成功時，需要：發 email 給客人、通知清潔排班、更新房間庫存、記錄帳務。若把這些全寫在 <code>make_reservation()</code> 裡，就違反 OCP——每加一個通知對象都要改核心方法。Observer 讓你只需 <code>register(new_observer)</code>。</p>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from datetime import date, timedelta
+from enum import Enum
+from typing import List, Dict, Optional
+import uuid
+
+
+class RoomType(Enum):
+    SINGLE = "single"
+    DOUBLE = "double"
+    SUITE = "suite"
+    DELUXE = "deluxe"
+
+
+class RoomStatus(Enum):
+    AVAILABLE = "available"
+    RESERVED = "reserved"
+    OCCUPIED = "occupied"
+    MAINTENANCE = "maintenance"
+
+
+class ReservationStatus(Enum):
+    CONFIRMED = "confirmed"
+    CHECKED_IN = "checked_in"
+    CHECKED_OUT = "checked_out"
+    CANCELLED = "cancelled"
+
+
+# === Observer Pattern ===
+class BookingObserver(ABC):
+    @abstractmethod
+    def on_reservation_made(self, reservation: 'Reservation'):
+        pass
+
+    @abstractmethod
+    def on_reservation_cancelled(self, reservation: 'Reservation'):
+        pass
+
+    @abstractmethod
+    def on_check_in(self, reservation: 'Reservation'):
+        pass
+
+
+class EmailNotifier(BookingObserver):
+    def on_reservation_made(self, reservation):
+        print(f"📧 Email sent to {reservation.guest.email}: Booking confirmed #{reservation.id}")
+
+    def on_reservation_cancelled(self, reservation):
+        print(f"📧 Cancellation email sent to {reservation.guest.email}")
+
+    def on_check_in(self, reservation):
+        print(f"📧 Welcome email sent to {reservation.guest.email}")
+
+
+class HousekeepingNotifier(BookingObserver):
+    def on_reservation_made(self, reservation):
+        print(f"🧹 Room {reservation.room.number} scheduled for cleaning before {reservation.check_in}")
+
+    def on_reservation_cancelled(self, reservation):
+        print(f"🧹 Cleaning cancelled for room {reservation.room.number}")
+
+    def on_check_in(self, reservation):
+        pass
+
+
+class AnalyticsLogger(BookingObserver):
+    def on_reservation_made(self, reservation):
+        print(f"📊 Analytics: Booking revenue +${reservation.total_cost:.2f}")
+
+    def on_reservation_cancelled(self, reservation):
+        print(f"📊 Analytics: Booking cancelled, revenue -${reservation.total_cost:.2f}")
+
+    def on_check_in(self, reservation):
+        print(f"📊 Analytics: Occupancy +1")
+
+
+# === Strategy Pattern for Pricing ===
+class PricingStrategy(ABC):
+    @abstractmethod
+    def calculate_price(self, base_price: float, nights: int, room_type: RoomType) -> float:
+        pass
+
+
+class StandardPricing(PricingStrategy):
+    def calculate_price(self, base_price: float, nights: int, room_type: RoomType) -> float:
+        return base_price * nights
+
+
+class WeekendPricing(PricingStrategy):
+    """週末加價 25%"""
+    def calculate_price(self, base_price: float, nights: int, room_type: RoomType) -> float:
+        return base_price * nights * 1.25
+
+
+class SeasonalPricing(PricingStrategy):
+    """旺季加價 50%"""
+    def calculate_price(self, base_price: float, nights: int, room_type: RoomType) -> float:
+        return base_price * nights * 1.5
+
+
+class LoyaltyPricing(PricingStrategy):
+    """會員折扣 15%"""
+    def calculate_price(self, base_price: float, nights: int, room_type: RoomType) -> float:
+        return base_price * nights * 0.85
+
+
+# === Core Domain Classes ===
+class Guest:
+    def __init__(self, name: str, email: str, phone: str):
+        self.id = str(uuid.uuid4())[:8]
+        self.name = name
+        self.email = email
+        self.phone = phone
+        self.loyalty_points = 0
+
+
+class Room:
+    BASE_PRICES = {
+        RoomType.SINGLE: 100,
+        RoomType.DOUBLE: 150,
+        RoomType.SUITE: 300,
+        RoomType.DELUXE: 500,
+    }
+
+    def __init__(self, number: str, room_type: RoomType, floor: int):
+        self.number = number
+        self.room_type = room_type
+        self.floor = floor
+        self.status = RoomStatus.AVAILABLE
+        self.base_price = self.BASE_PRICES[room_type]
+
+    def is_available(self) -> bool:
+        return self.status == RoomStatus.AVAILABLE
+
+
+class Reservation:
+    def __init__(self, guest: Guest, room: Room, check_in: date, check_out: date, pricing: PricingStrategy):
+        self.id = str(uuid.uuid4())[:8]
+        self.guest = guest
+        self.room = room
+        self.check_in = check_in
+        self.check_out = check_out
+        self.status = ReservationStatus.CONFIRMED
+        nights = (check_out - check_in).days
+        self.total_cost = pricing.calculate_price(room.base_price, nights, room.room_type)
+
+    @property
+    def nights(self) -> int:
+        return (self.check_out - self.check_in).days
+
+
+# === Payment ===
+class PaymentMethod(ABC):
+    @abstractmethod
+    def pay(self, amount: float) -> bool:
+        pass
+
+
+class CreditCardPayment(PaymentMethod):
+    def __init__(self, card_number: str, expiry: str):
+        self.card_number = card_number
+        self.expiry = expiry
+
+    def pay(self, amount: float) -> bool:
+        print(f"💳 Charged ${amount:.2f} to card ending {self.card_number[-4:]}")
+        return True
+
+
+class PayPalPayment(PaymentMethod):
+    def __init__(self, email: str):
+        self.email = email
+
+    def pay(self, amount: float) -> bool:
+        print(f"💰 PayPal charge ${amount:.2f} to {self.email}")
+        return True
+
+
+# === Hotel (Facade + Subject) ===
+class Hotel:
+    def __init__(self, name: str):
+        self.name = name
+        self.rooms: Dict[str, Room] = {}
+        self.reservations: List[Reservation] = []
+        self.observers: List[BookingObserver] = []
+        self.pricing_strategy: PricingStrategy = StandardPricing()
+
+    def add_room(self, room: Room):
+        self.rooms[room.number] = room
+
+    def register_observer(self, observer: BookingObserver):
+        self.observers.append(observer)
+
+    def set_pricing(self, strategy: PricingStrategy):
+        self.pricing_strategy = strategy
+
+    def search_available_rooms(self, room_type: RoomType, check_in: date, check_out: date) -> List[Room]:
+        available = []
+        for room in self.rooms.values():
+            if room.room_type == room_type and room.is_available():
+                # Check no conflicting reservations
+                conflict = any(
+                    r.room.number == room.number and
+                    r.status == ReservationStatus.CONFIRMED and
+                    not (check_out <= r.check_in or check_in >= r.check_out)
+                    for r in self.reservations
+                )
+                if not conflict:
+                    available.append(room)
+        return available
+
+    def make_reservation(self, guest: Guest, room: Room, check_in: date, check_out: date) -> Optional[Reservation]:
+        if not room.is_available():
+            return None
+        reservation = Reservation(guest, room, check_in, check_out, self.pricing_strategy)
+        room.status = RoomStatus.RESERVED
+        self.reservations.append(reservation)
+        # Notify all observers
+        for obs in self.observers:
+            obs.on_reservation_made(reservation)
+        return reservation
+
+    def cancel_reservation(self, reservation_id: str) -> bool:
+        for res in self.reservations:
+            if res.id == reservation_id and res.status == ReservationStatus.CONFIRMED:
+                res.status = ReservationStatus.CANCELLED
+                res.room.status = RoomStatus.AVAILABLE
+                for obs in self.observers:
+                    obs.on_reservation_cancelled(res)
+                return True
+        return False
+
+    def check_in(self, reservation_id: str) -> bool:
+        for res in self.reservations:
+            if res.id == reservation_id and res.status == ReservationStatus.CONFIRMED:
+                res.status = ReservationStatus.CHECKED_IN
+                res.room.status = RoomStatus.OCCUPIED
+                for obs in self.observers:
+                    obs.on_check_in(res)
+                return True
+        return False
+
+
+# === 使用範例 ===
+hotel = Hotel("Grand Python Hotel")
+hotel.add_room(Room("101", RoomType.SINGLE, 1))
+hotel.add_room(Room("201", RoomType.DOUBLE, 2))
+hotel.add_room(Room("301", RoomType.SUITE, 3))
+
+hotel.register_observer(EmailNotifier())
+hotel.register_observer(HousekeepingNotifier())
+hotel.register_observer(AnalyticsLogger())
+
+hotel.set_pricing(SeasonalPricing())  # 旺季
+
+guest = Guest("Alice", "alice@example.com", "555-0123")
+rooms = hotel.search_available_rooms(RoomType.SUITE, date(2026, 7, 10), date(2026, 7, 13))
+if rooms:
+    res = hotel.make_reservation(guest, rooms[0], date(2026, 7, 10), date(2026, 7, 13))
+    print(f"\nReservation {res.id}: {res.nights} nights, total ${res.total_cost:.2f}")
+    hotel.check_in(res.id)
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: Observer 和直接呼叫 send_email() 的差別是什麼？</strong></p>
+<p>A: 直接呼叫 = 緊耦合，每加一個通知對象都要改 make_reservation()。Observer = 鬆耦合，新增通知只需 register_observer()，不動核心邏輯。符合 OCP。</p>
+<p><strong>Q2: PricingStrategy 能否同時套用多個（如旺季+會員）？</strong></p>
+<p>A: 可用 Decorator Pattern 組合：<code>LoyaltyDecorator(SeasonalPricing())</code>，每層包裝修改前一層的結果。或用 Chain/Pipeline：<code>[seasonal_multiplier, loyalty_discount, tax]</code> 依序套用。</p>
+<p><strong>Q3: search_available_rooms 的效率問題？</strong></p>
+<p>A: 目前 O(R×N)（R=房間數, N=預訂數）。生產環境用 interval tree 或 DB index on (room_id, check_in, check_out) 加速衝突檢測。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何防止超賣（同一房間被兩人同時訂）？</strong><br>
+A: DB 層用 pessimistic lock（SELECT FOR UPDATE）或 optimistic lock（version column + retry）。應用層可加 distributed lock（Redis SETNX with TTL）確保同一房間同一時段只有一個交易在進行。</p>
+
+<p><strong>2. 如何實作取消政策（免費取消期限）？</strong><br>
+A: Strategy Pattern：<code>CancellationPolicy.calculate_refund(reservation, cancel_date)</code>。不同政策（NonRefundable, FreeCancelBefore24h, FlexibleCancel）各自實作退款計算。Hotel 持有當前 policy 引用。</p>
+
+<p><strong>3. 如何支援多幣別？</strong><br>
+A: 引入 <code>Money</code> value object（amount + currency），<code>CurrencyConverter</code> service 處理匯率。PricingStrategy 回傳 Money 而非 float，避免幣別混淆。</p>
+
+<p><strong>4. 如何做 Waitlist（候補名單）？</strong><br>
+A: 當房間不可用時加入 Priority Queue（按 loyalty tier 排序）。Observer 監聽 cancellation 事件，觸發 waitlist notification。可加 TTL：候補者 30 分鐘內未確認則輪給下一位。</p>
+
+<p><strong>5. 如何加入房間升等邏輯？</strong><br>
+A: Check-in 時若原訂房型無空房，UpgradeService 自動查詢更高等級空房。規則引擎（Rule Pattern）決定升等條件：loyalty tier ≥ Gold、連住 3+ 晚、特殊節日等。</p>
+</div>
+
+<!-- ==================== CH8 ==================== -->
+<h2 id="ch8">Ch8: Design ATM Machine 🏧</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>State Pattern（同 Ch5）：</strong>ATM 的行為完全取決於目前狀態（待機/已插卡/已驗證/出鈔中）。每個狀態是一個 class。</li>
+<li><strong>Transaction（交易）：</strong>一組操作要嘛全做，要嘛全不做。比喻：銀行轉帳——扣你的錢 + 加對方的錢必須一起成功，不能只做一半</li>
+</ul></div>
+
+<p><span class="pattern-tag">State Pattern</span> <span class="pattern-tag">Chain of Responsibility</span> <span class="solid-tag">SRP</span> <span class="solid-tag">OCP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>ATM 就像一個「狀態機」——插卡→輸入密碼→選擇操作→出鈔→退卡。每個狀態下能做的事不同，按錯按鈕不會壞掉，只會提示「請先插卡」。</p>
+<p><strong>白話解釋：</strong>ATM 有明確的狀態流轉（Idle→HasCard→Authenticated→SelectingTransaction→Processing），每個狀態只接受特定操作。State Pattern 讓每個狀態成為獨立物件，避免巨大的 if-else 叢林。</p>
+<p><strong>為什麼工作上需要：</strong>State Pattern 是面試高頻考點。ATM 完美展示：狀態多、轉換規則明確、每個狀態行為不同。面試官想看你能否用 State Pattern 替代 if-else。</p>
+<p><strong>先備知識：</strong>State Pattern、enum、有限狀態機概念</p>
+</div>
+
+<h3>核心概念：State Pattern 如何消滅 if-else 地獄？</h3>
+<p>不用 State Pattern 時，每個操作都要：<code>if state == IDLE: ... elif state == HAS_CARD: ... elif ...</code>。加新狀態需要改所有方法。State Pattern 將每個狀態封裝成類，ATM 只需 delegate 給當前 state 物件。</p>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Optional, Dict
+import uuid
+
+
+# === Domain Objects ===
+class Card:
+    def __init__(self, card_number: str, pin: str, account_id: str):
+        self.card_number = card_number
+        self.pin = pin
+        self.account_id = account_id
+
+
+class Account:
+    def __init__(self, account_id: str, holder_name: str, balance: float):
+        self.account_id = account_id
+        self.holder_name = holder_name
+        self.balance = balance
+
+    def withdraw(self, amount: float) -> bool:
+        if amount <= self.balance:
+            self.balance -= amount
+            return True
+        return False
+
+    def deposit(self, amount: float):
+        self.balance += amount
+
+    def get_balance(self) -> float:
+        return self.balance
+
+
+class TransactionType(Enum):
+    WITHDRAWAL = "withdrawal"
+    DEPOSIT = "deposit"
+    BALANCE_INQUIRY = "balance_inquiry"
+    TRANSFER = "transfer"
+
+
+class Transaction:
+    def __init__(self, tx_type: TransactionType, account_id: str, amount: float = 0):
+        self.id = str(uuid.uuid4())[:8]
+        self.tx_type = tx_type
+        self.account_id = account_id
+        self.amount = amount
+        self.success = False
+
+
+# === Cash Dispenser ===
+class CashDispenser:
+    def __init__(self):
+        self.denominations: Dict[int, int] = {
+            100: 100,  # 100張 $100
+            50: 200,   # 200張 $50
+            20: 500,   # 500張 $20
+        }
+
+    def can_dispense(self, amount: float) -> bool:
+        return amount <= self.total_cash() and amount % 20 == 0
+
+    def dispense(self, amount: float) -> Dict[int, int]:
+        """Greedy: 大面額優先"""
+        result = {}
+        remaining = int(amount)
+        for denom in sorted(self.denominations.keys(), reverse=True):
+            count = min(remaining // denom, self.denominations[denom])
+            if count > 0:
+                result[denom] = count
+                remaining -= denom * count
+                self.denominations[denom] -= count
+        if remaining > 0:
+            # Rollback
+            for d, c in result.items():
+                self.denominations[d] += c
+            return {}
+        return result
+
+    def total_cash(self) -> float:
+        return sum(d * c for d, c in self.denominations.items())
+
+
+# === State Pattern ===
+class ATMState(ABC):
+    def __init__(self, atm: 'ATM'):
+        self.atm = atm
+
+    @abstractmethod
+    def insert_card(self, card: Card) -> str:
+        pass
+
+    @abstractmethod
+    def enter_pin(self, pin: str) -> str:
+        pass
+
+    @abstractmethod
+    def select_transaction(self, tx_type: TransactionType, amount: float = 0) -> str:
+        pass
+
+    @abstractmethod
+    def cancel(self) -> str:
+        pass
+
+
+class IdleState(ATMState):
+    """等待插卡"""
+    def insert_card(self, card: Card) -> str:
+        self.atm.current_card = card
+        self.atm.set_state(HasCardState(self.atm))
+        return "Card accepted. Please enter your PIN."
+
+    def enter_pin(self, pin: str) -> str:
+        return "Please insert your card first."
+
+    def select_transaction(self, tx_type: TransactionType, amount: float = 0) -> str:
+        return "Please insert your card first."
+
+    def cancel(self) -> str:
+        return "No transaction in progress."
+
+
+class HasCardState(ATMState):
+    """已插卡，等待 PIN"""
+    def __init__(self, atm: 'ATM'):
+        super().__init__(atm)
+        self.attempts = 0
+        self.max_attempts = 3
+
+    def insert_card(self, card: Card) -> str:
+        return "Card already inserted."
+
+    def enter_pin(self, pin: str) -> str:
+        if self.atm.current_card.pin == pin:
+            account = self.atm.bank.get_account(self.atm.current_card.account_id)
+            if account:
+                self.atm.current_account = account
+                self.atm.set_state(AuthenticatedState(self.atm))
+                return f"Welcome, {account.holder_name}. Select transaction."
+            return "Account not found."
+        else:
+            self.attempts += 1
+            if self.attempts >= self.max_attempts:
+                self.atm.retain_card()
+                self.atm.set_state(IdleState(self.atm))
+                return "Card retained. Too many wrong attempts. Contact bank."
+            return f"Wrong PIN. {self.max_attempts - self.attempts} attempts remaining."
+
+    def select_transaction(self, tx_type: TransactionType, amount: float = 0) -> str:
+        return "Please enter your PIN first."
+
+    def cancel(self) -> str:
+        self.atm.eject_card()
+        self.atm.set_state(IdleState(self.atm))
+        return "Card ejected. Transaction cancelled."
+
+
+class AuthenticatedState(ATMState):
+    """已驗證，選擇交易"""
+    def insert_card(self, card: Card) -> str:
+        return "Please complete or cancel current transaction."
+
+    def enter_pin(self, pin: str) -> str:
+        return "Already authenticated."
+
+    def select_transaction(self, tx_type: TransactionType, amount: float = 0) -> str:
+        if tx_type == TransactionType.BALANCE_INQUIRY:
+            balance = self.atm.current_account.get_balance()
+            return f"Your balance: ${balance:.2f}"
+
+        elif tx_type == TransactionType.WITHDRAWAL:
+            if amount <= 0:
+                return "Please enter a valid amount."
+            if not self.atm.cash_dispenser.can_dispense(amount):
+                return "ATM cannot dispense this amount. Try multiples of $20."
+            if not self.atm.current_account.withdraw(amount):
+                return "Insufficient funds."
+            bills = self.atm.cash_dispenser.dispense(amount)
+            bill_str = ", ".join(f"{c}x${d}" for d, c in bills.items())
+            self.atm.eject_card()
+            self.atm.set_state(IdleState(self.atm))
+            return f"Dispensing ${amount:.0f} ({bill_str}). Take your card and cash."
+
+        elif tx_type == TransactionType.DEPOSIT:
+            if amount <= 0:
+                return "Please enter a valid amount."
+            self.atm.current_account.deposit(amount)
+            return f"Deposited ${amount:.2f}. New balance: ${self.atm.current_account.get_balance():.2f}"
+
+        return "Unknown transaction type."
+
+    def cancel(self) -> str:
+        self.atm.eject_card()
+        self.atm.set_state(IdleState(self.atm))
+        return "Transaction cancelled. Card ejected."
+
+
+# === Bank (External System) ===
+class Bank:
+    def __init__(self):
+        self.accounts: Dict[str, Account] = {}
+
+    def add_account(self, account: Account):
+        self.accounts[account.account_id] = account
+
+    def get_account(self, account_id: str) -> Optional[Account]:
+        return self.accounts.get(account_id)
+
+
+# === ATM (Context) ===
+class ATM:
+    def __init__(self, atm_id: str, bank: Bank):
+        self.atm_id = atm_id
+        self.bank = bank
+        self.cash_dispenser = CashDispenser()
+        self.current_card: Optional[Card] = None
+        self.current_account: Optional[Account] = None
+        self._state: ATMState = IdleState(self)
+        self.transactions: list = []
+
+    def set_state(self, state: ATMState):
+        self._state = state
+
+    def insert_card(self, card: Card) -> str:
+        return self._state.insert_card(card)
+
+    def enter_pin(self, pin: str) -> str:
+        return self._state.enter_pin(pin)
+
+    def select_transaction(self, tx_type: TransactionType, amount: float = 0) -> str:
+        return self._state.select_transaction(tx_type, amount)
+
+    def cancel(self) -> str:
+        return self._state.cancel()
+
+    def eject_card(self):
+        self.current_card = None
+        self.current_account = None
+        print("🔔 Card ejected.")
+
+    def retain_card(self):
+        print(f"⚠️ Card {self.current_card.card_number} retained!")
+        self.current_card = None
+        self.current_account = None
+
+
+# === 使用範例 ===
+bank = Bank()
+bank.add_account(Account("ACC001", "Alice Chen", 5000.0))
+card = Card("4111-1111-1111-1234", "1234", "ACC001")
+
+atm = ATM("ATM-001", bank)
+print(atm.insert_card(card))
+print(atm.enter_pin("0000"))    # Wrong PIN
+print(atm.enter_pin("1234"))    # Correct
+print(atm.select_transaction(TransactionType.BALANCE_INQUIRY))
+print(atm.select_transaction(TransactionType.WITHDRAWAL, 260))
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: State Pattern 和一堆 if-else 有什麼本質差別？</strong></p>
+<p>A: if-else 把所有狀態邏輯集中在一個地方（God method），新增狀態需修改所有方法。State Pattern 分散到獨立類——新增狀態只需新增一個類，不動現有程式碼（OCP）。</p>
+<p><strong>Q2: CashDispenser 的 Greedy 算法有什麼局限？</strong></p>
+<p>A: Greedy 不保證最優解。例如只剩 $50 和 $20，要出 $60 → Greedy 先用 $50 再差 $10 失敗。需要 DP/backtracking 才能找到 3x$20 的解。面試中提到這個 trade-off 會加分。</p>
+<p><strong>Q3: 為什麼 ATM 持有 Bank 的引用而不是直接操作 Account？</strong></p>
+<p>A: 因為 ATM 是 client，Bank 是 server。真實世界中 ATM 透過網路呼叫 Bank API，不直接存取帳戶。這個設計反映了物理架構的邊界（DIP: depend on abstraction）。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何處理出鈔時卡紙（硬體失敗）？</strong><br>
+A: 加入 <code>DispensingState</code>，若硬體回報失敗則自動 rollback（帳戶加回金額）、轉入 <code>OutOfServiceState</code>、通知維修。Transaction 記錄 status=FAILED + failure_reason。</p>
+
+<p><strong>2. 如何支援無卡交易（手機 NFC）？</strong><br>
+A: 抽象認證步驟：<code>AuthenticationMethod</code> interface（CardAuth, NFCAuth, BiometricAuth）。ATM 不再綁定「插卡」這個物理動作，而是接受任何 AuthenticationMethod 驗證後進入 AuthenticatedState。</p>
+
+<p><strong>3. 如何限制每日提款上限？</strong><br>
+A: Account 層加 <code>daily_limit: float</code> + <code>today_withdrawn: float</code>。withdraw() 前檢查是否超過 daily_limit。Bank 每日 reset。也可以放在 ATM 層（per-ATM limit）或兩者取較小值。</p>
+
+<p><strong>4. 如何做 Transaction Log（審計）？</strong><br>
+A: Observer Pattern — ATM 操作時通知 <code>AuditLogger</code>。每筆記錄：timestamp, ATM_id, card_number(masked), tx_type, amount, success/failure, state_transition。寫入 append-only log（合規需求）。</p>
+
+<p><strong>5. 如何處理網路斷線（ATM 連不上 Bank）？</strong><br>
+A: 加入 <code>OfflineState</code>（只允許餘額查詢/小額交易）。使用 Circuit Breaker Pattern：連續 N 次 timeout 後切入 offline mode，定期 ping 恢復。離線交易暫存本地，恢復後 batch sync。</p>
+</div>
+
+<!-- ==================== CH9 ==================== -->
+<h2 id="ch9">Ch9: Design File System 📁</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Composite Pattern：</strong>把單一物件和物件集合統一對待。比喻：資料夾和檔案——你可以「刪除一個檔案」也可以「刪除一個資料夾（含所有內容）」，操作介面一樣。真實例子：Linux filesystem、React component tree</li>
+<li><strong>Recursion（遞迴）：</strong>函數呼叫自己處理子問題。File system 天然是遞迴結構（資料夾裡有資料夾）</li>
+</ul></div>
+
+<p><span class="pattern-tag">Composite Pattern</span> <span class="pattern-tag">Iterator Pattern</span> <span class="solid-tag">OCP</span> <span class="solid-tag">LSP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>檔案系統就像俄羅斯套娃——資料夾裡可以有資料夾或檔案，無限巢狀。你對最外層和最內層做同一個操作（算大小、搜尋），結構自動遞迴處理。</p>
+<p><strong>白話解釋：</strong>File 和 Directory 都是「檔案系統節點」，但行為不同。Composite Pattern 讓它們共用介面——計算 size 時，File 回傳自己大小，Directory 則加總所有子節點。</p>
+<p><strong>為什麼工作上需要：</strong>Composite 是處理「樹狀結構」的標準模式。面試官想看你理解遞迴組合、統一介面、以及權限繼承的設計。</p>
+<p><strong>先備知識：</strong>Tree 結構、遞迴、Composite Pattern</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from datetime import datetime
+from enum import Flag, auto
+from typing import List, Optional, Generator
+
+
+# === Permission System ===
+class Permission(Flag):
+    NONE = 0
+    READ = auto()
+    WRITE = auto()
+    EXECUTE = auto()
+    ALL = READ | WRITE | EXECUTE
+
+
+class User:
+    def __init__(self, name: str, groups: List[str] = None):
+        self.name = name
+        self.groups = groups or []
+
+
+# === Composite Pattern ===
+class FileSystemNode(ABC):
+    """統一介面：File 和 Directory 都是 Node"""
+    def __init__(self, name: str, owner: User):
+        self.name = name
+        self.owner = owner
+        self.created_at = datetime.now()
+        self.modified_at = datetime.now()
+        self.parent: Optional['Directory'] = None
+        self._permissions: dict = {owner.name: Permission.ALL}
+
+    @abstractmethod
+    def get_size(self) -> int:
+        pass
+
+    @abstractmethod
+    def display(self, indent: int = 0) -> str:
+        pass
+
+    def get_path(self) -> str:
+        parts = []
+        node = self
+        while node:
+            parts.append(node.name)
+            node = node.parent
+        return "/" + "/".join(reversed(parts))
+
+    def set_permission(self, user_name: str, perm: Permission):
+        self._permissions[user_name] = perm
+
+    def has_permission(self, user: User, perm: Permission) -> bool:
+        # Check direct user permission
+        if user.name in self._permissions:
+            return perm in self._permissions[user.name]
+        # Check group permissions
+        for group in user.groups:
+            if group in self._permissions:
+                if perm in self._permissions[group]:
+                    return True
+        # Check parent (inheritance)
+        if self.parent:
+            return self.parent.has_permission(user, perm)
+        return False
+
+
+class File(FileSystemNode):
+    def __init__(self, name: str, owner: User, content: str = "", extension: str = ""):
+        super().__init__(name, owner)
+        self.content = content
+        self.extension = extension or name.split(".")[-1] if "." in name else ""
+
+    def get_size(self) -> int:
+        return len(self.content.encode('utf-8'))
+
+    def display(self, indent: int = 0) -> str:
+        return " " * indent + f"📄 {self.name} ({self.get_size()} bytes)"
+
+    def read(self, user: User) -> Optional[str]:
+        if self.has_permission(user, Permission.READ):
+            return self.content
+        raise PermissionError(f"{user.name} has no read access to {self.name}")
+
+    def write(self, user: User, content: str):
+        if self.has_permission(user, Permission.WRITE):
+            self.content = content
+            self.modified_at = datetime.now()
+        else:
+            raise PermissionError(f"{user.name} has no write access to {self.name}")
+
+
+class Directory(FileSystemNode):
+    def __init__(self, name: str, owner: User):
+        super().__init__(name, owner)
+        self.children: List[FileSystemNode] = []
+
+    def get_size(self) -> int:
+        """遞迴加總所有子節點大小"""
+        return sum(child.get_size() for child in self.children)
+
+    def display(self, indent: int = 0) -> str:
+        lines = [" " * indent + f"📁 {self.name}/"]
+        for child in self.children:
+            lines.append(child.display(indent + 2))
+        return "\n".join(lines)
+
+    def add(self, node: FileSystemNode):
+        node.parent = self
+        self.children.append(node)
+
+    def remove(self, name: str) -> bool:
+        for i, child in enumerate(self.children):
+            if child.name == name:
+                self.children.pop(i)
+                child.parent = None
+                return True
+        return False
+
+    def get_child(self, name: str) -> Optional[FileSystemNode]:
+        for child in self.children:
+            if child.name == name:
+                return child
+        return None
+
+    def list_files(self) -> List[FileSystemNode]:
+        return self.children[:]
+
+    # === Search (DFS) ===
+    def search_by_name(self, query: str) -> List[FileSystemNode]:
+        results = []
+        self._search_recursive(query, results)
+        return results
+
+    def _search_recursive(self, query: str, results: List[FileSystemNode]):
+        for child in self.children:
+            if query.lower() in child.name.lower():
+                results.append(child)
+            if isinstance(child, Directory):
+                child._search_recursive(query, results)
+
+    def search_by_extension(self, ext: str) -> List[File]:
+        results = []
+        self._search_ext_recursive(ext, results)
+        return results
+
+    def _search_ext_recursive(self, ext: str, results: List[File]):
+        for child in self.children:
+            if isinstance(child, File) and child.extension == ext:
+                results.append(child)
+            elif isinstance(child, Directory):
+                child._search_ext_recursive(ext, results)
+
+    # === Iterator (Generator) ===
+    def walk(self) -> Generator[FileSystemNode, None, None]:
+        """類似 os.walk 的遍歷"""
+        for child in self.children:
+            yield child
+            if isinstance(child, Directory):
+                yield from child.walk()
+
+
+# === FileSystem Facade ===
+class FileSystem:
+    def __init__(self):
+        self.root = Directory("root", User("system"))
+
+    def resolve_path(self, path: str) -> Optional[FileSystemNode]:
+        parts = [p for p in path.split("/") if p and p != "root"]
+        current = self.root
+        for part in parts:
+            if isinstance(current, Directory):
+                child = current.get_child(part)
+                if child is None:
+                    return None
+                current = child
+            else:
+                return None
+        return current
+
+    def create_file(self, path: str, name: str, owner: User, content: str = "") -> File:
+        directory = self.resolve_path(path)
+        if not isinstance(directory, Directory):
+            raise ValueError(f"Path {path} is not a directory")
+        f = File(name, owner, content)
+        directory.add(f)
+        return f
+
+    def create_directory(self, path: str, name: str, owner: User) -> Directory:
+        directory = self.resolve_path(path)
+        if not isinstance(directory, Directory):
+            raise ValueError(f"Path {path} is not a directory")
+        d = Directory(name, owner)
+        directory.add(d)
+        return d
+
+
+# === 使用範例 ===
+admin = User("admin", ["staff"])
+alice = User("alice", ["developers"])
+
+fs = FileSystem()
+fs.create_directory("/root", "home", admin)
+fs.create_directory("/root/home", "alice", alice)
+fs.create_file("/root/home/alice", "hello.py", alice, "print('hello world')")
+fs.create_file("/root/home/alice", "notes.txt", alice, "Meeting at 3pm")
+fs.create_directory("/root/home/alice", "projects", alice)
+fs.create_file("/root/home/alice/projects", "app.py", alice, "import flask\n" * 50)
+
+print(fs.root.display())
+print(f"\nTotal size: {fs.root.get_size()} bytes")
+print(f"\nSearch '.py': {[f.get_path() for f in fs.root.search_by_extension('py')]}")
+print(f"\nWalk all nodes:")
+for node in fs.root.walk():
+    print(f"  {node.get_path()} ({node.get_size()} bytes)")
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: Composite Pattern 的核心價值是什麼？</strong></p>
+<p>A: 讓 client 不用區分「單一物件」和「組合物件」。呼叫 <code>node.get_size()</code>，不管 node 是 File 還是 Directory 都能正確計算。消除了 isinstance 檢查的需求（大部分情況）。</p>
+<p><strong>Q2: 權限繼承為什麼用 parent chain 而不是 copy？</strong></p>
+<p>A: Copy = 修改父目錄權限後，已存在的子節點不受影響（stale）。Chain lookup = 動態繼承，父目錄權限變更立即生效。Linux 用的是 copy 模式（建立時決定），Windows ACL 支援 inherit。面試中說出 trade-off 就好。</p>
+<p><strong>Q3: walk() 用 Generator 比回傳 List 好在哪裡？</strong></p>
+<p>A: Lazy evaluation——巨大檔案系統（百萬節點）不需要一次載入全部到記憶體。也支援 early termination（找到第一個匹配就停）。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何實作 Symlink（符號連結）？</strong><br>
+A: 新增 <code>SymLink(FileSystemNode)</code> 類，持有 target_path。get_size() 回傳 0（link 本身不佔空間）或 delegate 到 target。需防止循環引用（visited set detection）。</p>
+
+<p><strong>2. 如何處理並行寫入同一檔案？</strong><br>
+A: File 層加 read-write lock（多讀單寫）。或用 Copy-on-Write：每次寫入建立新版本，讀者看到 snapshot。進階：append-only log + compaction（類似 LSM tree）。</p>
+
+<p><strong>3. 如何加入 Quota（磁碟配額）？</strong><br>
+A: 每個 User 有 <code>max_quota</code>。write() 和 create_file() 前計算該 user 的 total usage（遍歷所有 owner==user 的 file）。超過則拒絕。用 cache 加速（user → cached_size），寫入時 increment。</p>
+
+<p><strong>4. 如何實作 Trash Bin（資源回收筒）？</strong><br>
+A: delete 不真的刪除，而是 move 到隱藏的 <code>.trash/</code> directory（帶 TTL metadata）。undelete = move back。定期清理超過 30 天的 trash。</p>
+
+<p><strong>5. 如何支援 File Versioning？</strong><br>
+A: File 持有 <code>versions: List[FileVersion]</code>（content + timestamp + author）。write() append 新版本而非覆蓋。get_version(n) 回傳歷史版本。可加 diff/patch 壓縮儲存。</p>
+</div>
+
+<!-- ==================== CH10 ==================== -->
+<h2 id="ch10">Ch10: Design Social Media Feed 📱</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Observer：</strong>新貼文 → 通知所有 follower（push model）</li>
+<li><strong>Iterator：</strong>一次只載入一頁 feed，下滑再載入下一頁（cursor-based pagination）。比喻：餐廳菜單一頁一頁翻，不是把 1000 道菜一次全列出</li>
+<li><strong>Strategy（Ranking）：</strong>不同排序算法（時間/互動/個人化）可以熱切換。真實例子：Instagram 2016 從時間排序切換到 ML ranking</li>
+</ul></div>
+
+<p><span class="pattern-tag">Observer Pattern</span> <span class="pattern-tag">Iterator Pattern</span> <span class="pattern-tag">Strategy Pattern</span> <span class="solid-tag">SRP</span> <span class="solid-tag">OCP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>社群媒體 Feed 就像「個人化報紙」——你追蹤的人發文，系統決定什麼順序、什麼時候推給你看。是推播（Push）還是你主動刷新（Pull）？</p>
+<p><strong>白話解釋：</strong>核心問題是 Feed 排序演算法（時間序 vs 權重排名），加上 Push/Pull 模型（發文時推給所有 follower vs 用戶刷新時才組裝）。OOD 面試著重在 class 設計和模式選擇，不用真的寫推薦算法。</p>
+<p><strong>為什麼工作上需要：</strong>展示 Observer（follow/unfollow通知）、Strategy（不同排序算法可切換）、Iterator（分頁載入 feed）的整合。</p>
+<p><strong>先備知識：</strong>Observer、Strategy、簡單排序、時間戳比較</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+from typing import List, Dict, Set, Optional, Iterator
+from enum import Enum
+import uuid
+import heapq
+
+
+class PostType(Enum):
+    TEXT = "text"
+    IMAGE = "image"
+    VIDEO = "video"
+    LINK = "link"
+
+
+# === Core Entities ===
+class Post:
+    def __init__(self, author_id: str, content: str, post_type: PostType = PostType.TEXT):
+        self.id = str(uuid.uuid4())[:8]
+        self.author_id = author_id
+        self.content = content
+        self.post_type = post_type
+        self.created_at = datetime.now()
+        self.likes: Set[str] = set()
+        self.comments: List['Comment'] = []
+        self.shares: int = 0
+
+    @property
+    def engagement_score(self) -> float:
+        """互動分數 = likes*1 + comments*2 + shares*3"""
+        return len(self.likes) + len(self.comments) * 2 + self.shares * 3
+
+    def like(self, user_id: str):
+        self.likes.add(user_id)
+
+    def unlike(self, user_id: str):
+        self.likes.discard(user_id)
+
+    def add_comment(self, user_id: str, text: str):
+        self.comments.append(Comment(user_id, text))
+
+
+class Comment:
+    def __init__(self, author_id: str, text: str):
+        self.id = str(uuid.uuid4())[:8]
+        self.author_id = author_id
+        self.text = text
+        self.created_at = datetime.now()
+
+
+class User:
+    def __init__(self, user_id: str, name: str):
+        self.user_id = user_id
+        self.name = name
+        self.posts: List[Post] = []
+        self.following: Set[str] = set()
+        self.followers: Set[str] = set()
+
+    def follow(self, other: 'User'):
+        self.following.add(other.user_id)
+        other.followers.add(self.user_id)
+
+    def unfollow(self, other: 'User'):
+        self.following.discard(other.user_id)
+        other.followers.discard(self.user_id)
+
+    def create_post(self, content: str, post_type: PostType = PostType.TEXT) -> Post:
+        post = Post(self.user_id, content, post_type)
+        self.posts.append(post)
+        return post
+
+
+# === Feed Ranking Strategy ===
+class FeedStrategy(ABC):
+    @abstractmethod
+    def rank(self, posts: List[Post], user: User) -> List[Post]:
+        pass
+
+
+class ChronologicalStrategy(FeedStrategy):
+    """時間序：最新在前"""
+    def rank(self, posts: List[Post], user: User) -> List[Post]:
+        return sorted(posts, key=lambda p: p.created_at, reverse=True)
+
+
+class EngagementStrategy(FeedStrategy):
+    """互動權重排名"""
+    def rank(self, posts: List[Post], user: User) -> List[Post]:
+        return sorted(posts, key=lambda p: p.engagement_score, reverse=True)
+
+
+class HybridStrategy(FeedStrategy):
+    """混合：時間衰減 + 互動分"""
+    def rank(self, posts: List[Post], user: User) -> List[Post]:
+        now = datetime.now()
+        def score(post: Post) -> float:
+            hours_old = (now - post.created_at).total_seconds() / 3600
+            time_decay = 1 / (1 + hours_old * 0.1)  # 越舊越低
+            return post.engagement_score * time_decay
+        return sorted(posts, key=score, reverse=True)
+
+
+# === Feed Iterator (Pagination) ===
+class FeedIterator:
+    """分頁迭代器——每次載入 page_size 篇貼文"""
+    def __init__(self, posts: List[Post], page_size: int = 10):
+        self.posts = posts
+        self.page_size = page_size
+        self.cursor = 0
+
+    def has_next(self) -> bool:
+        return self.cursor < len(self.posts)
+
+    def next_page(self) -> List[Post]:
+        page = self.posts[self.cursor:self.cursor + self.page_size]
+        self.cursor += self.page_size
+        return page
+
+
+# === Observer for Notifications ===
+class NotificationObserver(ABC):
+    @abstractmethod
+    def on_new_post(self, post: Post, follower_id: str):
+        pass
+
+    @abstractmethod
+    def on_like(self, post: Post, liker_id: str):
+        pass
+
+    @abstractmethod
+    def on_comment(self, post: Post, commenter_id: str, comment: Comment):
+        pass
+
+
+class PushNotifier(NotificationObserver):
+    def on_new_post(self, post: Post, follower_id: str):
+        print(f"🔔 Push to {follower_id}: New post from {post.author_id}")
+
+    def on_like(self, post: Post, liker_id: str):
+        print(f"❤️ Push to {post.author_id}: {liker_id} liked your post")
+
+    def on_comment(self, post: Post, commenter_id: str, comment: Comment):
+        print(f"💬 Push to {post.author_id}: {commenter_id} commented")
+
+
+class EmailNotifier(NotificationObserver):
+    def on_new_post(self, post: Post, follower_id: str):
+        pass  # Don't email for every post
+
+    def on_like(self, post: Post, liker_id: str):
+        pass
+
+    def on_comment(self, post: Post, commenter_id: str, comment: Comment):
+        print(f"📧 Email to {post.author_id}: New comment from {commenter_id}")
+
+
+# === Social Media Platform (Facade) ===
+class SocialMediaPlatform:
+    def __init__(self):
+        self.users: Dict[str, User] = {}
+        self.all_posts: List[Post] = []
+        self.feed_strategy: FeedStrategy = HybridStrategy()
+        self.observers: List[NotificationObserver] = []
+
+    def register_observer(self, obs: NotificationObserver):
+        self.observers.append(obs)
+
+    def set_feed_strategy(self, strategy: FeedStrategy):
+        self.feed_strategy = strategy
+
+    def register_user(self, user_id: str, name: str) -> User:
+        user = User(user_id, name)
+        self.users[user_id] = user
+        return user
+
+    def create_post(self, user_id: str, content: str, post_type: PostType = PostType.TEXT) -> Post:
+        user = self.users[user_id]
+        post = user.create_post(content, post_type)
+        self.all_posts.append(post)
+        # Notify followers (Push model)
+        for follower_id in user.followers:
+            for obs in self.observers:
+                obs.on_new_post(post, follower_id)
+        return post
+
+    def like_post(self, user_id: str, post_id: str):
+        post = self._find_post(post_id)
+        if post:
+            post.like(user_id)
+            for obs in self.observers:
+                obs.on_like(post, user_id)
+
+    def comment_on_post(self, user_id: str, post_id: str, text: str):
+        post = self._find_post(post_id)
+        if post:
+            post.add_comment(user_id, text)
+            comment = post.comments[-1]
+            for obs in self.observers:
+                obs.on_comment(post, user_id, comment)
+
+    def get_feed(self, user_id: str, page_size: int = 10) -> FeedIterator:
+        """Pull model: 組裝用戶的 feed"""
+        user = self.users[user_id]
+        # Collect posts from following
+        candidate_posts = [
+            p for p in self.all_posts
+            if p.author_id in user.following or p.author_id == user_id
+        ]
+        # Rank using current strategy
+        ranked = self.feed_strategy.rank(candidate_posts, user)
+        return FeedIterator(ranked, page_size)
+
+    def _find_post(self, post_id: str) -> Optional[Post]:
+        for post in self.all_posts:
+            if post.id == post_id:
+                return post
+        return None
+
+
+# === 使用範例 ===
+platform = SocialMediaPlatform()
+platform.register_observer(PushNotifier())
+
+alice = platform.register_user("alice", "Alice")
+bob = platform.register_user("bob", "Bob")
+charlie = platform.register_user("charlie", "Charlie")
+
+# Follow relationships
+alice.follow(bob)
+alice.follow(charlie)
+charlie.follow(bob)
+
+# Bob posts
+p1 = platform.create_post("bob", "Just shipped a new feature! 🚀")
+p2 = platform.create_post("charlie", "Beautiful sunset today 🌅")
+
+# Engagement
+platform.like_post("alice", p1.id)
+platform.like_post("charlie", p1.id)
+platform.comment_on_post("alice", p1.id, "Congrats!")
+
+# Get Alice's feed
+feed_iter = platform.get_feed("alice", page_size=5)
+print("\n=== Alice's Feed ===")
+while feed_iter.has_next():
+    page = feed_iter.next_page()
+    for post in page:
+        print(f"  [{post.author_id}] {post.content} (score: {post.engagement_score})")
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: Push vs Pull 模型各適用什麼場景？</strong></p>
+<p>A: Push（fanout-on-write）：發文時寫入所有 follower 的 feed cache。適合讀多寫少（大部分用戶 follower 少）。Pull（fanout-on-read）：用戶刷新時才組裝。適合大 V（百萬粉絲 push 成本太高）。Twitter 實際用混合：普通用戶 Push，大 V Pull。</p>
+<p><strong>Q2: FeedStrategy 能否在運行時切換？</strong></p>
+<p>A: 可以——這就是 Strategy Pattern 的價值。A/B test 時對不同用戶群用不同 Strategy。甚至可以 per-user 設定偏好（user.preferred_feed_strategy）。</p>
+<p><strong>Q3: FeedIterator 和 Python 原生 Iterator 有什麼不同？</strong></p>
+<p>A: FeedIterator 支援 page-based 分頁（每次回傳多個），適合 API 回應。Python __iter__/__next__ 是 one-at-a-time。真實系統用 cursor-based pagination（記住上次位置的 token），支援 infinite scroll。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何處理 Celebrity 問題（百萬粉絲的 Push 成本）？</strong><br>
+A: Hybrid fanout：follower < threshold（如 10K）用 Push，超過用 Pull。大 V 的 post 不寫入 follower feed cache，而是在讀取時 merge。或 pre-compute top followers only。</p>
+
+<p><strong>2. 如何實作「已讀」標記和「你可能錯過的」？</strong><br>
+A: 每個 user-feed 記錄 last_read_timestamp。未讀 = post.created_at > last_read。「錯過的」= 高互動但未讀的舊文。需要在 FeedStrategy 中加入 "unseen_boost" 權重。</p>
+
+<p><strong>3. 如何防止 Feed 中的重複內容？</strong><br>
+A: Post ID deduplication（Set 追蹤已展示的 post_id）。對 repost/share，合併顯示（「Bob 和其他 3 人分享了此貼文」）。Near-duplicate detection 用 content hash 或 SimHash。</p>
+
+<p><strong>4. 如何加入 Content Filtering（敏感內容過濾）？</strong><br>
+A: Decorator/Chain of Responsibility：feed 組裝後過一條 filter pipeline（SpamFilter → NSFWFilter → BlockedUserFilter → MutedWordFilter）。每個 filter 是獨立類，可動態啟用/停用。</p>
+
+<p><strong>5. 如何做 Real-time Feed Update（新貼文自動出現）？</strong><br>
+A: WebSocket/SSE 推送。Server 維護每個 online user 的 connection。新 post fanout 時，若 follower online 則直接推送到前端 feed（optimistic insert at top）。加 debounce 避免頻繁更新。</p>
+</div>
+
+<!-- ==================== CH11 ==================== -->
+<h2 id="ch11">Ch11: Design Amazon Locker 📦</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Strategy（尺寸匹配）：</strong>不同大小的包裹配對不同大小的儲物格。First-Fit vs Best-Fit 策略</li>
+<li><strong>OTP（一次性密碼）：</strong>取件碼只能用一次。比喻：飯店房卡——退房後就失效</li>
+</ul></div>
+
+<p><span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">State Pattern</span> <span class="pattern-tag">Factory Pattern</span> <span class="solid-tag">SRP</span> <span class="solid-tag">OCP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>Amazon Locker 就像「自助寄物櫃」——快遞員放包裹進去，系統產生密碼給收件人，收件人輸入密碼取件。尺寸要匹配，超時要處理。</p>
+<p><strong>白話解釋：</strong>核心邏輯是 Size Matching（大包裹不能放小櫃）+ OTP 驗證 + 狀態管理（空→已佔用→等待取件→已取件）+ 超時退回。</p>
+<p><strong>為什麼工作上需要：</strong>展示「資源分配」問題的 OOD 解法：如何從有限資源池中找到合適的資源、分配、追蹤狀態、處理異常。</p>
+<p><strong>先備知識：</strong>Strategy Pattern、隨機碼生成、時間比較</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from enum import Enum
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+import random
+import string
+
+
+class LockerSize(Enum):
+    SMALL = 1    # fits small packages
+    MEDIUM = 2   # fits medium packages
+    LARGE = 3    # fits large packages
+    XLARGE = 4   # fits extra-large packages
+
+    def fits(self, package_size: 'PackageSize') -> bool:
+        return self.value >= package_size.value
+
+
+class PackageSize(Enum):
+    SMALL = 1
+    MEDIUM = 2
+    LARGE = 3
+    XLARGE = 4
+
+
+class LockerState(Enum):
+    AVAILABLE = "available"
+    OCCUPIED = "occupied"
+    OUT_OF_SERVICE = "out_of_service"
+
+
+# === Domain Objects ===
+class Package:
+    def __init__(self, package_id: str, size: PackageSize, recipient_email: str):
+        self.package_id = package_id
+        self.size = size
+        self.recipient_email = recipient_email
+        self.delivered_at: Optional[datetime] = None
+
+
+class OTPGenerator:
+    """一次性密碼產生器"""
+    @staticmethod
+    def generate(length: int = 6) -> str:
+        return ''.join(random.choices(string.digits, k=length))
+
+
+class Locker:
+    def __init__(self, locker_id: str, size: LockerSize):
+        self.locker_id = locker_id
+        self.size = size
+        self.state = LockerState.AVAILABLE
+        self.package: Optional[Package] = None
+        self.otp: Optional[str] = None
+        self.occupied_at: Optional[datetime] = None
+
+    def is_available(self) -> bool:
+        return self.state == LockerState.AVAILABLE
+
+    def assign_package(self, package: Package, otp: str):
+        self.package = package
+        self.otp = otp
+        self.state = LockerState.OCCUPIED
+        self.occupied_at = datetime.now()
+        package.delivered_at = datetime.now()
+
+    def release(self) -> Optional[Package]:
+        pkg = self.package
+        self.package = None
+        self.otp = None
+        self.state = LockerState.AVAILABLE
+        self.occupied_at = None
+        return pkg
+
+    def is_expired(self, max_hours: int = 72) -> bool:
+        if self.occupied_at:
+            return datetime.now() - self.occupied_at > timedelta(hours=max_hours)
+        return False
+
+
+# === Size Matching Strategy ===
+class AllocationStrategy(ABC):
+    @abstractmethod
+    def find_locker(self, lockers: List[Locker], package_size: PackageSize) -> Optional[Locker]:
+        pass
+
+
+class BestFitStrategy(AllocationStrategy):
+    """最小可用櫃：減少空間浪費"""
+    def find_locker(self, lockers: List[Locker], package_size: PackageSize) -> Optional[Locker]:
+        candidates = [
+            l for l in lockers
+            if l.is_available() and l.size.fits(package_size)
+        ]
+        if not candidates:
+            return None
+        # Sort by size (smallest fitting first)
+        candidates.sort(key=lambda l: l.size.value)
+        return candidates[0]
+
+
+class FirstFitStrategy(AllocationStrategy):
+    """第一個可用櫃：速度最快"""
+    def find_locker(self, lockers: List[Locker], package_size: PackageSize) -> Optional[Locker]:
+        for locker in lockers:
+            if locker.is_available() and locker.size.fits(package_size):
+                return locker
+        return None
+
+
+# === Notification ===
+class NotificationService(ABC):
+    @abstractmethod
+    def send_pickup_code(self, email: str, otp: str, locker_location: str, locker_id: str):
+        pass
+
+    @abstractmethod
+    def send_expiry_warning(self, email: str, hours_remaining: int):
+        pass
+
+    @abstractmethod
+    def send_return_notice(self, email: str, package_id: str):
+        pass
+
+
+class EmailNotification(NotificationService):
+    def send_pickup_code(self, email: str, otp: str, locker_location: str, locker_id: str):
+        print(f"📧 To {email}: Your package is ready! Code: {otp}, Location: {locker_location}, Locker: {locker_id}")
+
+    def send_expiry_warning(self, email: str, hours_remaining: int):
+        print(f"⚠️ To {email}: Pick up within {hours_remaining}h or package will be returned")
+
+    def send_return_notice(self, email: str, package_id: str):
+        print(f"📧 To {email}: Package {package_id} returned to sender (expired)")
+
+
+# === Locker Station (Main System) ===
+class LockerStation:
+    def __init__(self, station_id: str, location: str):
+        self.station_id = station_id
+        self.location = location
+        self.lockers: List[Locker] = []
+        self.allocation_strategy: AllocationStrategy = BestFitStrategy()
+        self.notification: NotificationService = EmailNotification()
+        self.delivery_log: Dict[str, str] = {}  # package_id -> locker_id
+        self.max_hold_hours = 72
+
+    def add_locker(self, locker: Locker):
+        self.lockers.append(locker)
+
+    def set_allocation_strategy(self, strategy: AllocationStrategy):
+        self.allocation_strategy = strategy
+
+    def deliver_package(self, package: Package) -> Optional[str]:
+        """快遞員放入包裹，回傳 OTP"""
+        locker = self.allocation_strategy.find_locker(self.lockers, package.size)
+        if locker is None:
+            print(f"❌ No available locker for {package.size.name} package")
+            return None
+
+        otp = OTPGenerator.generate()
+        locker.assign_package(package, otp)
+        self.delivery_log[package.package_id] = locker.locker_id
+
+        # Notify recipient
+        self.notification.send_pickup_code(
+            package.recipient_email, otp, self.location, locker.locker_id
+        )
+        return otp
+
+    def pickup_package(self, locker_id: str, entered_otp: str) -> Optional[Package]:
+        """收件人輸入密碼取件"""
+        locker = self._find_locker(locker_id)
+        if locker is None or locker.state != LockerState.OCCUPIED:
+            print("❌ Invalid locker or locker is empty")
+            return None
+
+        if locker.otp != entered_otp:
+            print("❌ Invalid OTP code")
+            return None
+
+        package = locker.release()
+        print(f"✅ Package {package.package_id} picked up from locker {locker_id}")
+        return package
+
+    def check_expired(self) -> List[Package]:
+        """檢查超時包裹，退回處理"""
+        expired_packages = []
+        for locker in self.lockers:
+            if locker.state == LockerState.OCCUPIED and locker.is_expired(self.max_hold_hours):
+                pkg = locker.release()
+                expired_packages.append(pkg)
+                self.notification.send_return_notice(pkg.recipient_email, pkg.package_id)
+                print(f"⏰ Locker {locker.locker_id}: Package {pkg.package_id} expired, returning to sender")
+        return expired_packages
+
+    def get_availability(self) -> Dict[LockerSize, int]:
+        """查看各尺寸可用數量"""
+        availability = {}
+        for size in LockerSize:
+            count = sum(1 for l in self.lockers if l.size == size and l.is_available())
+            availability[size] = count
+        return availability
+
+    def _find_locker(self, locker_id: str) -> Optional[Locker]:
+        for locker in self.lockers:
+            if locker.locker_id == locker_id:
+                return locker
+        return None
+
+
+# === 使用範例 ===
+station = LockerStation("STATION-001", "7-11 Xinyi Store")
+
+# Add lockers
+for i in range(5):
+    station.add_locker(Locker(f"S-{i+1}", LockerSize.SMALL))
+for i in range(3):
+    station.add_locker(Locker(f"M-{i+1}", LockerSize.MEDIUM))
+for i in range(2):
+    station.add_locker(Locker(f"L-{i+1}", LockerSize.LARGE))
+
+# Deliver packages
+pkg1 = Package("PKG-001", PackageSize.SMALL, "alice@mail.com")
+pkg2 = Package("PKG-002", PackageSize.MEDIUM, "bob@mail.com")
+pkg3 = Package("PKG-003", PackageSize.LARGE, "charlie@mail.com")
+
+otp1 = station.deliver_package(pkg1)
+otp2 = station.deliver_package(pkg2)
+otp3 = station.deliver_package(pkg3)
+
+print(f"\nAvailability: {station.get_availability()}")
+
+# Pickup
+station.pickup_package("S-1", otp1)
+station.pickup_package("M-1", "000000")  # Wrong OTP
+station.pickup_package("M-1", otp2)      # Correct
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: BestFit vs FirstFit 的 trade-off？</strong></p>
+<p>A: BestFit 省空間（小包裹不佔大櫃），但 O(n log n) sort。FirstFit 最快 O(n)，但可能浪費大櫃裝小包裹。Production 通常用 BestFit + 預留一定比例大櫃。</p>
+<p><strong>Q2: OTP 安全性如何保證？</strong></p>
+<p>A: 6位數字 = 100萬種。加上限制嘗試次數（3次鎖定）+ 72小時過期 + 每次只能對特定 locker 驗證。Production 可加 HMAC：OTP = HMAC(secret, package_id + timestamp)[:6]。</p>
+<p><strong>Q3: check_expired 應該怎麼觸發？</strong></p>
+<p>A: Cron job 或 Scheduler 定期執行（每小時）。也可以 lazy evaluation：每次 deliver 或 pickup 時順便檢查。兩者結合最穩：定期清理 + 操作時 opportunistic check。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何處理包裹超大、所有大櫃都滿的情況？</strong><br>
+A: 回傳失敗 + 建議最近有空位的 station（Location service 查詢附近站點）。或加入 waitlist：快遞員登記，有櫃空出時 notification callback。</p>
+
+<p><strong>2. 如何防止 OTP 被暴力破解？</strong><br>
+A: (1) 限制嘗試次數 3 次/小時 per locker (2) 失敗後加入 exponential backoff delay (3) 連續 5 次失敗鎖定 locker + 通知 admin (4) OTP 使用加密隨機數而非 pseudo-random。</p>
+
+<p><strong>3. 如何支援「代領」功能？</strong><br>
+A: Package 加 <code>authorized_delegates: List[str]</code>。deliver 時產生主 OTP + delegate OTP（或共用）。pickup 時驗證 OTP 即可（不綁定身份）。或加入 2FA：OTP + recipient 手機簡訊確認。</p>
+
+<p><strong>4. 如何處理硬體故障（某個 Locker 門打不開）？</strong><br>
+A: Locker 加 <code>OUT_OF_SERVICE</code> state。健康檢查 sensor 偵測到故障 → 自動標記 → 通知維修 → 內有包裹則 reassign 到其他 locker + 重新通知收件人新 OTP。</p>
+
+<p><strong>5. 如何做退貨？（客人放回包裹）</strong><br>
+A: 新增 <code>return_package()</code> 方法。客人選擇空 locker，放入包裹，系統掃描包裹 QR → 分配 locker → 通知物流取件。Locker 狀態轉為 RETURN_PENDING。物流取件後 release。</p>
+</div>
+
+<!-- ==================== CH12 ==================== -->
+<h2 id="ch12">Ch12: Design Movie Ticket Booking 🎬</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Concurrency Control：</strong>100 人同時選同一個座位，只有 1 人能成功。比喻：搶演唱會門票</li>
+<li><strong>Pessimistic Lock：</strong>先鎖住再操作（SELECT FOR UPDATE）。適合衝突頻繁的場景</li>
+<li><strong>Reservation TTL：</strong>鎖座位 10 分鐘，沒付款就自動釋放。防止座位永久被占</li>
+</ul></div>
+
+<p><span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">Observer Pattern</span> <span class="pattern-tag">Lock/Mutex</span> <span class="solid-tag">SRP</span> <span class="solid-tag">DIP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>想像你和朋友同時搶同一場電影的同一個座位——只有一個人能成功。系統要在毫秒內決定誰先搶到，不能一張票賣兩次。</p>
+<p><strong>白話解釋：</strong>核心挑戰是 <strong>Seat Locking</strong>（暫時鎖定座位）和 <strong>Concurrency Control</strong>（防止雙重販售）。選座後有 10 分鐘付款期限，超時自動釋放。</p>
+<p><strong>為什麼工作上需要：</strong>面試官想看你如何處理「有限資源的並發搶佔」——這在現實中對應 inventory management、ticket systems、booking platforms。</p>
+<p><strong>先備知識：</strong>Lock/Mutex 概念、TTL（time-to-live）、State Management</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import List, Dict, Optional, Set
+from threading import Lock
+import uuid
+
+
+class SeatStatus(Enum):
+    AVAILABLE = "available"
+    LOCKED = "locked"       # 暫時鎖定（付款中）
+    BOOKED = "booked"       # 已確認購買
+
+
+class SeatType(Enum):
+    REGULAR = "regular"
+    PREMIUM = "premium"
+    VIP = "vip"
+    COUPLE = "couple"
+
+
+class BookingStatus(Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+
+
+# === Core Domain ===
+class Movie:
+    def __init__(self, movie_id: str, title: str, duration_min: int, genre: str):
+        self.movie_id = movie_id
+        self.title = title
+        self.duration_min = duration_min
+        self.genre = genre
+
+
+class Theater:
+    def __init__(self, theater_id: str, name: str, total_seats: int):
+        self.theater_id = theater_id
+        self.name = name
+        self.total_seats = total_seats
+
+
+class Seat:
+    def __init__(self, seat_id: str, row: str, number: int, seat_type: SeatType):
+        self.seat_id = seat_id
+        self.row = row
+        self.number = number
+        self.seat_type = seat_type
+        self.status = SeatStatus.AVAILABLE
+        self.locked_by: Optional[str] = None
+        self.locked_at: Optional[datetime] = None
+        self._lock = Lock()  # Thread safety
+
+    def try_lock(self, user_id: str, lock_duration_sec: int = 600) -> bool:
+        """嘗試鎖定座位（原子操作）"""
+        with self._lock:
+            # Check if lock expired
+            if self.status == SeatStatus.LOCKED and self.locked_at:
+                if datetime.now() - self.locked_at > timedelta(seconds=lock_duration_sec):
+                    self._release_lock()
+
+            if self.status == SeatStatus.AVAILABLE:
+                self.status = SeatStatus.LOCKED
+                self.locked_by = user_id
+                self.locked_at = datetime.now()
+                return True
+            return False
+
+    def confirm_booking(self, user_id: str) -> bool:
+        with self._lock:
+            if self.status == SeatStatus.LOCKED and self.locked_by == user_id:
+                self.status = SeatStatus.BOOKED
+                return True
+            return False
+
+    def release(self):
+        with self._lock:
+            self._release_lock()
+
+    def _release_lock(self):
+        self.status = SeatStatus.AVAILABLE
+        self.locked_by = None
+        self.locked_at = None
+
+    @property
+    def display_name(self) -> str:
+        return f"{self.row}{self.number}"
+
+
+class Show:
+    def __init__(self, show_id: str, movie: Movie, theater: Theater, start_time: datetime):
+        self.show_id = show_id
+        self.movie = movie
+        self.theater = theater
+        self.start_time = start_time
+        self.seats: List[Seat] = []
+        self.pricing: Dict[SeatType, float] = {
+            SeatType.REGULAR: 300,
+            SeatType.PREMIUM: 450,
+            SeatType.VIP: 600,
+            SeatType.COUPLE: 800,
+        }
+
+    def add_seats(self, seats: List[Seat]):
+        self.seats.extend(seats)
+
+    def get_available_seats(self) -> List[Seat]:
+        return [s for s in self.seats if s.status == SeatStatus.AVAILABLE]
+
+    def get_seat_price(self, seat: Seat) -> float:
+        return self.pricing.get(seat.seat_type, 300)
+
+
+# === Booking ===
+class Booking:
+    LOCK_DURATION = 600  # 10 minutes
+
+    def __init__(self, user_id: str, show: Show, seats: List[Seat]):
+        self.booking_id = str(uuid.uuid4())[:8]
+        self.user_id = user_id
+        self.show = show
+        self.seats = seats
+        self.status = BookingStatus.PENDING
+        self.created_at = datetime.now()
+        self.total_amount = sum(show.get_seat_price(s) for s in seats)
+        self.payment_deadline = self.created_at + timedelta(seconds=self.LOCK_DURATION)
+
+    def is_expired(self) -> bool:
+        return datetime.now() > self.payment_deadline and self.status == BookingStatus.PENDING
+
+
+# === Payment ===
+class PaymentProcessor(ABC):
+    @abstractmethod
+    def process(self, amount: float, user_id: str) -> bool:
+        pass
+
+
+class CreditCardProcessor(PaymentProcessor):
+    def process(self, amount: float, user_id: str) -> bool:
+        print(f"💳 Processing ${amount:.0f} for user {user_id}")
+        return True  # Simulated success
+
+
+class MobilePayProcessor(PaymentProcessor):
+    def process(self, amount: float, user_id: str) -> bool:
+        print(f"📱 Mobile payment ${amount:.0f} for user {user_id}")
+        return True
+
+
+# === Booking System (Facade) ===
+class MovieBookingSystem:
+    def __init__(self):
+        self.shows: Dict[str, Show] = {}
+        self.bookings: Dict[str, Booking] = {}
+        self.payment_processor: PaymentProcessor = CreditCardProcessor()
+
+    def add_show(self, show: Show):
+        self.shows[show.show_id] = show
+
+    def set_payment_processor(self, processor: PaymentProcessor):
+        self.payment_processor = processor
+
+    def select_seats(self, user_id: str, show_id: str, seat_ids: List[str]) -> Optional[Booking]:
+        """選座位 + 鎖定（10分鐘付款期限）"""
+        show = self.shows.get(show_id)
+        if not show:
+            return None
+
+        # Try to lock all requested seats
+        locked_seats = []
+        for seat in show.seats:
+            if seat.seat_id in seat_ids:
+                if seat.try_lock(user_id):
+                    locked_seats.append(seat)
+                else:
+                    # Rollback: release already locked seats
+                    for s in locked_seats:
+                        s.release()
+                    print(f"❌ Seat {seat.display_name} not available")
+                    return None
+
+        if len(locked_seats) != len(seat_ids):
+            for s in locked_seats:
+                s.release()
+            return None
+
+        booking = Booking(user_id, show, locked_seats)
+        self.bookings[booking.booking_id] = booking
+        print(f"🔒 Seats locked for 10 min. Booking #{booking.booking_id}, Total: ${booking.total_amount:.0f}")
+        return booking
+
+    def confirm_payment(self, booking_id: str) -> bool:
+        """付款確認"""
+        booking = self.bookings.get(booking_id)
+        if not booking:
+            return False
+
+        if booking.is_expired():
+            self._expire_booking(booking)
+            print("❌ Booking expired. Seats released.")
+            return False
+
+        # Process payment
+        if self.payment_processor.process(booking.total_amount, booking.user_id):
+            booking.status = BookingStatus.CONFIRMED
+            for seat in booking.seats:
+                seat.confirm_booking(booking.user_id)
+            print(f"✅ Booking #{booking_id} confirmed! Seats: {[s.display_name for s in booking.seats]}")
+            return True
+        return False
+
+    def cancel_booking(self, booking_id: str) -> bool:
+        booking = self.bookings.get(booking_id)
+        if not booking or booking.status != BookingStatus.CONFIRMED:
+            return False
+        booking.status = BookingStatus.CANCELLED
+        for seat in booking.seats:
+            seat.release()
+        print(f"🚫 Booking #{booking_id} cancelled. Refund processing.")
+        return True
+
+    def _expire_booking(self, booking: Booking):
+        booking.status = BookingStatus.EXPIRED
+        for seat in booking.seats:
+            seat.release()
+
+    def cleanup_expired(self):
+        """定期清理過期鎖定"""
+        for booking in self.bookings.values():
+            if booking.is_expired():
+                self._expire_booking(booking)
+
+
+# === 使用範例 ===
+system = MovieBookingSystem()
+
+movie = Movie("MOV-1", "Inception", 148, "Sci-Fi")
+theater = Theater("TH-1", "IMAX Hall", 100)
+show = Show("SHOW-1", movie, theater, datetime(2026, 7, 15, 19, 30))
+
+# Create seats
+seats = []
+for row in "ABCDE":
+    for num in range(1, 11):
+        seat_type = SeatType.VIP if row == "A" else SeatType.PREMIUM if row == "B" else SeatType.REGULAR
+        seats.append(Seat(f"{row}{num}", row, num, seat_type))
+show.add_seats(seats)
+system.add_show(show)
+
+# User books seats
+booking = system.select_seats("user_alice", "SHOW-1", ["A5", "A6"])
+if booking:
+    system.confirm_payment(booking.booking_id)
+
+# Another user tries same seats (should fail)
+booking2 = system.select_seats("user_bob", "SHOW-1", ["A5", "A7"])
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: 為什麼用 Lock 而不是 database transaction？</strong></p>
+<p>A: OOD 面試中用 in-memory Lock 展示概念即可。Production 用 DB 層的 SELECT FOR UPDATE（pessimistic）或 version column（optimistic）。Redis SETNX + TTL 適合分散式場景。面試時說出 trade-off 即可。</p>
+<p><strong>Q2: 多座位原子鎖定的 Rollback 為什麼重要？</strong></p>
+<p>A: 如果鎖了 A5 但 A6 失敗，不 rollback 會導致 A5 一直被佔但沒人付款。All-or-nothing 語義：要嘛全部鎖定成功，要嘛全部不鎖。類似 DB transaction 的 atomicity。</p>
+<p><strong>Q3: 10 分鐘過期怎麼觸發？</strong></p>
+<p>A: 兩種方式：(1) Lazy — 下次有人嘗試鎖定時檢查已過期 (2) Eager — 背景 scheduler 每分鐘 run cleanup_expired()。Production 用兩者結合確保不漏。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何處理高並發（萬人搶票）場景？</strong><br>
+A: (1) 分段鎖定（per-seat lock 而非 global lock） (2) 排隊系統（virtual queue + token） (3) 分批放票（每 5 分鐘釋放一批） (4) 預留庫存 buffer 防止超賣。DB 層用 atomic decrement。</p>
+
+<p><strong>2. 如何做動態定價（尖峰時段漲價）？</strong><br>
+A: Strategy Pattern：<code>DynamicPricingStrategy</code> 考慮 occupancy rate、距開演時間、weekday/weekend。show.pricing 變成 <code>pricing_strategy.calculate(seat, show, current_time)</code>。A/B test 不同策略。</p>
+
+<p><strong>3. 如何支援「選座位推薦」（最佳觀影位置）？</strong><br>
+A: 新增 <code>SeatRecommender</code> service。基於距離螢幕中心的距離 + 排數權重 + 連座偏好，回傳 top-N 推薦座位組合。可用 scoring function + greedy search。</p>
+
+<p><strong>4. 如何處理退票退款？</strong><br>
+A: 按時間分級退款：24h+ 前全額退、6-24h 退 80%、<6h 不退。CancellationPolicy strategy pattern。退款後 seat 回到 AVAILABLE。需考慮第三方支付的非同步退款 callback。</p>
+
+<p><strong>5. 如何做合併支付（多人分攤）？</strong><br>
+A: Booking 支援 <code>split_payment: Dict[user_id, amount]</code>。所有人都確認支付後才 confirm（saga pattern/eventual consistency）。設定期限：任一人超時則全部 rollback。</p>
+</div>
+
+<!-- ==================== CH13 ==================== -->
+<h2 id="ch13">Ch13: Design Card Game — Blackjack 🃏</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Strategy（玩家策略）：</strong>不同 AI 難度用不同策略（保守/積極/計牌）。可 runtime 切換</li>
+<li><strong>Encapsulation（牌組封裝）：</strong>Deck class 只暴露 deal() 和 shuffle()，外界不能直接偷看或操控牌的順序</li>
+</ul></div>
+
+<p><span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">Template Method</span> <span class="pattern-tag">State Pattern</span> <span class="solid-tag">OCP</span> <span class="solid-tag">SRP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>21 點（Blackjack）是「決策遊戲」——每回合你決定要不要再拿一張牌。莊家有固定策略（17 點以上必須停），玩家可以用不同策略（保守/激進/算牌）。</p>
+<p><strong>白話解釋：</strong>OOD 重點是：Deck（牌堆）、Card（牌）、Hand（手牌 + 計算點數）、Player/Dealer（不同策略），以及遊戲流程控制。Strategy Pattern 讓不同 AI 策略可插拔。</p>
+<p><strong>為什麼工作上需要：</strong>展示「遊戲規則引擎」設計——狀態轉換（hit/stand/bust/blackjack）、策略模式（可換 AI）、Template Method（遊戲流程固定但步驟可變）。</p>
+<p><strong>先備知識：</strong>撲克牌基礎、Strategy Pattern、State machine</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from enum import Enum
+from typing import List, Optional
+import random
+
+
+class Suit(Enum):
+    HEARTS = "♥"
+    DIAMONDS = "♦"
+    CLUBS = "♣"
+    SPADES = "♠"
+
+
+class Rank(Enum):
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    FIVE = 5
+    SIX = 6
+    SEVEN = 7
+    EIGHT = 8
+    NINE = 9
+    TEN = 10
+    JACK = 11
+    QUEEN = 12
+    KING = 13
+    ACE = 14
+
+    @property
+    def blackjack_value(self) -> int:
+        if self.value >= 10 and self.value <= 13:
+            return 10
+        elif self.value == 14:
+            return 11  # Ace default, adjusted in Hand
+        return self.value
+
+
+class Card:
+    def __init__(self, suit: Suit, rank: Rank):
+        self.suit = suit
+        self.rank = rank
+        self.face_up = True
+
+    @property
+    def value(self) -> int:
+        return self.rank.blackjack_value
+
+    def __repr__(self):
+        display = "🂠" if not self.face_up else f"{self.rank.name}{self.suit.value}"
+        return display
+
+
+class Deck:
+    def __init__(self, num_decks: int = 1):
+        self.cards: List[Card] = []
+        self._build(num_decks)
+        self.shuffle()
+
+    def _build(self, num_decks: int):
+        for _ in range(num_decks):
+            for suit in Suit:
+                for rank in Rank:
+                    self.cards.append(Card(suit, rank))
+
+    def shuffle(self):
+        random.shuffle(self.cards)
+
+    def deal(self) -> Card:
+        if not self.cards:
+            raise ValueError("Deck is empty!")
+        return self.cards.pop()
+
+    @property
+    def remaining(self) -> int:
+        return len(self.cards)
+
+
+class Hand:
+    def __init__(self):
+        self.cards: List[Card] = []
+
+    def add_card(self, card: Card):
+        self.cards.append(card)
+
+    @property
+    def value(self) -> int:
+        """計算手牌點數（Ace 彈性計算 11 or 1）"""
+        total = sum(c.value for c in self.cards)
+        aces = sum(1 for c in self.cards if c.rank == Rank.ACE)
+        # Adjust aces from 11 to 1 if over 21
+        while total > 21 and aces > 0:
+            total -= 10
+            aces -= 1
+        return total
+
+    @property
+    def is_bust(self) -> bool:
+        return self.value > 21
+
+    @property
+    def is_blackjack(self) -> bool:
+        return len(self.cards) == 2 and self.value == 21
+
+    def __repr__(self):
+        cards_str = " ".join(str(c) for c in self.cards)
+        return f"[{cards_str}] = {self.value}"
+
+
+# === Player Strategy (Strategy Pattern) ===
+class PlayerStrategy(ABC):
+    @abstractmethod
+    def should_hit(self, hand: Hand, dealer_up_card: Card) -> bool:
+        pass
+
+
+class ConservativeStrategy(PlayerStrategy):
+    """保守策略：12 以上就 Stand"""
+    def should_hit(self, hand: Hand, dealer_up_card: Card) -> bool:
+        return hand.value < 12
+
+
+class BasicStrategy(PlayerStrategy):
+    """基本策略：根據莊家明牌決定"""
+    def should_hit(self, hand: Hand, dealer_up_card: Card) -> bool:
+        dealer_val = dealer_up_card.value
+        if hand.value <= 11:
+            return True
+        if hand.value >= 17:
+            return False
+        # Dealer shows high card (7+), be aggressive
+        if dealer_val >= 7:
+            return hand.value < 17
+        # Dealer shows low card (2-6), be conservative
+        return hand.value < 12
+
+
+class AggressiveStrategy(PlayerStrategy):
+    """激進策略：18 以下都 Hit"""
+    def should_hit(self, hand: Hand, dealer_up_card: Card) -> bool:
+        return hand.value < 18
+
+
+class DealerStrategy(PlayerStrategy):
+    """莊家固定策略：17 以下必須 Hit"""
+    def should_hit(self, hand: Hand, dealer_up_card: Card) -> bool:
+        return hand.value < 17
+
+
+# === Players ===
+class Player:
+    def __init__(self, name: str, strategy: PlayerStrategy, chips: int = 1000):
+        self.name = name
+        self.strategy = strategy
+        self.hand = Hand()
+        self.chips = chips
+        self.current_bet = 0
+
+    def place_bet(self, amount: int) -> bool:
+        if amount > self.chips:
+            return False
+        self.current_bet = amount
+        self.chips -= amount
+        return True
+
+    def win(self, multiplier: float = 2.0):
+        self.chips += int(self.current_bet * multiplier)
+
+    def push(self):
+        """平手退回賭注"""
+        self.chips += self.current_bet
+
+    def reset_hand(self):
+        self.hand = Hand()
+        self.current_bet = 0
+
+
+class Dealer:
+    def __init__(self):
+        self.name = "Dealer"
+        self.hand = Hand()
+        self.strategy = DealerStrategy()
+
+    def reset_hand(self):
+        self.hand = Hand()
+
+
+# === Game Engine ===
+class GameResult(Enum):
+    PLAYER_WIN = "Player wins"
+    DEALER_WIN = "Dealer wins"
+    PUSH = "Push (tie)"
+    PLAYER_BLACKJACK = "Player Blackjack!"
+    PLAYER_BUST = "Player busts"
+    DEALER_BUST = "Dealer busts"
+
+
+class BlackjackGame:
+    def __init__(self, num_decks: int = 6):
+        self.deck = Deck(num_decks)
+        self.players: List[Player] = []
+        self.dealer = Dealer()
+        self.round_results: List[Dict] = []
+
+    def add_player(self, player: Player):
+        self.players.append(player)
+
+    def play_round(self, bets: Dict[str, int]) -> Dict[str, GameResult]:
+        """一輪完整遊戲"""
+        results = {}
+
+        # Reset hands
+        self.dealer.reset_hand()
+        for p in self.players:
+            p.reset_hand()
+            p.place_bet(bets.get(p.name, 100))
+
+        # Deal initial cards
+        for _ in range(2):
+            for p in self.players:
+                p.hand.add_card(self.deck.deal())
+            self.dealer.hand.add_card(self.deck.deal())
+
+        # Dealer's first card face down
+        self.dealer.hand.cards[0].face_up = False
+        dealer_up_card = self.dealer.hand.cards[1]
+
+        print(f"Dealer shows: {dealer_up_card}")
+        for p in self.players:
+            print(f"{p.name}: {p.hand}")
+
+        # Player turns
+        for player in self.players:
+            result = self._player_turn(player, dealer_up_card)
+            if result:
+                results[player.name] = result
+
+        # Dealer turn (only if any player didn't bust)
+        active_players = [p for p in self.players if p.name not in results]
+        if active_players:
+            self.dealer.hand.cards[0].face_up = True
+            print(f"\nDealer reveals: {self.dealer.hand}")
+            self._dealer_turn()
+
+        # Determine winners
+        for player in active_players:
+            results[player.name] = self._determine_winner(player)
+
+        # Settle bets
+        for player in self.players:
+            result = results[player.name]
+            if result in (GameResult.PLAYER_WIN, GameResult.DEALER_BUST):
+                player.win(2.0)
+            elif result == GameResult.PLAYER_BLACKJACK:
+                player.win(2.5)
+            elif result == GameResult.PUSH:
+                player.push()
+
+        return results
+
+    def _player_turn(self, player: Player, dealer_up_card: Card) -> Optional[GameResult]:
+        # Check natural blackjack
+        if player.hand.is_blackjack:
+            print(f"  {player.name}: BLACKJACK! 🎉")
+            return GameResult.PLAYER_BLACKJACK
+
+        while player.strategy.should_hit(player.hand, dealer_up_card):
+            card = self.deck.deal()
+            player.hand.add_card(card)
+            print(f"  {player.name} hits: {card} → {player.hand}")
+            if player.hand.is_bust:
+                print(f"  {player.name} BUSTS! 💥")
+                return GameResult.PLAYER_BUST
+        print(f"  {player.name} stands at {player.hand.value}")
+        return None
+
+    def _dealer_turn(self):
+        while self.dealer.strategy.should_hit(self.dealer.hand, self.dealer.hand.cards[0]):
+            card = self.deck.deal()
+            self.dealer.hand.add_card(card)
+            print(f"  Dealer hits: {card} → {self.dealer.hand}")
+        if self.dealer.hand.is_bust:
+            print("  Dealer BUSTS! 💥")
+        else:
+            print(f"  Dealer stands at {self.dealer.hand.value}")
+
+    def _determine_winner(self, player: Player) -> GameResult:
+        if self.dealer.hand.is_bust:
+            return GameResult.DEALER_BUST
+        if player.hand.value > self.dealer.hand.value:
+            return GameResult.PLAYER_WIN
+        elif player.hand.value < self.dealer.hand.value:
+            return GameResult.DEALER_WIN
+        else:
+            return GameResult.PUSH
+
+
+# === 使用範例 ===
+from typing import Dict
+
+game = BlackjackGame(num_decks=6)
+game.add_player(Player("Alice", BasicStrategy(), chips=1000))
+game.add_player(Player("Bob", AggressiveStrategy(), chips=1000))
+
+results = game.play_round({"Alice": 100, "Bob": 200})
+print(f"\nResults: {results}")
+for p in game.players:
+    print(f"  {p.name}: ${p.chips} chips")
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: Ace 計算為什麼需要特殊處理？</strong></p>
+<p>A: Ace 可以是 11 或 1。Hand.value 先全算 11，再從爆掉的 Ace 開始逐一降為 1。這是 Greedy approach——盡量保持高點數，直到超過 21 才降級。</p>
+<p><strong>Q2: Strategy Pattern 在這裡的核心價值？</strong></p>
+<p>A: 玩家的「決策邏輯」與「玩家身份」分離。同一個 Player 可以切換策略（學習/適應）。也方便做 AI simulation：跑 10000 局比較不同策略的勝率。</p>
+<p><strong>Q3: 為什麼 Deck 用多副牌（num_decks=6）？</strong></p>
+<p>A: 真實賭場用 6-8 副牌防止算牌。多副牌讓記牌變困難（需要追蹤更多已出的牌）。OOD 設計中，Deck 的可配置性展示了靈活度。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何加入 Split（分牌）和 Double Down（加倍）？</strong><br>
+A: Player 持有 <code>hands: List[Hand]</code>（支援多手牌）。Split 條件：兩張同 rank。Double Down：加倍賭注只再拿一張。每種操作是 <code>PlayerAction</code> enum，Strategy.choose_action() 回傳 HIT/STAND/SPLIT/DOUBLE。</p>
+
+<p><strong>2. 如何做 Card Counting（算牌系統）？</strong><br>
+A: 新增 <code>CardCountingStrategy(PlayerStrategy)</code>，維護 running_count（Hi-Lo system: 2-6=+1, 7-9=0, 10-A=-1）。true_count = running / remaining_decks。count > +2 加大下注。Deck 需要 expose dealt cards。</p>
+
+<p><strong>3. 如何支援多人同桌 + 旁觀者？</strong><br>
+A: Observer Pattern：Game 是 Subject，Player/Spectator 是 Observer。每張牌 deal 時 notify all。Spectator 只能看不能操作（介面隔離）。加入 max_players 限制。</p>
+
+<p><strong>4. 如何擴展為其他撲克遊戲（Poker, Baccarat）？</strong><br>
+A: Template Method：<code>CardGame</code> 定義 skeleton（deal → player_turns → showdown → settle）。各遊戲 override 具體步驟。Card/Deck/Hand 可重用。Hand.value 的計算邏輯透過 Strategy 或 subclass 替換。</p>
+
+<p><strong>5. 如何保證公平性（防止作弊）？</strong><br>
+A: (1) Deck shuffle 用 cryptographic random (2) 洗牌後生成 hash，遊戲結束後公開 seed 可驗證 (3) 牌面朝下時 client 不傳值（server-authoritative） (4) Audit log 記錄每張 deal 的牌和時間。</p>
+</div>
+
+<!-- ==================== CH14 ==================== -->
+<h2 id="ch14">Ch14: Design Splitwise 💰</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Graph（圖論）：</strong>用「有向圖」表示誰欠誰錢。節點=人，邊=欠款金額</li>
+<li><strong>Debt Simplification：</strong>A 欠 B 100, B 欠 C 100 → 簡化為 A 直接欠 C 100（減少轉帳次數）</li>
+<li><strong>Strategy（分帳策略）：</strong>平分/按比例/指定金額，三種策略可插拔</li>
+</ul></div>
+
+<p><span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">Graph Algorithm</span> <span class="pattern-tag">Observer Pattern</span> <span class="solid-tag">SRP</span> <span class="solid-tag">OCP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>朋友聚餐 AA 制——有人先付、有人多付、有人只吃了一部分。最後要算「誰欠誰多少」，並用最少次轉帳把帳清掉。</p>
+<p><strong>白話解釋：</strong>核心是 <strong>Split Strategy</strong>（等分/按比例/精確金額）+ <strong>Balance Graph</strong>（有向圖記錄每對 user 的淨餘額）+ <strong>Simplify Debts</strong>（最小化交易次數的圖演算法）。</p>
+<p><strong>為什麼工作上需要：</strong>展示 Strategy Pattern（多種分帳策略）+ Graph-based 問題建模 + 淨額結算演算法。面試官想看你能否處理「多對多關係的簡化」。</p>
+<p><strong>先備知識：</strong>有向圖、淨額計算、Strategy Pattern</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from typing import List, Dict, Tuple, Set
+from collections import defaultdict
+from enum import Enum
+import uuid
+import heapq
+
+
+class SplitType(Enum):
+    EQUAL = "equal"
+    EXACT = "exact"
+    PERCENTAGE = "percentage"
+    SHARES = "shares"
+
+
+# === Split Strategies ===
+class SplitStrategy(ABC):
+    @abstractmethod
+    def calculate_splits(self, total: float, participants: List[str],
+                         split_data: Dict = None) -> Dict[str, float]:
+        """回傳每人應付金額"""
+        pass
+
+
+class EqualSplit(SplitStrategy):
+    def calculate_splits(self, total: float, participants: List[str],
+                         split_data: Dict = None) -> Dict[str, float]:
+        per_person = total / len(participants)
+        return {p: round(per_person, 2) for p in participants}
+
+
+class ExactSplit(SplitStrategy):
+    def calculate_splits(self, total: float, participants: List[str],
+                         split_data: Dict = None) -> Dict[str, float]:
+        """每人指定確切金額"""
+        if not split_data or 'amounts' not in split_data:
+            raise ValueError("ExactSplit requires 'amounts' dict")
+        amounts = split_data['amounts']
+        if abs(sum(amounts.values()) - total) > 0.01:
+            raise ValueError("Amounts don't sum to total")
+        return amounts
+
+
+class PercentageSplit(SplitStrategy):
+    def calculate_splits(self, total: float, participants: List[str],
+                         split_data: Dict = None) -> Dict[str, float]:
+        """按百分比分"""
+        if not split_data or 'percentages' not in split_data:
+            raise ValueError("PercentageSplit requires 'percentages' dict")
+        pcts = split_data['percentages']
+        if abs(sum(pcts.values()) - 100) > 0.01:
+            raise ValueError("Percentages must sum to 100")
+        return {p: round(total * pcts[p] / 100, 2) for p in participants}
+
+
+class SharesSplit(SplitStrategy):
+    def calculate_splits(self, total: float, participants: List[str],
+                         split_data: Dict = None) -> Dict[str, float]:
+        """按份數分（2份、1份...）"""
+        if not split_data or 'shares' not in split_data:
+            raise ValueError("SharesSplit requires 'shares' dict")
+        shares = split_data['shares']
+        total_shares = sum(shares.values())
+        per_share = total / total_shares
+        return {p: round(per_share * shares[p], 2) for p in participants}
+
+
+# === Domain Objects ===
+class User:
+    def __init__(self, user_id: str, name: str, email: str):
+        self.user_id = user_id
+        self.name = name
+        self.email = email
+
+
+class Expense:
+    def __init__(self, description: str, total: float, paid_by: str,
+                 participants: List[str], split_strategy: SplitStrategy,
+                 split_data: Dict = None):
+        self.id = str(uuid.uuid4())[:8]
+        self.description = description
+        self.total = total
+        self.paid_by = paid_by
+        self.participants = participants
+        self.split_strategy = split_strategy
+        self.splits = split_strategy.calculate_splits(total, participants, split_data)
+
+
+class Group:
+    def __init__(self, group_id: str, name: str):
+        self.group_id = group_id
+        self.name = name
+        self.members: Set[str] = set()
+        self.expenses: List[Expense] = []
+
+    def add_member(self, user_id: str):
+        self.members.add(user_id)
+
+    def add_expense(self, expense: Expense):
+        self.expenses.append(expense)
+
+
+# === Balance Graph + Debt Simplification ===
+class BalanceGraph:
+    """有向圖：追蹤所有人之間的淨餘額"""
+    def __init__(self):
+        # balances[A][B] = amount A owes B
+        self.balances: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+
+    def add_debt(self, debtor: str, creditor: str, amount: float):
+        """debtor 欠 creditor amount 元"""
+        if debtor == creditor:
+            return
+        self.balances[debtor][creditor] += amount
+        self.balances[creditor][debtor] -= amount
+
+    def get_net_balance(self, user_id: str) -> float:
+        """正數 = 別人欠你，負數 = 你欠別人"""
+        total = 0
+        for other, amount in self.balances[user_id].items():
+            total -= amount  # If I owe someone, it's negative in my row
+        return total
+
+    def get_debts_for_user(self, user_id: str) -> Dict[str, float]:
+        """回傳 user 欠各人的金額（正數=我欠他）"""
+        debts = {}
+        for other, amount in self.balances[user_id].items():
+            if amount > 0.01:  # I owe them
+                debts[other] = round(amount, 2)
+        return debts
+
+    def simplify_debts(self) -> List[Tuple[str, str, float]]:
+        """
+        最小化交易次數的核心演算法：
+        1. 算出每人的淨餘額
+        2. 正數的人是 creditor，負數的人是 debtor
+        3. Greedy matching：最大債務人付給最大債權人
+        """
+        # Calculate net amounts
+        net: Dict[str, float] = defaultdict(float)
+        for person, others in self.balances.items():
+            for other, amount in others.items():
+                net[person] += amount  # positive = I owe others
+
+        # Separate into debtors (owe money) and creditors (owed money)
+        debtors = []  # (amount_owed, person)
+        creditors = []  # (amount_owed_to_them, person)
+
+        for person, amount in net.items():
+            if amount > 0.01:
+                debtors.append([amount, person])
+            elif amount < -0.01:
+                creditors.append([-amount, person])
+
+        # Greedy matching
+        transactions = []
+        debtors.sort(reverse=True)
+        creditors.sort(reverse=True)
+
+        i, j = 0, 0
+        while i < len(debtors) and j < len(creditors):
+            debt_amount, debtor = debtors[i]
+            credit_amount, creditor = creditors[j]
+
+            settle = min(debt_amount, credit_amount)
+            transactions.append((debtor, creditor, round(settle, 2)))
+
+            debtors[i][0] -= settle
+            creditors[j][0] -= settle
+
+            if debtors[i][0] < 0.01:
+                i += 1
+            if creditors[j][0] < 0.01:
+                j += 1
+
+        return transactions
+
+
+# === Splitwise System (Facade) ===
+class SplitwiseSystem:
+    SPLIT_STRATEGIES = {
+        SplitType.EQUAL: EqualSplit(),
+        SplitType.EXACT: ExactSplit(),
+        SplitType.PERCENTAGE: PercentageSplit(),
+        SplitType.SHARES: SharesSplit(),
+    }
+
+    def __init__(self):
+        self.users: Dict[str, User] = {}
+        self.groups: Dict[str, Group] = {}
+        self.balance_graph = BalanceGraph()
+
+    def register_user(self, user_id: str, name: str, email: str) -> User:
+        user = User(user_id, name, email)
+        self.users[user_id] = user
+        return user
+
+    def create_group(self, group_id: str, name: str, member_ids: List[str]) -> Group:
+        group = Group(group_id, name)
+        for mid in member_ids:
+            group.add_member(mid)
+        self.groups[group_id] = group
+        return group
+
+    def add_expense(self, group_id: str, description: str, total: float,
+                    paid_by: str, participants: List[str],
+                    split_type: SplitType = SplitType.EQUAL,
+                    split_data: Dict = None) -> Expense:
+        strategy = self.SPLIT_STRATEGIES[split_type]
+        expense = Expense(description, total, paid_by, participants, strategy, split_data)
+
+        # Update balance graph
+        for participant, amount in expense.splits.items():
+            if participant != paid_by:
+                self.balance_graph.add_debt(participant, paid_by, amount)
+
+        # Add to group
+        if group_id in self.groups:
+            self.groups[group_id].add_expense(expense)
+
+        print(f"💰 {description}: ${total} paid by {paid_by}")
+        for p, amt in expense.splits.items():
+            print(f"   {p} owes: ${amt:.2f}")
+        return expense
+
+    def get_balances(self, user_id: str) -> Dict[str, float]:
+        return self.balance_graph.get_debts_for_user(user_id)
+
+    def simplify_all_debts(self) -> List[Tuple[str, str, float]]:
+        return self.balance_graph.simplify_debts()
+
+    def settle_debt(self, payer: str, payee: str, amount: float):
+        """記錄一筆還款"""
+        self.balance_graph.add_debt(payee, payer, amount)
+        print(f"✅ {payer} paid ${amount:.2f} to {payee}")
+
+
+# === 使用範例 ===
+sw = SplitwiseSystem()
+sw.register_user("alice", "Alice", "alice@mail.com")
+sw.register_user("bob", "Bob", "bob@mail.com")
+sw.register_user("charlie", "Charlie", "charlie@mail.com")
+sw.register_user("diana", "Diana", "diana@mail.com")
+
+group = sw.create_group("trip", "Japan Trip", ["alice", "bob", "charlie", "diana"])
+
+# Equal split: Alice pays dinner $120 for everyone
+sw.add_expense("trip", "Dinner", 120, "alice", ["alice", "bob", "charlie", "diana"])
+
+# Percentage split: Bob pays hotel $400 (Alice 40%, Bob 40%, Charlie 20%)
+sw.add_expense("trip", "Hotel", 400, "bob",
+               ["alice", "bob", "charlie"],
+               SplitType.PERCENTAGE,
+               {"percentages": {"alice": 40, "bob": 40, "charlie": 20}})
+
+# Shares split: Charlie pays taxi $60 (Alice 2 shares, others 1 each)
+sw.add_expense("trip", "Taxi", 60, "charlie",
+               ["alice", "bob", "charlie", "diana"],
+               SplitType.SHARES,
+               {"shares": {"alice": 2, "bob": 1, "charlie": 1, "diana": 1}})
+
+print("\n=== Simplified Debts ===")
+for debtor, creditor, amount in sw.simplify_all_debts():
+    print(f"  {debtor} → {creditor}: ${amount:.2f}")
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: 為什麼需要 simplify_debts 而不是直接記錄每對的餘額？</strong></p>
+<p>A: 5 個人可能有 10 對 debt（N*(N-1)/2）。Simplify 後最多 N-1 筆交易就能清帳。例如 A→B $50, B→C $30, A→C $20 可簡化為 A→B $50, A→C $50 的淨額（更少轉帳次數）。</p>
+<p><strong>Q2: Greedy simplify 是最優解嗎？</strong></p>
+<p>A: Greedy（最大債務配最大債權）產生 ≤ N-1 筆交易，但不保證全局最少。最優解是 NP-hard（Subset Sum variant）。實務上 Greedy 已足夠——差異很小且容易理解。</p>
+<p><strong>Q3: 浮點數精度問題怎麼處理？</strong></p>
+<p>A: 用 Decimal 或整數分（cents）。$1.50 存為 150。所有計算在整數上做，顯示時除 100。round(x, 2) 只是 demo——production 永遠不用 float 存錢。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何支援多幣別？</strong><br>
+A: Expense 加 <code>currency</code> field。BalanceGraph 維護 per-currency 餘額（或統一換算到基準貨幣）。settle 時可指定匯率。顯示時各 currency 分開。</p>
+
+<p><strong>2. 如何處理「部分還款」？</strong><br>
+A: settle_debt 允許任意金額。BalanceGraph 更新淨額。UI 顯示「已還 $30/$50」。加入 Payment 物件追蹤還款歷史。</p>
+
+<p><strong>3. 如何做 Recurring Expenses（房租 AA）？</strong><br>
+A: RecurringExpense extends Expense + schedule (monthly/weekly)。Scheduler 自動建立新 Expense。Template pattern：每期自動套用同樣的 split_strategy 和 participants。</p>
+
+<p><strong>4. 如何保證 Concurrent 修改安全？</strong><br>
+A: BalanceGraph 的 add_debt 需要 lock（per-pair lock 或 global lock）。或用 event sourcing：所有操作是 append-only events，餘額是 derived view。DB 層用 transaction isolation。</p>
+
+<p><strong>5. 最優 simplify（最少交易次數）的演算法？</strong><br>
+A: 計算所有人 net balance → 將非零 net 的人放入集合 → 用 bitmask DP 找最大子集數量使得子集和=0 → 每個子集內部只需 (size-1) 筆交易。總交易 = total_non_zero - num_zero_sum_subsets。複雜度 O(2^N × N)，N≤20 可接受。</p>
+</div>
+
+<!-- ==================== CH15 ==================== -->
+<h2 id="ch15">Ch15: Design Rate Limiter (OOD) ⚡</h2>
+<div style="background:#fff3e0;border-left:4px solid #ff9800;padding:12px;margin:12px 0;border-radius:4px;">
+<h4>📖 本章核心概念</h4>
+<ul>
+<li><strong>Strategy（限流演算法）：</strong>Token Bucket / Leaky Bucket / Sliding Window / Fixed Window 四種算法，用 Strategy pattern 可熱切換</li>
+<li><strong>Decorator（中介層）：</strong>Rate limiter 包在外面，裡面的 service 不需要知道被限流了。比喻：門口保安——餐廳廚師不用管排隊的事</li>
+<li><strong>真實例子：</strong>AWS API Gateway 用 Token Bucket。Cloudflare 用 Sliding Window。Stripe 用 fixed window per API key</li>
+</ul></div>
+
+<p><span class="pattern-tag">Strategy Pattern</span> <span class="pattern-tag">Decorator Pattern</span> <span class="pattern-tag">Factory Pattern</span> <span class="solid-tag">OCP</span> <span class="solid-tag">SRP</span> <span class="solid-tag">DIP</span></p>
+
+<div class="beginner">
+<h4>🌱 從零開始理解</h4>
+<p><strong>生活比喻：</strong>Rate Limiter 就像「高速公路收費站」——每小時只允許通過 N 台車。多了就排隊或拒絕。不同收費站可以有不同規則（固定窗口、滑動窗口、令牌桶）。</p>
+<p><strong>白話解釋：</strong>Rate Limiter 控制 API 呼叫頻率。OOD 重點不是「演算法本身」而是「如何讓不同限流算法可插拔」（Strategy）+ 「如何透明地加到現有 handler 上」（Decorator）。</p>
+<p><strong>為什麼工作上需要：</strong>展示 Strategy（算法可切換）+ Decorator（中間件包裝）的雙模式結合。Production rate limiter 是每個 API 團隊的必備組件。</p>
+<p><strong>先備知識：</strong>Token Bucket、Sliding Window 概念、Decorator Pattern</p>
+</div>
+
+<pre><code class="language-python">from abc import ABC, abstractmethod
+from collections import defaultdict, deque
+from datetime import datetime, timedelta
+from typing import Dict, Callable, Optional
+import time
+import threading
+
+
+# === Rate Limiting Algorithms (Strategy Pattern) ===
+class RateLimitStrategy(ABC):
+    @abstractmethod
+    def is_allowed(self, client_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    def get_remaining(self, client_id: str) -> int:
+        pass
+
+
+class FixedWindowStrategy(RateLimitStrategy):
+    """固定窗口：每分鐘/每秒 N 次"""
+    def __init__(self, max_requests: int, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.windows: Dict[str, Dict] = {}  # client -> {window_start, count}
+
+    def is_allowed(self, client_id: str) -> bool:
+        now = time.time()
+        window_start = int(now / self.window_seconds) * self.window_seconds
+
+        if client_id not in self.windows:
+            self.windows[client_id] = {"start": window_start, "count": 0}
+
+        client_window = self.windows[client_id]
+        if client_window["start"] != window_start:
+            # New window
+            client_window["start"] = window_start
+            client_window["count"] = 0
+
+        if client_window["count"] < self.max_requests:
+            client_window["count"] += 1
+            return True
+        return False
+
+    def get_remaining(self, client_id: str) -> int:
+        if client_id not in self.windows:
+            return self.max_requests
+        return max(0, self.max_requests - self.windows[client_id]["count"])
+
+
+class SlidingWindowLogStrategy(RateLimitStrategy):
+    """滑動窗口（日誌版）：精確追蹤每個請求時間戳"""
+    def __init__(self, max_requests: int, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.request_logs: Dict[str, deque] = defaultdict(deque)
+
+    def is_allowed(self, client_id: str) -> bool:
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        log = self.request_logs[client_id]
+        # Remove expired entries
+        while log and log[0] <= window_start:
+            log.popleft()
+
+        if len(log) < self.max_requests:
+            log.append(now)
+            return True
+        return False
+
+    def get_remaining(self, client_id: str) -> int:
+        now = time.time()
+        window_start = now - self.window_seconds
+        log = self.request_logs[client_id]
+        while log and log[0] <= window_start:
+            log.popleft()
+        return max(0, self.max_requests - len(log))
+
+
+class TokenBucketStrategy(RateLimitStrategy):
+    """令牌桶：允許突發流量"""
+    def __init__(self, capacity: int, refill_rate: float):
+        self.capacity = capacity        # 桶的最大容量
+        self.refill_rate = refill_rate  # 每秒補充幾個 token
+        self.buckets: Dict[str, Dict] = {}
+
+    def is_allowed(self, client_id: str) -> bool:
+        now = time.time()
+        if client_id not in self.buckets:
+            self.buckets[client_id] = {"tokens": self.capacity, "last_refill": now}
+
+        bucket = self.buckets[client_id]
+        # Refill tokens
+        elapsed = now - bucket["last_refill"]
+        bucket["tokens"] = min(self.capacity, bucket["tokens"] + elapsed * self.refill_rate)
+        bucket["last_refill"] = now
+
+        if bucket["tokens"] >= 1:
+            bucket["tokens"] -= 1
+            return True
+        return False
+
+    def get_remaining(self, client_id: str) -> int:
+        if client_id not in self.buckets:
+            return self.capacity
+        return int(self.buckets[client_id]["tokens"])
+
+
+class LeakyBucketStrategy(RateLimitStrategy):
+    """漏桶：固定速率輸出"""
+    def __init__(self, capacity: int, leak_rate: float):
+        self.capacity = capacity
+        self.leak_rate = leak_rate  # 每秒漏出幾個
+        self.buckets: Dict[str, Dict] = {}
+
+    def is_allowed(self, client_id: str) -> bool:
+        now = time.time()
+        if client_id not in self.buckets:
+            self.buckets[client_id] = {"water": 0, "last_leak": now}
+
+        bucket = self.buckets[client_id]
+        # Leak water
+        elapsed = now - bucket["last_leak"]
+        bucket["water"] = max(0, bucket["water"] - elapsed * self.leak_rate)
+        bucket["last_leak"] = now
+
+        if bucket["water"] < self.capacity:
+            bucket["water"] += 1
+            return True
+        return False
+
+    def get_remaining(self, client_id: str) -> int:
+        if client_id not in self.buckets:
+            return self.capacity
+        return max(0, int(self.capacity - self.buckets[client_id]["water"]))
+
+
+# === Decorator Pattern (Middleware) ===
+class RequestHandler(ABC):
+    @abstractmethod
+    def handle(self, request: Dict) -> Dict:
+        pass
+
+
+class APIHandler(RequestHandler):
+    """實際的 API 處理器"""
+    def handle(self, request: Dict) -> Dict:
+        return {"status": 200, "body": f"OK - processed {request.get('path', '/')}"}
+
+
+class RateLimitDecorator(RequestHandler):
+    """Rate Limit 中間件 — 透明包裝"""
+    def __init__(self, handler: RequestHandler, strategy: RateLimitStrategy):
+        self._handler = handler
+        self._strategy = strategy
+
+    def handle(self, request: Dict) -> Dict:
+        client_id = request.get("client_id", "anonymous")
+
+        if not self._strategy.is_allowed(client_id):
+            remaining = self._strategy.get_remaining(client_id)
+            return {
+                "status": 429,
+                "body": "Too Many Requests",
+                "headers": {
+                    "X-RateLimit-Remaining": remaining,
+                    "Retry-After": 60
+                }
+            }
+        # Pass through to actual handler
+        response = self._handler.handle(request)
+        response.setdefault("headers", {})
+        response["headers"]["X-RateLimit-Remaining"] = self._strategy.get_remaining(client_id)
+        return response
+
+
+class LoggingDecorator(RequestHandler):
+    """日誌中間件"""
+    def __init__(self, handler: RequestHandler):
+        self._handler = handler
+
+    def handle(self, request: Dict) -> Dict:
+        print(f"📝 [{datetime.now().strftime('%H:%M:%S')}] {request.get('method','GET')} {request.get('path','/')}")
+        response = self._handler.handle(request)
+        print(f"   → {response['status']}")
+        return response
+
+
+class AuthDecorator(RequestHandler):
+    """認證中間件"""
+    def __init__(self, handler: RequestHandler, valid_tokens: set):
+        self._handler = handler
+        self._valid_tokens = valid_tokens
+
+    def handle(self, request: Dict) -> Dict:
+        token = request.get("auth_token")
+        if not token or token not in self._valid_tokens:
+            return {"status": 401, "body": "Unauthorized"}
+        return self._handler.handle(request)
+
+
+# === Rate Limiter Factory ===
+class RateLimiterFactory:
+    @staticmethod
+    def create(algorithm: str, **kwargs) -> RateLimitStrategy:
+        strategies = {
+            "fixed_window": lambda: FixedWindowStrategy(
+                kwargs.get("max_requests", 100),
+                kwargs.get("window_seconds", 60)
+            ),
+            "sliding_window": lambda: SlidingWindowLogStrategy(
+                kwargs.get("max_requests", 100),
+                kwargs.get("window_seconds", 60)
+            ),
+            "token_bucket": lambda: TokenBucketStrategy(
+                kwargs.get("capacity", 100),
+                kwargs.get("refill_rate", 10)
+            ),
+            "leaky_bucket": lambda: LeakyBucketStrategy(
+                kwargs.get("capacity", 100),
+                kwargs.get("leak_rate", 10)
+            ),
+        }
+        if algorithm not in strategies:
+            raise ValueError(f"Unknown algorithm: {algorithm}")
+        return strategies[algorithm]()
+
+
+# === 使用範例 ===
+# Build handler pipeline using Decorator Pattern
+api = APIHandler()
+rate_limited = RateLimitDecorator(api, TokenBucketStrategy(capacity=5, refill_rate=1))
+logged = LoggingDecorator(rate_limited)
+
+# Simulate requests
+for i in range(8):
+    request = {"client_id": "user_123", "method": "GET", "path": "/api/data"}
+    response = logged.handle(request)
+    if response["status"] == 429:
+        print(f"   ⚠️ Rate limited! Retry after {response['headers']['Retry-After']}s")
+
+# Different strategy via Factory
+print("\n=== Fixed Window Strategy ===")
+fixed = RateLimiterFactory.create("fixed_window", max_requests=3, window_seconds=10)
+for i in range(5):
+    allowed = fixed.is_allowed("client_A")
+    print(f"  Request {i+1}: {'✅' if allowed else '❌'} (remaining: {fixed.get_remaining('client_A')})")
+</code></pre>
+
+<details open>
+<summary>🔍 理解確認</summary>
+<p><strong>Q1: 四種算法的核心差異？</strong></p>
+<p>A: Fixed Window = 簡單但有邊界突發問題（窗口交界可能 2x）。Sliding Window = 精確但記憶體高（存每個 timestamp）。Token Bucket = 允許突發（桶滿時可一次用完）。Leaky Bucket = 固定速率輸出（平滑流量）。</p>
+<p><strong>Q2: Decorator Pattern 在這裡的價值？</strong></p>
+<p>A: 透明疊加中間件——handler 本身不知道自己被 rate-limit 了。可以任意組合：Auth → RateLimit → Logging → Handler。新增/移除功能不改 handler 程式碼。OCP 完美實現。</p>
+<p><strong>Q3: Token Bucket 的 refill_rate 怎麼理解？</strong></p>
+<p>A: refill_rate=10 表示每秒補充 10 個 token。capacity=100 表示最多累積 100。突發情況下可瞬間用完 100 token（允許 burst），之後回到 10/sec 的穩定速率。這是 AWS API Gateway 採用的模型。</p>
+</details>
+
+<div class="followup">
+<h4>💡 面試追問（5題）</h4>
+<p><strong>1. 如何做分散式 Rate Limiter？</strong><br>
+A: (1) Redis 集中式：INCR + EXPIRE（Fixed Window）或 Sorted Set（Sliding Window） (2) 本地 + 同步：每個節點本地計數，定期 sync 到中央 (3) Sticky session：同一 client 固定路由到同一節點。Trade-off: 精確度 vs 延遲 vs 複雜度。</p>
+
+<p><strong>2. 如何支援多層限流（全局 + per-API + per-user）？</strong><br>
+A: 多個 RateLimitDecorator 疊加：Global(PerAPI(PerUser(Handler)))。每層獨立的 Strategy 和 config。任一層拒絕即回 429。Response header 顯示哪層觸發。</p>
+
+<p><strong>3. 如何優雅地通知 Client 限流狀態？</strong><br>
+A: Response headers: X-RateLimit-Limit（總額度）, X-RateLimit-Remaining（剩餘）, X-RateLimit-Reset（重置時間 Unix timestamp）, Retry-After（建議等待秒數）。Client 據此實作 exponential backoff。</p>
+
+<p><strong>4. 如何做 Rate Limit 的白名單/VIP 通道？</strong><br>
+A: 引入 <code>RateLimitConfig</code> per client tier。VIP 用更高 capacity 的 Strategy。Whitelist 直接 bypass（if client in whitelist: pass）。可用 Chain of Responsibility：WhitelistCheck → TierLookup → RateLimit。</p>
+
+<p><strong>5. Token Bucket 的邊界情況：容量為 0 或 refill_rate 為 0？</strong><br>
+A: capacity=0 → 永遠拒絕（kill switch）。refill_rate=0 → 用完就沒了（one-time quota）。兩者都是合法的 edge case，代碼要正確處理。這也可以當作 feature flag：暫時關閉某 API 只需把 capacity 設為 0。</p>
+</div>
+
+<!-- ==================== SUMMARY ==================== -->
+<h2 id="summary">📋 總結：OOD 模式地圖 + SOLID + 面試節奏</h2>
+
+<h3>🗺️ 10 大 OOD 設計模式對照表</h3>
+
+<table>
+<tr><th>模式</th><th>核心意圖</th><th>本書出現場景</th><th>一句話記憶</th></tr>
+<tr><td><strong>Strategy</strong></td><td>算法可切換</td><td>Chess(走法)、Hotel(定價)、Feed(排序)、Splitwise(分帳)、RateLimiter(算法)</td><td>「同一件事有多種做法」→ Strategy</td></tr>
+<tr><td><strong>Observer</strong></td><td>事件通知解耦</td><td>Hotel(通知)、Feed(新貼文)、MovieBooking(票務通知)</td><td>「狀態變了要通知誰」→ Observer</td></tr>
+<tr><td><strong>State</strong></td><td>狀態決定行為</td><td>ATM(Idle/HasCard/Auth)、Locker(Available/Occupied)</td><td>「不同狀態做不同事」→ State</td></tr>
+<tr><td><strong>Composite</strong></td><td>樹狀結構統一操作</td><td>FileSystem(File/Directory)</td><td>「部分和整體同介面」→ Composite</td></tr>
+<tr><td><strong>Iterator</strong></td><td>順序訪問集合</td><td>Feed(分頁)、FileSystem(walk)</td><td>「逐步取得下一個」→ Iterator</td></tr>
+<tr><td><strong>Decorator</strong></td><td>透明疊加功能</td><td>RateLimiter(中間件)、Hotel(定價組合)</td><td>「不改原本的，外面包一層」→ Decorator</td></tr>
+<tr><td><strong>Factory</strong></td><td>建立物件不暴露細節</td><td>RateLimiter(Factory)、Hotel(Room建立)</td><td>「我只要結果，不管怎麼造」→ Factory</td></tr>
+<tr><td><strong>Template Method</strong></td><td>骨架固定步驟可變</td><td>Blackjack(遊戲流程)、Chess(回合流程)</td><td>「流程一樣但某些步驟不同」→ Template</td></tr>
+<tr><td><strong>Chain of Resp.</strong></td><td>請求沿鏈傳遞</td><td>ATM(出鈔面額)、RateLimiter(多層過濾)</td><td>「一關一關過」→ Chain</td></tr>
+<tr><td><strong>Command</strong></td><td>操作封裝可 Undo</td><td>Chess(Undo/Redo)、MovieBooking(交易記錄)</td><td>「把動作變成物件」→ Command</td></tr>
+</table>
+
+<h3>✅ SOLID 快速自查清單</h3>
+
+<table>
+<tr><th>原則</th><th>英文</th><th>一句話</th><th>違反訊號</th></tr>
+<tr><td><strong>S</strong></td><td>Single Responsibility</td><td>一個類只做一件事</td><td>Class 超過 200 行；改 A 功能卻要動 B 的程式碼</td></tr>
+<tr><td><strong>O</strong></td><td>Open/Closed</td><td>擴展開放，修改封閉</td><td>加新功能要改 if-else；新增類型要動現有方法</td></tr>
+<tr><td><strong>L</strong></td><td>Liskov Substitution</td><td>子類可替代父類</td><td>子類 override 後行為不一致；需要 isinstance 判斷</td></tr>
+<tr><td><strong>I</strong></td><td>Interface Segregation</td><td>介面要小而精</td><td>實作者被迫實作用不到的方法（raise NotImplementedError）</td></tr>
+<tr><td><strong>D</strong></td><td>Dependency Inversion</td><td>依賴抽象不依賴具體</td><td>高層模組 import 低層具體類；無法換實作</td></tr>
+</table>
+
+<h3>⏱️ 面試 45 分鐘時間分配</h3>
+
+<table>
+<tr><th>時段</th><th>分鐘</th><th>做什麼</th><th>常見錯誤</th></tr>
+<tr><td>1. 釐清需求</td><td>3-5</td><td>問 scope、actors、核心 use cases（最多 3-4 個）</td><td>不問就開始寫；scope 太大收不回來</td></tr>
+<tr><td>2. 核心物件</td><td>5-7</td><td>列出 5-8 個主要 class + 關係圖</td><td>一開始就寫完整 code；忘記畫類圖</td></tr>
+<tr><td>3. API/介面設計</td><td>5</td><td>定義主要方法簽名 + 核心流程</td><td>跳過介面直接實作</td></tr>
+<tr><td>4. 實作核心邏輯</td><td>15-20</td><td>寫 2-3 個最重要的 class（含設計模式）</td><td>寫太多 boilerplate；忘記解釋 WHY</td></tr>
+<tr><td>5. 討論擴展</td><td>5-10</td><td>提出 2-3 個 follow-up（concurrency、scale、新功能）</td><td>被動等問；不主動提出 trade-off</td></tr>
+</table>
+
+<h3>🎯 面試必背口訣</h3>
+
+<div style="background: #f0f4ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+<p><strong>開場三句話模板：</strong></p>
+<ol>
+<li>「讓我先確認 scope——我們要設計 [X] 的核心功能，包括 [1][2][3]，先不處理 [out-of-scope]，對嗎？」</li>
+<li>「核心物件我看到 [A, B, C, D]，它們的關係是 [has-a / is-a / uses]。」</li>
+<li>「這裡我會用 [Pattern Name] 因為 [one sentence reason]。」</li>
+</ol>
+
+<p><strong>選模式的決策樹：</strong></p>
+<ul>
+<li>同一行為多種實作？→ <strong>Strategy</strong></li>
+<li>狀態影響行為？→ <strong>State</strong></li>
+<li>事件要通知多方？→ <strong>Observer</strong></li>
+<li>樹狀/巢狀結構？→ <strong>Composite</strong></li>
+<li>動態加功能不改原本？→ <strong>Decorator</strong></li>
+<li>操作要能 Undo？→ <strong>Command</strong></li>
+<li>流程固定步驟可變？→ <strong>Template Method</strong></li>
+<li>建立物件太複雜？→ <strong>Factory / Builder</strong></li>
+</ul>
+</div>
+
+<h3>📐 從需求到模式的思考框架</h3>
+
+<pre><code class="language-python"># === OOD 面試思考框架 (Python 偽代碼) ===
+
+def solve_ood_problem(problem):
+    # Step 1: 識別核心實體 (Nouns)
+    entities = extract_nouns(problem)  # User, Order, Payment...
+
+    # Step 2: 識別行為 (Verbs)
+    behaviors = extract_verbs(problem)  # create, validate, notify...
+
+    # Step 3: 識別變化點 (What varies?)
+    variations = find_what_changes(problem)
+    for v in variations:
+        if v.is_algorithm:      apply(StrategyPattern)
+        if v.is_state:          apply(StatePattern)
+        if v.is_notification:   apply(ObserverPattern)
+        if v.is_tree_structure: apply(CompositePattern)
+        if v.is_addon:          apply(DecoratorPattern)
+
+    # Step 4: SOLID 檢查
+    for cls in all_classes:
+        assert cls.responsibilities <= 1          # SRP
+        assert cls.open_for_extension             # OCP
+        assert cls.subtypes_are_substitutable     # LSP
+        assert cls.interface_is_minimal           # ISP
+        assert cls.depends_on_abstractions        # DIP
+
+    # Step 5: 寫核心 2-3 個 class + 說明為什麼選這個模式
+    return design
+</code></pre>
+
+<hr>
+<p style="text-align:center; color:#6b7280; margin-top:3rem;">
+📚 OOD 面試攻略 Part 2 — Ch6~Ch15 完結<br>
+全書涵蓋 10 個經典 OOD 題目 + 50 道追問 + SOLID/Pattern 對照 + 面試節奏指南<br>
+祝面試順利 🎉
+</p>
+
+
+</body>
+</html>

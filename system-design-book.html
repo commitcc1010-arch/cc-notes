@@ -1,21 +1,29 @@
 <!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<title>System Design Interview 深度指南</title>
+<html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<title>System Design Interview 深度指南 v2（增補版）</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
 <style>
-body { font-family: -apple-system, 'Noto Sans CJK TC', sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.7; font-size: 14px; }
-h1 { page-break-before: always; border-bottom: 2px solid #333; padding-bottom: 8px; }
+body { font-family: -apple-system, 'Noto Sans CJK TC', sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; line-height: 1.8; background: #fff; color: #333; font-size: 14px; }
+h1 { color: #1a5276; border-bottom: 3px solid #2980b9; padding-bottom: 10px; page-break-before: always; }
 h1:first-of-type { page-break-before: avoid; }
-h2 { color: #1a5276; border-bottom: 1px solid #aaa; padding-bottom: 4px; page-break-before: always; }
-h3 { color: #2c3e50; }
-pre { background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; page-break-inside: avoid; }
-code { background: #f0f0f0; padding: 2px 5px; border-radius: 3px; font-size: 12px; }
+h2 { color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 6px; page-break-before: always; }
+h3 { color: #34495e; }
+pre { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 13px; }
+code { background: #f0f0f0; padding: 2px 5px; border-radius: 3px; font-size: 13px; }
 pre code { background: none; padding: 0; }
 table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
 th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-th { background: #f8f8f8; font-weight: bold; }
+th { background: #f1f3f5; }
 blockquote { border-left: 4px solid #3498db; margin: 12px 0; padding: 8px 16px; background: #f9f9f9; }
-@media print { h2 { page-break-before: always; } body { font-size: 11px; } }
+details { margin: 10px 0; }
+details[open] summary { margin-bottom: 8px; }
+summary { cursor: pointer; font-weight: bold; color: #2980b9; }
+.glossary { background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.prereq { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.quiz { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 16px; margin: 16px 0; border-radius: 4px; }
+.realworld { background: #fce4ec; border-left: 4px solid #e91e63; padding: 16px; margin: 16px 0; border-radius: 4px; }
+@media print { h2 { page-break-before: always; } }
 </style>
 </head><body>
 <h1 id="system-design-interview-senior-engineer-staff-level-thinking">《System Design Interview 深度指南：從 Senior Engineer 到 Staff-Level Thinking》</h1>
@@ -26,6 +34,18 @@ blockquote { border-left: 4px solid #3498db; margin: 12px 0; padding: 8px 16px; 
 <h1 id="part-0system-design">Part 0：System Design 面試心法</h1>
 <hr />
 <h2 id="chapter-1system-design-interview">Chapter 1：System Design Interview 到底在考什麼？</h2>
+
+<div class="prereq"><h4>📋 前置知識速覽</h4><ul><li>你知道什麼是 API（前後端怎麼溝通）</li><li>你用過至少一種資料庫（MySQL/PostgreSQL/MongoDB）</li><li>你理解 client-server 架構的基本概念</li></ul></div>
+<div class="glossary"><h4>📖 本章術語表</h4><table><tr><th>術語</th><th>白話</th><th>比喻</th><th>真實系統</th></tr>
+<tr><td>Requirement Clarification</td><td>問清楚題目到底要什麼</td><td>點菜前先問「辣不辣、要飯還是麵」</td><td>Google 面試官期望前 3-5 分鐘問問題</td></tr>
+<tr><td>Back-of-envelope Estimation</td><td>粗略計算判斷系統規模</td><td>搬家前估算「大概幾箱」決定叫多大的車</td><td>Twitter: 300M DAU × 2 tweets = 7K write QPS</td></tr>
+<tr><td>Bottleneck</td><td>系統最先扛不住的地方</td><td>高速公路收費站——車道再寬，收費口就那幾個</td><td>Instagram: DB 寫入是第一個 bottleneck</td></tr>
+<tr><td>Trade-off</td><td>選 A 就犧牲 B，沒有完美方案</td><td>租房：離公司近 vs 房租便宜</td><td>CAP: 一致性 vs 可用性</td></tr></table></div>
+<div class="realworld"><h4>🌍 真實案例</h4><ul><li><strong>Google:</strong> L5 面試有 1 輪 System Design（45 min），不是考標準答案而是思考過程</li><li><strong>Meta:</strong> rubric 分四塊 Requirement/Architecture/Deep Dive/Trade-offs 各 25%</li><li><strong>Amazon:</strong> 常結合 LP（為什麼選這方案？Customer Obsession？）</li></ul></div>
+<div class="quiz"><h4>🧪 驗證考題</h4><details open><summary>Q1: 面試官說「假設 scale 不是問題」，你該怎麼理解？</summary><p><strong>A:</strong> 不是說不做 estimation。是暗示他想看其他面向（data model, consistency）。快速提一下 scale（"~10K QPS, single DB handles it"），然後把時間花在他想看的方向。</p></details>
+<details open><summary>Q2: read:write = 1:1 vs 100:1，架構最大差異？</summary><p><strong>A:</strong> 100:1 → cache + read replica 解決。1:1 → cache 幫助有限（頻繁 invalidation），需要 sharding + async write + write-optimized DB。</p></details>
+<details open><summary>Q3: 「Design Twitter」改成「公司內部公告系統（1000 人）」，怎麼簡化？</summary><p><strong>A:</strong> 單機夠（不需 sharding/cache/CDN）。Push-to-all（1000人×10公告/天=10K writes/day）。不需 celebrity optimization。重點轉向 permission + 搜尋 + 已讀未讀。</p></details></div>
+
 <h3 id="1">1. 這是什麼？</h3>
 <p>System Design Interview 是大廠（Google、Meta、Amazon、Microsoft、Apple）用來評估 Senior+ 工程師的核心面試環節。面試官會給你一個開放式問題（例如 "Design Twitter"、"Design Uber"），你需要在 35-45 分鐘內設計出一個可擴展的分散式系統。</p>
 <p><strong>關鍵認知：這不是考試，是模擬工作場景。</strong></p>
@@ -1185,6 +1205,19 @@ Step 7 - Failure Modes:
 <h1 id="part-2">Part 2：核心分散式系統觀念</h1>
 <hr />
 <h2 id="chapter-3scalability">Chapter 3：Scalability 可擴展性</h2>
+
+<div class="prereq"><h4>📋 前置知識速覽</h4><ul><li>你知道什麼是 server（跑程式對外服務的電腦）</li><li>你用過 database 做 CRUD</li><li>你理解「流量變大 → 系統變慢」的直覺</li></ul></div>
+<div class="glossary"><h4>📖 本章術語表</h4><table><tr><th>術語</th><th>白話</th><th>比喻</th><th>真實系統</th></tr>
+<tr><td>Horizontal Scaling</td><td>加更多機器</td><td>餐廳請更多服務生</td><td>Netflix 上千台 streaming server</td></tr>
+<tr><td>Vertical Scaling</td><td>換更強的機器</td><td>把服務生換成超人</td><td>DB 從 32GB→256GB RAM</td></tr>
+<tr><td>Stateless</td><td>Server 不記得你是誰</td><td>每次去便利商店都要重新說要什麼</td><td>REST API + Redis session</td></tr>
+<tr><td>Sharding</td><td>資料分散存到多台</td><td>圖書館按字母分樓層</td><td>Instagram shard by user_id</td></tr>
+<tr><td>Replication</td><td>資料複製多份</td><td>重要文件影印 3 份放不同地方</td><td>MySQL 1 primary + 3 replica</td></tr>
+<tr><td>Fanout</td><td>一個事件觸發 N 個動作</td><td>群組發訊息→100人收到通知</td><td>Twitter 發 tweet→推送到 follower feed</td></tr></table></div>
+<div class="quiz"><h4>🧪 驗證考題</h4><details open><summary>Q1: 10M 在線用戶的 Chat app，為什麼不能把所有 WebSocket 放一台 server？</summary><p><strong>A:</strong> 每個 WebSocket ~50KB memory。10M×50KB=500GB。最大 instance ~768GB 且不能 100% 給 WebSocket。實際一台撐 100K-500K connections，需要 20-100 台 + consistent hashing。</p></details>
+<details open><summary>Q2: 什麼情況 Vertical Scaling 比 Horizontal 好？</summary><p><strong>A:</strong> (1) DB sharding 前先 scale up 最簡單 (2) 早期 startup（分散式複雜度不值得） (3) 單機 GPU 計算（ML training）。經驗法則：一台能扛就不要分散式。</p></details>
+<details open><summary>Q3: Design IoT Dashboard（百萬設備每秒報數據）跟 Instagram Feed 設計重點有什麼不同？</summary><p><strong>A:</strong> IoT = write-heavy（百萬 writes/sec）。用 time-series DB + Kafka buffer + pre-aggregated data。Cache 幾乎沒用（寫入太頻繁 cache 來不及暖）。vs Instagram = read-heavy → cache + CDN 為主。</p></details></div>
+
 <h3 id="1_2">1. 這是什麼？</h3>
 <p>Scalability（可擴展性）是指系統在負載增加時，能夠通過增加資源來維持或提升效能的能力。</p>
 <p>一個 scalable 的系統不是「現在很快」，而是「當用戶從 1 萬變成 1 億時，我知道怎麼讓它繼續快」。</p>
@@ -2671,6 +2704,17 @@ Optimization:
 <h1 id="part-3data-layer">Part 3：Data Layer 核心知識</h1>
 <hr />
 <h2 id="chapter-6sql-vs-nosql">Chapter 6：SQL vs NoSQL 選型</h2>
+
+<div class="prereq"><h4>📋 前置知識速覽</h4><ul><li>你用過至少一種資料庫（SQL 或 NoSQL）</li><li>你理解 table/row/column</li><li>你知道 query 是什麼（SELECT/INSERT/UPDATE）</li></ul></div>
+<div class="glossary"><h4>📖 本章術語表</h4><table><tr><th>術語</th><th>白話</th><th>比喻</th><th>真實系統</th></tr>
+<tr><td>RDBMS</td><td>關係型 DB（有固定 schema）</td><td>Excel 試算表（固定欄位）</td><td>PostgreSQL, MySQL</td></tr>
+<tr><td>NoSQL</td><td>非關係型（schema 靈活）</td><td>筆記本（格式自由）</td><td>MongoDB, DynamoDB, Cassandra</td></tr>
+<tr><td>ACID</td><td>DB 交易四大保證</td><td>銀行轉帳全成功或全失敗</td><td>PostgreSQL transaction</td></tr>
+<tr><td>Polyglot Persistence</td><td>同系統用多種 DB</td><td>工具箱（專業工具各司其職）</td><td>Uber: MySQL+Redis+Cassandra+ES</td></tr></table></div>
+<div class="quiz"><h4>🧪 驗證考題</h4><details open><summary>Q1: 「購物車」選 SQL 還是 NoSQL？各有什麼 tradeoff？</summary><p><strong>A:</strong> NoSQL（DynamoDB）：key=user_id 存 JSON，讀寫快。SQL：JOIN 算總價方便。如果只有 owner 讀寫→NoSQL。如果要「查所有含商品X的購物車」→SQL。</p></details>
+<details open><summary>Q2: 為什麼 DynamoDB 不適合全文搜尋？</summary><p><strong>A:</strong> 只支援 key-based access。全文搜尋需 inverted index，DynamoDB 無法建立。Scan 全表 O(N) 太慢。用 Elasticsearch。</p></details>
+<details open><summary>Q3: 設計「1億條商品評論系統」，用哪些 DB 組合？</summary><p><strong>A:</strong> PostgreSQL（用戶+商品 metadata, ACID）+ DynamoDB（評論內容, 高寫入）+ Elasticsearch（搜尋）+ Redis（熱門商品快取+平均分）= Polyglot Persistence。</p></details></div>
+
 <h3 id="1_5">1. 這是什麼？</h3>
 <p>資料庫選型是 System Design 中最關鍵的決策之一。選錯資料庫，後期要遷移的成本極高。</p>
 <pre><code>SQL (Relational Database):
@@ -4446,6 +4490,18 @@ USING CONSISTENCY ALL;
 <h1 id="part-4performance-building-blocks">Part 4：Performance Building Blocks</h1>
 <hr />
 <h2 id="chapter-10cache">Chapter 10：Cache</h2>
+
+<div class="prereq"><h4>📋 前置知識速覽</h4><ul><li>你知道「DB 查詢很慢」這個痛點</li><li>你理解 key-value（像 Python dict）</li><li>你知道 RAM 比 disk 快 100 倍以上</li></ul></div>
+<div class="glossary"><h4>📖 本章術語表</h4><table><tr><th>術語</th><th>白話</th><th>比喻</th><th>真實系統</th></tr>
+<tr><td>Cache-aside</td><td>先查 cache，miss 就查 DB 回填</td><td>先看手機照片，沒有再從雲端下載</td><td>Redis + PostgreSQL 標準搭配</td></tr>
+<tr><td>Write-through</td><td>寫入同時更新 cache 和 DB</td><td>改手機通訊錄同時改紙本</td><td>DynamoDB DAX</td></tr>
+<tr><td>TTL</td><td>資料保質期，過了自動刪</td><td>超市食品有效日期</td><td>Redis EXPIRE 3600</td></tr>
+<tr><td>Cache Stampede</td><td>Cache 過期瞬間大量打 DB</td><td>百貨開門搶購潮</td><td>Twitter trending cache 過期</td></tr>
+<tr><td>CDN</td><td>離用戶近的靜態內容副本</td><td>連鎖超市每個社區開分店</td><td>CloudFront: Netflix 95% from edge</td></tr></table></div>
+<div class="quiz"><h4>🧪 驗證考題</h4><details open><summary>Q1: 電商「庫存數量」應該 cache 嗎？</summary><p><strong>A:</strong> 要小心。cache=100 但實際=0 會 oversell。方案：(1)不 cache (2)短 TTL+write-through (3)庫存>10 才 cache。涉及「錢」→ 一致性 > 效能。</p></details>
+<details open><summary>Q2: Redis 掛了整個系統會怎樣？怎麼 fallback？</summary><p><strong>A:</strong> 全部打 DB → DB 爆 → cascade failure。Fallback：circuit breaker 限 DB 並發 + local cache 30s + 返回 stale data + Redis Sentinel auto failover。</p></details>
+<details open><summary>Q3: Design「即時排行榜」每秒 10K 更新分數，用什麼 cache 策略？</summary><p><strong>A:</strong> Redis Sorted Set（ZADD+ZREVRANGE）直接當 primary storage。不需傳統 cache-aside（Redis 本身就是 source of truth for ranking）。O(logN) 寫入，10K/sec 對 Redis 輕鬆。</p></details></div>
+
 <h3 id="1_9">1. 這是什麼？</h3>
 <p>Cache 是一個高速的臨時儲存層，存放經常被存取的資料副本，避免每次都去慢速的 data source（如 DB）取資料。</p>
 <pre><code>Without cache:
@@ -6812,6 +6868,12 @@ Without observability: Could take hours of guessing
 <h1 id="part-6">Part 6：常見系統題型深挖</h1>
 <hr />
 <h2 id="chapter-16design-url-shortener">Chapter 16：Design URL Shortener</h2>
+
+<div class="prereq"><h4>📋 前置知識速覽</h4><ul><li>你知道 HTTP redirect（301/302）</li><li>你知道 hash function（input→fixed output）</li><li>你理解 base62（a-z A-Z 0-9 = 62 字元）</li></ul></div>
+<div class="quiz"><h4>🧪 驗證考題 + 變形題</h4><details open><summary>Q1: MD5(url)前7字元當 short code，collision 機率？</summary><p><strong>A:</strong> 62^7≈3.5兆。生日悖論：2M URLs 後 ~1% collision。10M→10%。大規模不可接受。用 KGS 完全避免。</p></details>
+<details open><summary>Q2: 變形——Design Pastebin，跟 URL Shortener 差異？</summary><p><strong>A:</strong> (1)內容大（1KB-10MB）→S3 (2)需要渲染+語法上色 (3)可能要版本歷史。但 key generation 邏輯相同。</p></details>
+<details open><summary>Q3: 變形——Design QR Code Generator，額外考量？</summary><p><strong>A:</strong> 圖片生成 CPU intensive→worker pool。圖片需 CDN。可能有自訂 logo。核心仍是 key-value + redirect。</p></details></div>
+
 <h3 id="problem-statement">Problem Statement</h3>
 <p>設計一個像 bit.ly 的短網址服務。用戶輸入長 URL，系統返回短 URL；訪問短 URL 時 redirect 到原始 URL。</p>
 <h3 id="clarifying-questions">Clarifying Questions</h3>
@@ -6920,6 +6982,11 @@ Decision: 302 for analytics-enabled URLs, 301 for others
 </code></pre>
 <hr />
 <h2 id="chapter-17design-news-feed-twitter">Chapter 17：Design News Feed / Twitter</h2>
+
+<div class="quiz"><h4>🧪 變形題</h4><details open><summary>Q1: Celebrity 發 tweet 後立刻刪除，hybrid fanout 怎麼處理？</summary><p><strong>A:</strong> Fanout-on-read 部分：從 celebrity timeline 刪除即可。Fanout-on-write 部分：async delete event 移除 follower feed cache 中的 tweet_id。可能幾秒延遲（eventual consistency for deletion OK）。</p></details>
+<details open><summary>Q2: 變形——LinkedIn Feed（商業+relevance 排序）有什麼不同？</summary><p><strong>A:</strong> (1)Ranking 更重（engagement prediction+connection strength） (2)更新頻率低→batch pre-compute (3)內容長→摘要預計算 (4)廣告嵌入是核心。</p></details>
+<details open><summary>Q3: 變形——Reddit（upvote+nested comments），feed 邏輯差異？</summary><p><strong>A:</strong> (1)Topic-based 不是 user-based (2)Vote-based 排序不是 time-based (3)不需 fanout（subreddit 就是 feed） (4)Nested comments = tree 不是 flat。</p></details></div>
+
 <h3 id="problem-statement_1">Problem Statement</h3>
 <p>設計 Twitter/Facebook 的 News Feed 系統。用戶可以發文、follow 其他人、看到 following 的最新動態。</p>
 <h3 id="clarifying-questions_1">Clarifying Questions</h3>
@@ -7036,6 +7103,10 @@ store in Redis Sorted Set with score = ranking_score
 </ul>
 <hr />
 <h2 id="chapter-18design-chat-messenger">Chapter 18：Design Chat / Messenger</h2>
+
+<div class="quiz"><h4>🧪 變形題</h4><details open><summary>Q1: 變形——把 1v1 Chat 改成 Discord（百萬人 server），怎麼變？</summary><p><strong>A:</strong> (1)文字：pull model（百萬人不能 fanout） (2)Voice：SFU server 混合音頻 (3)角色/權限複雜 (4)Server-level sharding。</p></details>
+<details open><summary>Q2: 變形——Design E2E encrypted chat（Signal），最大差異？</summary><p><strong>A:</strong> Server 看不到明文→(1)不能 server-side search (2)Group 用 Sender Key (3)離線存密文 client 解密 (4)Key 丟失=歷史不可恢復。Server 只是 relay，client 複雜度大增。</p></details></div>
+
 <h3 id="problem-statement_2">Problem Statement</h3>
 <p>設計一個即時通訊系統（WhatsApp/Messenger），支援 1v1 和 group chat。</p>
 <h3 id="clarifying-questions_2">Clarifying Questions</h3>
@@ -7524,6 +7595,10 @@ Pre-warming: When a video goes viral, proactively push to all edges
 </code></pre>
 <hr />
 <h2 id="chapter-23design-booking-system-ticketmaster">Chapter 23：Design Booking System / Ticketmaster</h2>
+
+<div class="quiz"><h4>🧪 變形題</h4><details open><summary>Q1: 變形——改成「搶購限量球鞋（Nike SNKRS）」，有什麼不同？</summary><p><strong>A:</strong> (1)Per-size counter 不是 per-seat (2)抽籤制（lottery）不是先搶先贏 (3)Bot prevention 是核心 (4)Payment 中獎後才收。</p></details>
+<details open><summary>Q2: 變形——Airbnb 房源預約 vs Ticketmaster？</summary><p><strong>A:</strong> (1)日期區間（calendar-based）不是固定場次 (2)並發低很多 (3)有 Request to Book（host 手動確認） (4)取消政策複雜。更偏 marketplace 邏輯。</p></details></div>
+
 <h3 id="problem-statement_7">Problem Statement</h3>
 <p>設計一個訂票/預約系統，處理高並發搶票場景。</p>
 <h3 id="clarifying-questions_7">Clarifying Questions</h3>
@@ -8242,4 +8317,470 @@ adaptive behavior, and defines criteria for revisiting decisions.
 
 Good luck! 🚀
 </code></pre>
+<hr />
+<h1 id="a50">📖 附錄 A：核心名詞百科（50+ 術語白話解說）</h1>
+<blockquote>
+<p>每個術語都用「一句話定義 + 生活比喻 + 真實系統例子」三層解說</p>
+</blockquote>
+<hr />
+<h2 id="_4">🔤 基礎架構類</h2>
+<h3 id="horizontal-scaling">Horizontal Scaling（水平擴展）</h3>
+<ul>
+<li><strong>一句話：</strong> 加更多機器來分擔負載</li>
+<li><strong>生活比喻：</strong> 餐廳太忙了，不是把一個廚師培訓成超人（vertical），而是再請 3 個廚師（horizontal）</li>
+<li><strong>真實例子：</strong> Netflix 從 1 台 server 擴展到 1000 台 server，每台處理一部分用戶的 streaming 請求</li>
+</ul>
+<h3 id="vertical-scaling">Vertical Scaling（垂直擴展）</h3>
+<ul>
+<li><strong>一句話：</strong> 換一台更強的機器</li>
+<li><strong>生活比喻：</strong> 筆電太慢了，換一台有更多 RAM 和更快 CPU 的</li>
+<li><strong>真實例子：</strong> 資料庫從 32GB RAM 升級到 256GB RAM，在 sharding 之前先撐住流量</li>
+</ul>
+<h3 id="stateless-service">Stateless Service（無狀態服務）</h3>
+<ul>
+<li><strong>一句話：</strong> Server 不記住任何 client 的資訊，每個 request 都獨立處理</li>
+<li><strong>生活比喻：</strong> 便利商店收銀員不記得你上次買了什麼——你每次結帳都要重新掃商品</li>
+<li><strong>真實例子：</strong> REST API server 把 session 存在 Redis 而非本機記憶體，這樣任何一台 server 都能處理任何 request</li>
+</ul>
+<h3 id="load-balancer">Load Balancer（負載均衡器）</h3>
+<ul>
+<li><strong>一句話：</strong> 把流量平均分配到多台 server 的中間人</li>
+<li><strong>生活比喻：</strong> 銀行大廳的取號機——叫號系統把客戶分配到空閒的櫃台</li>
+<li><strong>真實例子：</strong> AWS ALB 把 HTTP request 根據 URL path 分配到不同的微服務</li>
+</ul>
+<h3 id="cdncontent-delivery-network">CDN（Content Delivery Network）</h3>
+<ul>
+<li><strong>一句話：</strong> 把靜態內容（圖片、影片、JS）緩存在離用戶最近的邊緣節點</li>
+<li><strong>生活比喻：</strong> 超市在每個社區都有分店，你不需要跑到市中心的總倉庫買東西</li>
+<li><strong>真實例子：</strong> Netflix 把熱門電影的片段緩存在全球 15,000+ 個邊緣節點，用戶看片不需要跨大洋傳資料</li>
+</ul>
+<hr />
+<h2 id="_5">🔤 資料庫類</h2>
+<h3 id="sharding">Sharding（分片）</h3>
+<ul>
+<li><strong>一句話：</strong> 把一個大 table 拆成多個小 table 分散到不同機器</li>
+<li><strong>生活比喻：</strong> 圖書館把書按字母分配到不同樓層（A-F 在 1 樓，G-L 在 2 樓...）</li>
+<li><strong>真實例子：</strong> Instagram 按 user_id % 4 把用戶資料分到 4 個 PostgreSQL instance</li>
+</ul>
+<h3 id="replication">Replication（複製）</h3>
+<ul>
+<li><strong>一句話：</strong> 把資料複製到多台機器，提高讀取速度和容錯能力</li>
+<li><strong>生活比喻：</strong> 重要文件影印多份放在不同辦公室——一份被火燒了，其他還在</li>
+<li><strong>真實例子：</strong> MySQL primary-replica 架構：1 台寫入，3 台讀取，寫入自動同步到 replica</li>
+</ul>
+<h3 id="consistent-hashing">Consistent Hashing（一致性哈希）</h3>
+<ul>
+<li><strong>一句話：</strong> 一種特殊的分配方式，加減機器時只需移動少量資料</li>
+<li><strong>生活比喻：</strong> 圓形蛋糕切成 N 份分給 N 個人。加一個人時，只需從相鄰的人那裡切一小塊，不用重新切整個蛋糕</li>
+<li><strong>真實例子：</strong> DynamoDB 和 Cassandra 用 consistent hashing 來決定每條資料存在哪個節點</li>
+</ul>
+<h3 id="cap-theorem">CAP Theorem</h3>
+<ul>
+<li><strong>一句話：</strong> 網路分區（P）發生時，你只能在一致性（C）和可用性（A）之間選一個</li>
+<li><strong>生活比喻：</strong> 兩個分隔兩地的銀行分行。電話斷了（partition），你是選擇「先不能存取款，等電話修好確認總帳」（C）還是「兩邊各自營業，之後再對帳」（A）？</li>
+<li><strong>真實例子：</strong> </li>
+<li>CP 系統：ZooKeeper（leader 掛了整個集群暫時不可用，但保證一致性）</li>
+<li>AP 系統：Cassandra（任何節點都能讀寫，但可能讀到舊資料）</li>
+</ul>
+<h3 id="eventual-consistency">Eventual Consistency（最終一致性）</h3>
+<ul>
+<li><strong>一句話：</strong> 資料更新後，所有副本最終會同步，但中間可能有幾秒的不一致</li>
+<li><strong>生活比喻：</strong> 你在 IG 改了大頭照，你朋友可能 3 秒後才看到新照片——最終都會看到，只是不是即時</li>
+<li><strong>真實例子：</strong> Twitter 的 follower count——你 follow 某人後，他的 follower count 可能幾秒後才 +1</li>
+</ul>
+<h3 id="acid">ACID</h3>
+<ul>
+<li><strong>一句話：</strong> 資料庫交易的四個保證：全做或全不做(A)、規則不被破壞(C)、交易互不干擾(I)、寫入永不丟失(D)</li>
+<li><strong>生活比喻：</strong> 銀行轉帳——要嘛你的帳戶 -1000 且對方 +1000（全做），要嘛兩邊都不變（全不做）。不能只扣你的錢但對方沒收到</li>
+<li><strong>真實例子：</strong> Stripe 支付處理用 PostgreSQL 確保每筆交易都是 ACID 的</li>
+</ul>
+<hr />
+<h2 id="_6">🔤 效能類</h2>
+<h3 id="cache">Cache（快取）</h3>
+<ul>
+<li><strong>一句話：</strong> 把常用資料暫存在快速的儲存層，避免每次都去慢速的源頭拿</li>
+<li><strong>生活比喻：</strong> 你把常用電話號碼記在手機裡（cache），不需要每次都翻電話簿（database）</li>
+<li><strong>真實例子：</strong> Redis 存放 Twitter 用戶的 precomputed feed，讀取 &lt; 1ms vs 查 DB 50ms</li>
+</ul>
+<h3 id="cache-invalidation">Cache Invalidation（快取失效）</h3>
+<ul>
+<li><strong>一句話：</strong> 源頭資料改了，怎麼確保 cache 裡的舊資料被更新或刪除</li>
+<li><strong>生活比喻：</strong> 你記住的是朋友的舊電話號碼，但他換號了——你什麼時候會知道？</li>
+<li><strong>真實例子：</strong> Facebook 用 CDC（Change Data Capture）來監聽 DB 變更，即時刪除對應的 Memcached key</li>
+</ul>
+<h3 id="ttltime-to-live">TTL（Time-To-Live）</h3>
+<ul>
+<li><strong>一句話：</strong> 資料的「保質期」——過了就自動刪除</li>
+<li><strong>生活比喻：</strong> 超市食品的有效期限——過期了就要扔掉</li>
+<li><strong>真實例子：</strong> Redis SET key value EX 3600 → 這個 cache 1 小時後自動過期</li>
+</ul>
+<h3 id="p99-latency">p99 Latency</h3>
+<ul>
+<li><strong>一句話：</strong> 99% 的 request 都在這個時間內完成（1% 比這更慢）</li>
+<li><strong>生活比喻：</strong> 餐廳說「99% 的客人在 15 分鐘內上菜」——但有 1% 等了 1 小時（tail latency）</li>
+<li><strong>真實例子：</strong> Google 搜尋 p50=200ms, p99=800ms。那 1% 的慢 request 可能是命中了冷 shard</li>
+</ul>
+<h3 id="throughput">Throughput（吞吐量）</h3>
+<ul>
+<li><strong>一句話：</strong> 系統每秒能處理多少 request</li>
+<li><strong>生活比喻：</strong> 高速公路每小時能通過多少輛車</li>
+<li><strong>真實例子：</strong> 單台 Redis 能達到 100K-300K QPS；單台 MySQL 約 5K-10K QPS（簡單查詢）</li>
+</ul>
+<h3 id="backpressure">Backpressure（背壓）</h3>
+<ul>
+<li><strong>一句話：</strong> 當下游處理不過來時，告訴上游「慢一點」</li>
+<li><strong>生活比喻：</strong> 水管接到一個小杯子——水開太大杯子會溢出，所以你把水龍頭關小</li>
+<li><strong>真實例子：</strong> Kafka consumer lag 增加時，API gateway 開始返回 429 Too Many Requests</li>
+</ul>
+<hr />
+<h2 id="_7">🔤 可靠性類</h2>
+<h3 id="circuit-breaker">Circuit Breaker（斷路器）</h3>
+<ul>
+<li><strong>一句話：</strong> 偵測到下游服務故障時，暫時停止送 request 過去（避免雪崩）</li>
+<li><strong>生活比喻：</strong> 家裡跳電了，保險絲斷開保護電路。等電力恢復後再合上</li>
+<li><strong>真實例子：</strong> Netflix Hystrix：如果 Payment Service 連續失敗 5 次，自動「斷路」30 秒不再呼叫它</li>
+</ul>
+<h3 id="failover">Failover（故障轉移）</h3>
+<ul>
+<li><strong>一句話：</strong> 主要節點掛了，自動切換到備用節點</li>
+<li><strong>生活比喻：</strong> 你的GPS 說「前方道路封閉」，自動幫你規劃替代路線</li>
+<li><strong>真實例子：</strong> AWS RDS Multi-AZ：primary DB 掛了，自動在 30 秒內 promote replica 為新 primary</li>
+</ul>
+<h3 id="idempotency">Idempotency（冪等性）</h3>
+<ul>
+<li><strong>一句話：</strong> 同一個操作執行 1 次和執行 N 次的結果相同</li>
+<li><strong>生活比喻：</strong> 按電梯按鈕——按 1 次和按 10 次效果一樣（電梯只會來一次）</li>
+<li><strong>真實例子：</strong> Stripe 的 Idempotency-Key header——即使因為網路問題重試 3 次，也只會扣款一次</li>
+</ul>
+<h3 id="slo-sla-sli">SLO / SLA / SLI</h3>
+<ul>
+<li><strong>一句話：</strong> SLI 是指標（延遲、錯誤率），SLO 是目標（p99 &lt; 200ms），SLA 是對外承諾（違反要賠錢）</li>
+<li><strong>生活比喻：</strong> SLI = 你的體重（量測值）。SLO = 你的目標體重（內部目標）。SLA = 你跟健身教練簽的合約（達不到要退費）</li>
+<li><strong>真實例子：</strong> AWS S3 SLA = 99.9% availability。低於此 → 客戶獲得 10% service credit</li>
+</ul>
+<h3 id="graceful-degradation">Graceful Degradation（優雅降級）</h3>
+<ul>
+<li><strong>一句話：</strong> 系統壓力太大時，主動放棄非核心功能，保護核心功能</li>
+<li><strong>生活比喻：</strong> 手機電量 5% 時自動關閉 WiFi、藍牙、降低亮度——但電話還能打</li>
+<li><strong>真實例子：</strong> Amazon Black Friday：推薦系統掛了 → 改顯示熱門商品（不是空白頁）；結帳功能永遠不能掛</li>
+</ul>
+<hr />
+<h2 id="_8">🔤 訊息佇列類</h2>
+<h3 id="at-least-once-delivery">At-Least-Once Delivery</h3>
+<ul>
+<li><strong>一句話：</strong> 保證訊息至少送到一次（可能重複，但不會丟）</li>
+<li><strong>生活比喻：</strong> 掛號信——郵局保證一定送到，但偶爾可能送兩次（你收到兩封一樣的信）</li>
+<li><strong>真實例子：</strong> SQS Standard Queue + consumer acknowledgment。如果 consumer 沒有 ack，message 會重新出現</li>
+</ul>
+<h3 id="dead-letter-queue-dlq">Dead Letter Queue (DLQ)</h3>
+<ul>
+<li><strong>一句話：</strong> 處理失敗太多次的訊息被移到這裡，等人類檢查</li>
+<li><strong>生活比喻：</strong> 郵局收到地址寫錯的信，退回給寄件人之前先放在「無法投遞」箱</li>
+<li><strong>真實例子：</strong> SQS DLQ：message 失敗 3 次後移到 DLQ → 觸發 CloudWatch alarm → on-call 工程師收到通知</li>
+</ul>
+<h3 id="fan-out">Fan-out</h3>
+<ul>
+<li><strong>一句話：</strong> 一個事件觸發多個下游處理</li>
+<li><strong>生活比喻：</strong> 你在群組裡發了一條訊息 → 100 個人都收到通知</li>
+<li><strong>真實例子：</strong> Twitter fanout-on-write：用戶發 tweet → 推送到所有 follower 的 feed cache</li>
+</ul>
+<hr />
+<h2 id="_9">🔤 安全類</h2>
+<h3 id="rate-limiting">Rate Limiting</h3>
+<ul>
+<li><strong>一句話：</strong> 限制每個用戶/IP 在一段時間內能發多少 request</li>
+<li><strong>生活比喻：</strong> 自助餐限制每人只能取 3 盤（防止一個人拿光所有食物）</li>
+<li><strong>真實例子：</strong> GitHub API 限制每 token 5000 req/hour；超過返回 429 + Retry-After header</li>
+</ul>
+<h3 id="jwtjson-web-token">JWT（JSON Web Token）</h3>
+<ul>
+<li><strong>一句話：</strong> 一個被簽名的小紙條，裡面記錄「你是誰」和「你能做什麼」</li>
+<li><strong>生活比喻：</strong> 你的員工識別證——上面有你的照片、名字、部門。門禁系統看一眼就知道你能進哪些門</li>
+<li><strong>真實例子：</strong> 登入後 server 發 JWT（含 user_id + role），之後每個 API request 帶上這個 token，server 只需驗證簽名不需要查 DB</li>
+</ul>
+<h3 id="oauth-20">OAuth 2.0</h3>
+<ul>
+<li><strong>一句話：</strong> 讓第三方 app 存取你的資料，不需要給出你的密碼</li>
+<li><strong>生活比喻：</strong> 你給保姆一把限時門禁卡（能開前門但不能開保險箱）——你沒有給她房子的主鑰匙</li>
+<li><strong>真實例子：</strong> 「用 Google 帳號登入」— app 拿到你的 email 和頭像，但不知道你的 Google 密碼</li>
+</ul>
+<hr />
+<h1 id="b-3-5">📝 附錄 B：概念驗證考題（每章 3-5 題，附詳解）</h1>
+<blockquote>
+<p>用來驗證你是否真的理解，不是背答案</p>
+</blockquote>
+<hr />
+<h2 id="part-0-1">Part 0-1 考題：面試心法 &amp; 框架</h2>
+<p><strong>Q1：面試中花 15 分鐘問需求是好是壞？為什麼？</strong></p>
+<details open>
+<summary>答案</summary>
+
+**壞。** 需求確認應該控制在 3-5 分鐘內。花 15 分鐘問問題意味著：
+1. 你在拖延時間避免設計
+2. 面試官會覺得你無法區分重要和不重要的問題
+3. 你只剩 30 分鐘做設計，每個部分都會很淺
+
+**正確做法：** 問 5-8 個關鍵問題，快速 scope down，然後說 "Based on these requirements, let me sketch a high-level design."
+</details>
+
+<p><strong>Q2：估算題 — 每天有 500M 活躍用戶，每人發 2 條消息。Write QPS 大約多少？Peak 呢？</strong></p>
+<details open>
+<summary>答案</summary>
+
+- Total writes/day = 500M × 2 = 1B messages/day
+- Average Write QPS = 1B / 86,400 ≈ **11,574 QPS**（可以記成 ~12K）
+- Peak QPS = Average × 3 ≈ **35,000 QPS**
+
+估算時記住：1 day ≈ 10^5 秒。所以 1B / 10^5 ≈ 10K QPS。
+</details>
+
+<p><strong>Q3：為什麼 System Design 面試中要主動提 failure mode？不提會怎樣？</strong></p>
+<details open>
+<summary>答案</summary>
+
+**不提 = 被評為 L4 (Junior)。** 因為：
+1. L5+ 的核心技能是「預見問題」，不只是設計 happy path
+2. 面試官在等你主動講——如果你不提，他會問，這時你就是被動回答而非主動展示
+3. 主動說 "Let me address potential failure modes" 是強烈的 Senior signal
+
+**具體影響：** 一個只有 happy path 的設計在 Google 通常評為 "Meets expectations at current level"（不足以升級）。加上 failure handling 和 tradeoff reasoning 才會是 "Exceeds expectations"。
+</details>
+
+<hr />
+<h2 id="part-2_1">Part 2 考題：分散式系統核心</h2>
+<p><strong>Q4：一個電商系統有「商品庫存」和「用戶評論」兩種資料。它們應該用相同還是不同的 consistency level？為什麼？</strong></p>
+<details open>
+<summary>答案</summary>
+
+**不同。**
+- **庫存 → Strong Consistency（CP）：** 因為兩個用戶不能同時買到最後一件商品（oversell = 金錢損失）
+- **評論 → Eventual Consistency（AP）：** 因為一條新評論晚 2 秒出現不會造成任何損失
+
+這就是 "polyglot consistency" — 同一個系統內，不同資料用不同的 consistency level。面試中說出這個觀點是 Staff-level signal。
+</details>
+
+<p><strong>Q5：什麼是 Split Brain？舉一個具體例子說明它的危害。</strong></p>
+<details open>
+<summary>答案</summary>
+
+**Split Brain：** 網路分區導致同一個系統出現兩個 "leader"（都以為自己是主），各自接受寫入 → 資料不一致。
+
+**具體例子：** PostgreSQL Primary-Replica 架構。Primary 在 AZ-1，Replica 在 AZ-2。兩個 AZ 之間的網路斷了：
+1. Replica 偵測不到 Primary → 自動 promote 成新 Primary
+2. 舊 Primary 還活著，仍在接受寫入
+3. 現在有兩個 Primary → 同一筆資料被兩邊各自修改 → 網路恢復後資料衝突
+
+**解決方案：** Quorum-based leader election（需要 3 個節點的多數同意才能成為 leader）或 Fencing Token（舊 leader 的 token 被作廢，無法寫入）。
+</details>
+
+<p><strong>Q6：Replication lag 是 3 秒。用戶剛剛改了大頭照，但刷新頁面看到的還是舊照片。如何解決？</strong></p>
+<details open>
+<summary>答案</summary>
+
+使用 **Read-After-Write Consistency** 策略：
+
+1. 用戶更新 profile → 寫入 Leader
+2. 寫入成功後，在 response 中返回一個 `last_write_timestamp`
+3. 用戶下次讀取時，帶上這個 timestamp
+4. Server 檢查：如果最近的 Replica 資料比 timestamp 舊 → 改讀 Leader
+5. 5 秒後（lag 已追上），恢復讀 Replica
+
+**關鍵：** 這只對「用戶自己的讀取」做 strong consistency，其他人讀到舊照片（晚 3 秒）是可以接受的。
+</details>
+
+<hr />
+<h2 id="part-3-data-layer">Part 3 考題：Data Layer</h2>
+<p><strong>Q7：一個社交平台有 1 億用戶，每人平均有 200 followers。如果用 "Follow" table 存關係，大概有多少行？SQL 還是 NoSQL 比較適合？</strong></p>
+<details open>
+<summary>答案</summary>
+
+**行數：** 1 億 × 200 = 200 億行（20B rows）
+
+**選擇 NoSQL（如 Cassandra 或 DynamoDB）** 因為：
+1. 200 億行超過單機 SQL 的合理範圍
+2. Follow 關係的 access pattern 很單純：`WHERE follower_id = X` 或 `WHERE followee_id = X`
+3. 不需要 JOIN 或 transaction
+4. 需要 linear write scalability（高關注量時 write burst）
+
+**Schema 設計（DynamoDB）：**
+- Table: Follows
+- PK: follower_id, SK: followee_id
+- GSI: PK = followee_id, SK = follower_id（查「誰 follow 了我」）
+
+用 SQL 也行（PostgreSQL + sharding by follower_id），但 NoSQL 在這種 simple key-value access pattern + massive scale 場景更自然。
+</details>
+
+<p><strong>Q8：為什麼 "SELECT * FROM orders WHERE status = 'pending'" 在一億行的 table 上可能很慢，即使有 index on status？</strong></p>
+<details open>
+<summary>答案</summary>
+
+因為 **selectivity（選擇性）太低。**
+
+如果 status 只有 3 種值（pending/completed/cancelled），每個值覆蓋 ~33% 的資料。Index on status 告訴 DB "pending 的行在 row 1, 5, 8, 12, ..."——但這包含 3000 萬行！DB 的 query optimizer 可能認為走 index 比 full scan 更慢（因為大量 random I/O），乾脆做 sequential scan。
+
+**解決方案：**
+1. **Partial index：** `CREATE INDEX ON orders(created_at) WHERE status = 'pending'` — 只 index pending 的行
+2. **Composite index：** `(status, created_at)` — 如果常 query pending 且按時間排序
+3. **分表：** 把 pending 和 completed orders 分到不同 table
+4. **考慮 access pattern：** pending orders 通常很少（< 1%），用 partial index 最有效
+</details>
+
+<hr />
+<h2 id="part-4-performance-building-blocks">Part 4 考題：Performance Building Blocks</h2>
+<p><strong>Q9：Redis cache hit rate 是 95%，底層 DB 能承受 5,000 QPS。整個系統最多能扛多少 read QPS？</strong></p>
+<details open>
+<summary>答案</summary>
+
+如果 95% 的 request 被 cache 擋住，只有 5% 打到 DB。
+
+DB 能承受 5,000 QPS = 總流量的 5%
+
+所以：**總 QPS = 5,000 / 0.05 = 100,000 QPS**
+
+換句話說：cache hit rate 每提升 1%，系統能承受的總流量就大幅增加。從 95% 到 99%，DB 負載降為原來的 1/5。這就是為什麼 "cache hit rate" 是最重要的監控指標之一。
+</details>
+
+<p><strong>Q10：Kafka 和 SQS 的本質差異是什麼？什麼時候選 Kafka？</strong></p>
+<details open>
+<summary>答案</summary>
+
+| | Kafka | SQS |
+|---|---|---|
+| 本質 | 分散式 log（append-only） | 訊息佇列（consume-and-delete） |
+| 消費後 | Message 仍在（可 replay） | Message 被刪除 |
+| Consumer | Consumer group，自己追蹤 offset | Per-message ack，SQS 管理 |
+| Ordering | 同一 partition 保證順序 | Standard: best-effort; FIFO: strict |
+| 管理成本 | 高（自建 cluster） | 無（fully managed） |
+
+**選 Kafka 當：**
+1. 需要 replay（replay 過去 7 天的 event）
+2. 多個 consumer 要獨立消費同一資料（event sourcing）
+3. 超高吞吐量（1M+ msg/sec）
+4. 需要 stream processing（Kafka Streams / Flink）
+
+**選 SQS 當：**
+1. 簡單的 task queue（背景任務）
+2. 不想管 infrastructure
+3. 不需要 replay
+4. Per-message acknowledgment 重要（失敗自動 retry）
+</details>
+
+<hr />
+<h2 id="part-5-cross-cutting-concerns">Part 5 考題：Cross-Cutting Concerns</h2>
+<p><strong>Q11：Token Bucket 和 Sliding Window 的最大差異是什麼？什麼場景你會選 Token Bucket？</strong></p>
+<details open>
+<summary>答案</summary>
+
+**最大差異：Burst handling。**
+- Token Bucket 允許 burst（桶滿時可以瞬間發完所有 token）
+- Sliding Window 嚴格按時間窗口計數（不允許 burst）
+
+**選 Token Bucket 當：**
+- 你想給正常用戶好的體驗（偶爾 burst 是合理的，例如頁面載入同時發 10 個 API call）
+- 但平均速率要受控
+
+**選 Sliding Window 當：**
+- 你對第三方有嚴格的 rate limit 合約（不允許任何 burst）
+- 安全場景（login attempt limiting — 不管你桶裡有多少 token，每分鐘就是最多 5 次）
+
+**Amazon 和 Stripe 都用 Token Bucket** — 因為它同時兼顧了 "允許短暫 burst" 和 "長期速率控制"。
+</details>
+
+<p><strong>Q12：你的系統用 JWT 做認證。一個用戶被封號了，但他的 JWT 還有 14 小時有效期。怎麼辦？</strong></p>
+<details open>
+<summary>答案</summary>
+
+這是 JWT 的經典問題：**無法即時 revoke**。
+
+**解法（從簡單到複雜）：**
+1. **短 TTL：** JWT 有效期改為 15 分鐘 + refresh token（7 天）。封號時 revoke refresh token → 15 分鐘後 JWT 過期就完了
+2. **Token Blacklist：** Redis 存被 revoke 的 JWT ID，每個 request 都檢查（增加 latency ~1ms）
+3. **Hybrid：** 對 99% request 信任 JWT（不查 DB），但對 sensitive 操作（轉帳、改密碼）額外驗證用戶狀態
+
+**面試中怎麼講：**
+"I'll use short-lived access tokens (15 min) with refresh token rotation. For immediate revocation, I add a small Redis blacklist (TTL = remaining JWT expiry). This covers 99% of cases with minimal latency overhead."
+</details>
+
+<hr />
+<h2 id="part-6_1">Part 6 考題：系統設計題</h2>
+<p><strong>Q13：Design URL Shortener 時，用 base62(auto_increment_id) 生成 short code 有什麼問題？</strong></p>
+<details open>
+<summary>答案</summary>
+
+**三個問題：**
+1. **可預測性：** 用戶可以猜到其他人的短網址（id+1, id+2...）→ 安全風險
+2. **單點故障：** auto_increment 需要一台集中式 DB 生成 ID → 這台 DB 掛了就無法創建新 URL
+3. **分散式困難：** 多台 server 要共享同一個 counter → 要用 distributed ID generator 或 ID range allocation
+
+**更好的方案：**
+- Pre-generated Key Service (KGS)：提前生成所有可能的 key，存在 DB 中標記使用狀態
+- Snowflake ID → base62：用 timestamp + machine_id + sequence 生成全局唯一 ID
+</details>
+
+<p><strong>Q14：Design Chat System 中，為什麼不能用 HTTP polling 而要用 WebSocket？用具體數字說明。</strong></p>
+<details open>
+<summary>答案</summary>
+
+假設 1M 在線用戶，polling 間隔 1 秒：
+
+**HTTP Polling：**
+- QPS = 1M × 1 req/sec = 1,000,000 QPS
+- 99% 的 response 是 "no new message"（浪費！）
+- 每個 request 有 ~200B header overhead
+- Bandwidth = 1M × 200B/sec = 200MB/sec（純 overhead）
+- 延遲 = 最差 1 秒（等下次 poll）
+
+**WebSocket：**
+- 連線數 = 1M（persistent，不需要反覆建立）
+- 只在有新消息時才傳資料
+- 延遲 = ~50ms（server push 即時推送）
+- 沒有 HTTP header overhead（WebSocket frame header 只有 2-14 bytes）
+- Bandwidth：只傳實際消息，節省 99%
+
+**結論：** Chat 是 bidirectional, real-time 的場景。Polling 浪費 99% 的流量，WebSocket 只在需要時才傳資料。
+</details>
+
+<p><strong>Q15：設計 Booking System 時，「先鎖座位再付款」vs「先付款再確認座位」，各有什麼 tradeoff？</strong></p>
+<details open>
+<summary>答案</summary>
+
+| | 先鎖再付 | 先付再確認 |
+|---|---|---|
+| **流程** | Reserve → Pay → Confirm | Pay → Check availability → Confirm or Refund |
+| **用戶體驗** | 好（選好位子再付錢，像買票） | 差（付了錢可能被告知沒位了） |
+| **庫存鎖定** | 有（鎖 10 分鐘等付款） | 無（不鎖庫存） |
+| **放棄率** | 高（很多人鎖了但不付款 → 座位空轉） | 低 |
+| **超賣風險** | 低（已鎖定） | 需要處理退款 |
+| **適用** | 演唱會、電影票（座位有價值，用戶要選） | 外賣、共乘（可替代品多） |
+
+**Ticketmaster 的做法：** 先鎖再付 + 10 分鐘 TTL。超時自動釋放。配合 virtual waiting room 控制並發。
+
+**面試關鍵：** 說出 "reservation timeout + TTL" 是必須的，否則會有永久鎖死的問題。
+</details>
+
+<hr />
+<h2 id="_10">綜合考題</h2>
+<p><strong>Q16：以下哪個設計決策最能體現 Staff-level thinking？為什麼？</strong></p>
+<p>A. 選擇 Redis 因為它快
+B. 選擇 Redis 因為我們的讀寫比是 100:1，cache hit rate 預期 &gt; 95%，且我們可以接受 1-2 秒的 stale data
+C. 選擇 Redis 並實作了所有 cache invalidation 策略
+D. 選擇 Redis 並加上了 5 層 fallback</p>
+<details open>
+<summary>答案</summary>
+
+**B。** 因為它展示了：
+1. **Data-driven decision：** 用具體數字（100:1 ratio, 95% hit rate）支撐選擇
+2. **Tradeoff awareness：** 明確說出「可以接受」的代價（stale data 1-2 秒）
+3. **Context-specific：** 不是「Redis 好」而是「在我們的場景下 Redis 最合適」
+
+A 太淺（junior）。C 過度工程化（不是所有策略都需要）。D 過度設計（5 層 fallback 增加複雜度未必值得）。
+
+**Staff-level = 用最少的複雜度，解決最關鍵的問題，並明確說出 tradeoff。**
+</details>
+
+<hr />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+<script>hljs.highlightAll();</script>
 </body></html>

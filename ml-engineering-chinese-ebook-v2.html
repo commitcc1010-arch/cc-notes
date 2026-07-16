@@ -1,0 +1,2785 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML 工程實戰指南 v2 — 深入淺出的大規模機器學習訓練完全攻略（增強版）</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #ffffff; color: #1a1a1a; line-height: 1.8; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+h1 { font-size: 2.2rem; border-bottom: 3px solid #2563eb; padding-bottom: 0.5rem; margin: 2rem 0 1rem; }
+h2 { font-size: 1.8rem; color: #1e40af; margin: 2rem 0 1rem; border-left: 4px solid #2563eb; padding-left: 0.8rem; }
+h3 { font-size: 1.4rem; color: #1e3a5f; margin: 1.5rem 0 0.8rem; }
+h4 { font-size: 1.1rem; color: #374151; margin: 1rem 0 0.5rem; }
+p { margin: 0.8rem 0; }
+pre { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 1rem 0; }
+code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.9rem; }
+:not(pre) > code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #d63384; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+th, td { border: 1px solid #d1d5db; padding: 0.6rem 1rem; text-align: left; }
+th { background: #eff6ff; font-weight: 600; }
+tr:nth-child(even) { background: #f8fafc; }
+details { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0; }
+details summary { font-weight: 600; cursor: pointer; color: #166534; font-size: 1.05rem; }
+details.qa { background: #fef3c7; border-color: #fbbf24; }
+details.qa summary { color: #92400e; }
+details.beginner { background: #ecfdf5; border-color: #6ee7b7; }
+details.beginner summary { color: #065f46; }
+.toc { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+.toc h2 { border: none; padding: 0; margin: 0 0 1rem; }
+.toc ul { list-style: none; padding-left: 0; }
+.toc li { margin: 0.4rem 0; }
+.toc li a { color: #2563eb; text-decoration: none; }
+.toc li a:hover { text-decoration: underline; }
+.toc ul ul { padding-left: 1.5rem; }
+.callout { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 1rem 1.2rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+.warning { background: #fef2f2; border-left-color: #ef4444; }
+.tip { background: #f0fdf4; border-left-color: #22c55e; }
+.emoji-header { font-size: 1.3rem; margin: 1.5rem 0 0.5rem; }
+blockquote { border-left: 3px solid #94a3b8; padding-left: 1rem; color: #475569; font-style: italic; margin: 1rem 0; }
+
+.beginner-box { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0; }
+.beginner-box h4, .beginner-box h3 { color: #065f46; }
+.qa-box { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0; }
+.qa-box h4 { color: #92400e; }
+.decision-tree { background: #f8f9fa; padding: 20px; border-radius: 8px; }
+section { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid #e2e8f0; }
+
+.glossary-box { background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 8px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+.glossary-box h4 { color: #0369a1; margin-bottom: 0.8rem; }
+.glossary-box table { font-size: 0.9rem; }
+.glossary-box th { background: #e0f2fe; }
+.prereq-box { background: #faf5ff; border: 1px solid #c4b5fd; border-radius: 8px; padding: 1rem 1.2rem; margin: 1rem 0; }
+.prereq-box h4 { color: #6d28d9; }
+.quiz-box { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+.quiz-box h4 { color: #c2410c; }
+
+</style>
+</head>
+<body>
+
+<h1>🚀 ML 工程實戰指南</h1>
+<p><strong>基於 stas00/ml-engineering 開源書翻譯、補充與實戰範例</strong></p>
+<p>深入淺出、從零到一的機器學習工程完全攻略</p>
+
+<nav class="toc">
+<h2>📑 目錄</h2>
+<ul>
+<li><strong>Part 1: 戰場總覽</strong>
+<ul>
+<li><a href="#ch1">第一章：AI 戰場全貌</a>
+<ul>
+<li><a href="#ch1-1">1.1 AI 軍備競賽：什麼才是決定勝負的關鍵</a></li>
+<li><a href="#ch1-2">1.2 算力需求：訓練一個大模型要多少 GPU？</a></li>
+<li><a href="#ch1-3">1.3 主力戰馬：GPU 家族介紹</a></li>
+<li><a href="#ch1-4">1.4 FOMO 建議：別慌，冷靜思考</a></li>
+<li><a href="#ch1-5">1.5 ML 工程師的天堂與地獄</a></li>
+<li><a href="#ch1-6">1.6 如何取得算力資源</a></li>
+<li><a href="#ch1-7">1.7 不請自來的建議</a></li>
+</ul>
+</li>
+<li><a href="#ch2">第二章：如何選擇雲端供應商</a>
+<ul>
+<li><a href="#ch2-1">2.1 三大雲的 ML 生態比較</a></li>
+<li><a href="#ch2-2">2.2 GPU 實例類型與定價策略</a></li>
+<li><a href="#ch2-3">2.3 Spot/Preemptible 省錢術</a></li>
+<li><a href="#ch2-4">2.4 選擇框架：決策矩陣</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Part 2: 硬體基礎設施</strong>
+<ul>
+<li><a href="#ch-compute-accelerators">第四章：運算加速器</a></li>
+<li><a href="#ch-storage">第五章：儲存系統</a></li>
+<li><a href="#ch-network">第六章：網路通訊</a></li>
+</ul>
+</li>
+<li><strong>Part 3: 訓練工程</strong>
+<ul>
+<li><a href="#ch3-1-model-parallelism">3.1 模型並行策略</a></li>
+<li><a href="#ch3-2-memory-anatomy">3.2 GPU 記憶體解剖學</a></li>
+<li><a href="#ch3-3-performance">3.3 訓練效能優化</a></li>
+<li><a href="#ch3-4-decision-tree">3.4 並行策略決策樹</a></li>
+</ul>
+</li>
+<li><strong>Part 4: Debug 與推論</strong>
+<ul>
+<li><a href="#ch-debug">第十章：分散式訓練 Debug 實戰</a></li>
+<li><a href="#ch-inference">第十一章：Inference 優化基礎</a></li>
+<li><a href="#ch-misc">第十二章：附錄與索引</a></li>
+</ul>
+</li>
+</ul>
+</nav>
+
+<!-- ==================== CHAPTER 1 ==================== -->
+
+
+
+
+<h1>🚀 ML 工程實戰指南 — Part 1 Enhanced</h1>
+<p><strong>第一章 + 第二章：AI 戰場全貌 & 雲端供應商選擇</strong></p>
+
+<!-- ==================== CHAPTER 1 ==================== -->
+<h1 id="ch1">第一章：AI 戰場全貌 ⚔️</h1>
+
+<!-- 📖 術語表 -->
+<div class="glossary-box">
+<h3>📖 術語表 — 第一章核心詞彙</h3>
+<table>
+<tr><th>English</th><th>中文</th><th>白話定義</th><th>生活比喻</th></tr>
+<tr><td>Scaling Laws</td><td>縮放定律</td><td>模型性能與算力/數據/參數量之間的數學關係</td><td>像健身：練越多越壯，但邊際效果遞減</td></tr>
+<tr><td>FLOPS</td><td>浮點運算次數/秒</td><td>衡量算力的單位，每秒能做多少次浮點計算</td><td>工廠的「每秒能組裝幾台手機」</td></tr>
+<tr><td>MFU (Model FLOPS Utilization)</td><td>模型浮點利用率</td><td>GPU 實際用來做有用計算的比例</td><td>一天 8 小時上班，實際寫 code 的時間佔比</td></tr>
+<tr><td>HBM (High Bandwidth Memory)</td><td>高頻寬記憶體</td><td>GPU 專用的超快記憶體，離運算核心很近</td><td>廚師面前的備料台 vs 走到倉庫取貨</td></tr>
+<tr><td>Spot Instance</td><td>競價實例</td><td>用雲端閒置容量，便宜但隨時可能被收回</td><td>航空公司最後一刻的折扣機票——便宜但可能被取消</td></tr>
+<tr><td>Checkpoint</td><td>檢查點</td><td>訓練中途把模型狀態存檔，以便中斷後恢復</td><td>遊戲的存檔點——死掉可以讀檔重來</td></tr>
+<tr><td>On-demand Instance</td><td>隨選實例</td><td>按小時付費的雲端 GPU，保證不被搶走</td><td>計程車跳表——貴但保證送到</td></tr>
+<tr><td>Reserved Instance</td><td>預留實例</td><td>承諾用 1-3 年換取大幅折扣的 GPU</td><td>簽年約的健身房會員——每月較便宜但綁約</td></tr>
+<tr><td>BF16 (BFloat16)</td><td>Brain 浮點 16 位</td><td>Google 發明的 16 位元格式，保留 FP32 的指數範圍</td><td>犧牲精度換速度的「快速素描」vs 精密油畫</td></tr>
+<tr><td>NVLink</td><td>NVIDIA 高速互連</td><td>GPU 之間的專用高速通道，比 PCIe 快 7-14 倍</td><td>GPU 之間的「子彈列車」vs 普通公路</td></tr>
+</table>
+</div>
+
+<!-- 前置知識 -->
+<div class="prereq-box">
+<h4>📋 前置知識 — 閱讀本章前你需要知道</h4>
+<p>本章不需要深厚的技術背景。你只需要了解：(1) GPU 是專門做大量平行計算的硬體晶片；(2) 訓練 AI 模型 = 餵大量數據讓模型調整參數；(3) 雲端服務可以按時間租用遠端的 GPU 機器；(4) Python 基本語法（函式、字典、f-string）。如果你知道什麼是矩陣乘法會更好，但非必需。</p>
+</div>
+
+<details class="beginner" open>
+<summary>🌱 從零開始理解：什麼是 AI 軍備競賽？</summary>
+<h4>生活比喻</h4>
+<p>想像你要蓋一棟 101 大樓。你需要：鋼筋水泥（數據）、起重機（GPU）、建築師（演算法）、以及一大筆錢（算力預算）。AI 軍備競賽就像各國在比誰能蓋出最高的大樓——誰有最多起重機、最好的建築師、最多的預算，誰就能先蓋完。</p>
+<h4>白話解釋</h4>
+<p>AI 公司（OpenAI、Google、Meta、Anthropic）都在搶購 GPU 來訓練更大的模型。這場競賽的本質是：<strong>誰能把最多的算力、最好的數據、最聰明的工程師組合在一起，誰就贏</strong>。</p>
+<h4>為什麼工作上需要知道這個？</h4>
+<p>因為你的公司也在這場競賽中。了解戰場全貌，才能做出正確的技術決策：該買多少 GPU？用哪家雲端？訓練策略怎麼排？</p>
+<h4>先備知識</h4>
+<p>只需要知道：GPU 是專門做平行計算的硬體、模型越大需要越多算力、雲端可以租 GPU。</p>
+</details>
+
+<h2 id="ch1-1">1.1 AI 軍備競賽：什麼才是決定勝負的關鍵</h2>
+
+<p>2024-2026 年的 AI 產業，核心競爭力可以濃縮為三個維度：</p>
+
+<table>
+<tr><th>維度</th><th>描述</th><th>誰做得最好</th></tr>
+<tr><td>🔥 算力 (Compute)</td><td>GPU 叢集規模、互聯頻寬</td><td>Meta (600K H100), xAI (100K)</td></tr>
+<tr><td>📊 數據 (Data)</td><td>高品質訓練語料的規模與多樣性</td><td>Google (搜尋+YT), Meta (社群)</td></tr>
+<tr><td>🧠 人才 (Talent)</td><td>頂尖 ML 研究員與工程師</td><td>OpenAI, DeepMind, Anthropic</td></tr>
+</table>
+
+<div class="callout">
+<strong>💡 實戰觀察：</strong>算力是唯一可以用錢直接買到的維度。數據需要時間累積，人才需要文化吸引。所以大公司瘋狂採購 GPU——因為這是最容易「加速」的槓桿。
+</div>
+
+<p><strong>Scaling Laws 的啟示：</strong></p>
+<p>OpenAI 的研究表明，模型性能（loss）與三個因素呈冪律關係：</p>
+<p>$$ L(N, D, C) \propto N^{-\alpha} + D^{-\beta} + C^{-\gamma} $$</p>
+<p>其中 \(N\) = 參數量、\(D\) = 數據量、\(C\) = 算力。簡單說：<strong>越大越好，但報酬遞減</strong>。</p>
+
+<pre><code class="language-python"># 計算 Scaling Law 下的預期 loss 改善
+import math
+
+def estimate_loss_improvement(compute_multiplier):
+    """
+    根據 Chinchilla scaling law 估算 loss 改善
+    gamma ≈ 0.05 (compute exponent)
+    """
+    gamma = 0.05
+    improvement = 1 - (1 / compute_multiplier) ** gamma
+    return improvement * 100  # 百分比改善
+
+# 如果算力翻倍
+print(f"算力 2x → loss 改善約 {estimate_loss_improvement(2):.1f}%")
+# 如果算力翻 10 倍
+print(f"算力 10x → loss 改善約 {estimate_loss_improvement(10):.1f}%")
+# 如果算力翻 100 倍
+print(f"算力 100x → loss 改善約 {estimate_loss_improvement(100):.1f}%")
+</code></pre>
+
+<p>這段程式碼展示了為什麼各大公司要瘋狂堆算力——即使只有幾個百分點的 loss 改善，在最終產品體驗上差異巨大。</p>
+
+<h2 id="ch1-2">1.2 算力需求：訓練一個大模型要多少 GPU？</h2>
+
+<p>訓練一個 LLM 的算力需求可以用以下公式估算：</p>
+<p>$$ C \approx 6 \times N \times D $$</p>
+<p>其中 \(C\) = 總 FLOPS、\(N\) = 參數量、\(D\) = 訓練 token 數。</p>
+
+<pre><code class="language-python">def estimate_training_compute(
+    params_billions: float,
+    tokens_trillions: float,
+    gpu_tflops: float = 312,
+    mfu: float = 0.4,
+    num_gpus: int = 1024,
+    hours_per_day: float = 24
+) -> dict:
+    """
+    估算訓練大型語言模型所需的時間與成本
+    """
+    total_flops = 6 * (params_billions * 1e9) * (tokens_trillions * 1e12)
+    effective_tflops_per_gpu = gpu_tflops * mfu
+    total_flops_per_sec = effective_tflops_per_gpu * 1e12 * num_gpus
+    seconds_needed = total_flops / total_flops_per_sec
+    days_needed = seconds_needed / (3600 * hours_per_day)
+    cost_per_gpu_hour = 2.5
+    total_cost = (seconds_needed / 3600) * num_gpus * cost_per_gpu_hour
+    
+    return {
+        "total_pflops": total_flops / 1e15,
+        "days": days_needed,
+        "gpu_hours": (seconds_needed / 3600) * num_gpus,
+        "estimated_cost_usd": total_cost
+    }
+
+result = estimate_training_compute(params_billions=70, tokens_trillions=2, num_gpus=2048)
+print(f"📊 訓練 70B 模型 (2T tokens, 2048x H100)")
+print(f"   總算力需求: {result['total_pflops']:.0f} PetaFLOPS")
+print(f"   預估天數: {result['days']:.0f} 天")
+print(f"   GPU 時數: {result['gpu_hours']:,.0f} hr")
+print(f"   預估成本: ${result['estimated_cost_usd']:,.0f}")
+</code></pre>
+
+<div class="callout tip">
+<strong>🎯 實戰心得：</strong>MFU (Model FLOPS Utilization) 是最關鍵的效率指標。業界頂尖團隊能做到 50-60%，一般團隊約 30-40%。差距 10% 的 MFU 就等於多花幾百萬美金。
+</div>
+
+<h2 id="ch1-3">1.3 主力戰馬：GPU 家族介紹</h2>
+
+<table>
+<tr><th>GPU</th><th>記憶體</th><th>BF16 TFLOPS</th><th>互聯</th><th>適用場景</th></tr>
+<tr><td>A100 80GB</td><td>80 GB HBM2e</td><td>312</td><td>NVLink 600 GB/s</td><td>入門級訓練/推理</td></tr>
+<tr><td>H100 SXM</td><td>80 GB HBM3</td><td>990</td><td>NVLink 900 GB/s</td><td>主流大模型訓練</td></tr>
+<tr><td>H200</td><td>141 GB HBM3e</td><td>990</td><td>NVLink 900 GB/s</td><td>長上下文/大 batch</td></tr>
+<tr><td>B200</td><td>192 GB HBM3e</td><td>2250</td><td>NVLink 1800 GB/s</td><td>下一代旗艦</td></tr>
+<tr><td>AWS Trainium2</td><td>96 GB HBM3</td><td>~840</td><td>NeuronLink</td><td>AWS 專用加速器</td></tr>
+</table>
+
+<pre><code class="language-python">def estimate_gpu_memory_for_model(
+    params_billions: float,
+    precision: str = "bf16",
+    optimizer: str = "adam",
+    batch_size: int = 1,
+    seq_length: int = 4096,
+    hidden_dim: int = None
+) -> dict:
+    """估算模型訓練所需的 GPU 記憶體"""
+    bytes_per_param = {"fp32": 4, "bf16": 2, "fp16": 2, "int8": 1}[precision]
+    model_memory_gb = (params_billions * 1e9 * bytes_per_param) / (1024**3)
+    if optimizer == "adam":
+        optimizer_memory_gb = (params_billions * 1e9 * 8) / (1024**3)
+    else:
+        optimizer_memory_gb = (params_billions * 1e9 * 4) / (1024**3)
+    gradient_memory_gb = model_memory_gb
+    if hidden_dim is None:
+        hidden_dim = int((params_billions * 1e9 / 12) ** 0.5) * 2
+    activation_memory_gb = (batch_size * seq_length * hidden_dim * 34 * 2) / (1024**3)
+    total_gb = model_memory_gb + optimizer_memory_gb + gradient_memory_gb + activation_memory_gb
+    
+    return {
+        "model_gb": model_memory_gb,
+        "optimizer_gb": optimizer_memory_gb,
+        "gradient_gb": gradient_memory_gb,
+        "activation_gb": activation_memory_gb,
+        "total_gb": total_gb,
+        "min_gpus_h100": math.ceil(total_gb / 80)
+    }
+
+import math
+r7b = estimate_gpu_memory_for_model(7, seq_length=4096)
+print(f"🔹 7B 模型 (BF16 + Adam):")
+print(f"   模型: {r7b['model_gb']:.1f} GB | 優化器: {r7b['optimizer_gb']:.1f} GB")
+print(f"   總計: {r7b['total_gb']:.1f} GB → 最少需要 {r7b['min_gpus_h100']} 張 H100")
+
+r70b = estimate_gpu_memory_for_model(70, seq_length=4096)
+print(f"\n🔹 70B 模型 (BF16 + Adam):")
+print(f"   總計: {r70b['total_gb']:.1f} GB → 最少需要 {r70b['min_gpus_h100']} 張 H100")
+</code></pre>
+
+<details class="qa" open>
+<summary>📝 理解確認 Q&A</summary>
+<p><strong>Q1: 為什麼 Adam 優化器需要額外 8 bytes/parameter？</strong></p>
+<p>A: Adam 維護兩個 fp32 的動量估計（first moment 和 second moment），每個 4 bytes，所以 4+4=8 bytes/param。這就是為什麼很多團隊轉向 AdaFactor 或 LION 等低記憶體優化器。</p>
+<p><strong>Q2: MFU 40% 代表什麼？剩下 60% 的時間 GPU 在做什麼？</strong></p>
+<p>A: GPU 閒置 60% 的時間主要花在：(1) 通訊等待（AllReduce 梯度同步）(2) 記憶體存取延遲 (3) Kernel launch overhead (4) Pipeline bubble。提升 MFU 是 ML 系統工程的核心挑戰。</p>
+<p><strong>Q3: 為什麼 Scaling Laws 對 ML 工程師很重要？</strong></p>
+<p>A: 因為它讓你在花錢之前就能預測結果。如果你知道 10x 算力只能帶來 ~11% 的 loss 改善，就能理性評估 ROI 而不是盲目堆 GPU。</p>
+</details>
+
+<h2 id="ch1-4">1.4 FOMO 建議：別慌，冷靜思考</h2>
+
+<details class="beginner" open>
+<summary>🌱 從零開始理解：AI FOMO 是什麼感覺？</summary>
+<h4>生活比喻</h4>
+<p>就像 2021 年人人都在買比特幣，你看同事都在訓練大模型、發 paper、拿 offer，內心焦慮「我是不是落後了？」這就是 AI FOMO（Fear Of Missing Out）。</p>
+<h4>白話解釋</h4>
+<p>媒體渲染讓每個人覺得不懂 AI 就要被淘汰。但事實是：<strong>90% 的公司不需要從頭訓練模型</strong>，大部分工作是微調、部署、和 MLOps。</p>
+</details>
+
+<p><strong>冷靜的現實：</strong></p>
+<ul>
+<li>🎯 不是每個問題都需要 LLM（有時候 regex + 規則 > GPT-4）</li>
+<li>🎯 大部分公司的瓶頸是<strong>數據品質</strong>，不是模型大小</li>
+<li>🎯 一個好的 7B 微調模型在特定任務上可以打敗通用 70B</li>
+<li>🎯 推理成本 >> 訓練成本（長期來看）</li>
+</ul>
+
+<pre><code class="language-python"># 冷靜的 ROI 計算：自建 vs 調用 API
+import math
+
+def compare_build_vs_buy(
+    daily_requests: int,
+    api_cost_per_1k_tokens: float = 0.01,
+    avg_tokens_per_request: int = 500,
+    gpu_monthly_cost: float = 2000,
+    self_hosted_capacity: int = 50000
+):
+    """比較自建 vs API 的成本"""
+    monthly_api_cost = (daily_requests * 30 * avg_tokens_per_request / 1000) * api_cost_per_1k_tokens
+    gpus_needed = math.ceil(daily_requests / self_hosted_capacity)
+    monthly_self_cost = gpus_needed * gpu_monthly_cost + 5000
+    return {
+        "api_monthly": monthly_api_cost,
+        "self_monthly": monthly_self_cost,
+        "breakeven_requests": int((gpu_monthly_cost + 5000) / 
+                                   (avg_tokens_per_request / 1000 * api_cost_per_1k_tokens * 30))
+    }
+
+result = compare_build_vs_buy(daily_requests=10000)
+print(f"每日 10K 請求:")
+print(f"  API 月費: ${result['api_monthly']:,.0f}")
+print(f"  自建月費: ${result['self_monthly']:,.0f}")
+print(f"  損益兩平點: 每日 {result['breakeven_requests']:,} 請求")
+</code></pre>
+
+<h2 id="ch1-5">1.5 ML 工程師的天堂與地獄</h2>
+
+<p><strong>天堂 🏖️：</strong></p>
+<ul>
+<li>充足的 GPU 預算，不用每次實驗都求人批准</li>
+<li>成熟的 MLOps 基礎設施（自動化訓練、版本控制、監控）</li>
+<li>清晰的業務目標，知道模型改善 1% 的商業價值</li>
+<li>數據團隊配合良好，標註品質有保障</li>
+<li>能做端到端的工作：從研究到生產部署</li>
+</ul>
+
+<p><strong>地獄 🔥：</strong></p>
+<ul>
+<li>「我們要做 AI」但沒人說得清楚要解決什麼問題</li>
+<li>GPU 叢集維運全靠你一個人</li>
+<li>模型精度從 89% 提到 89.5% 但沒人在乎</li>
+<li>數據亂七八糟，花 80% 時間清洗而不是建模</li>
+<li>老闆看了 ChatGPT demo 就要你「兩週內做一個出來」</li>
+</ul>
+
+<div class="callout warning">
+<strong>⚠️ 真實故事：</strong>某 Fortune 500 公司花了 $20M 買了 500 張 A100，但因為沒有好的 ML 平台團隊，GPU 利用率長期低於 15%。算力不是瓶頸——<strong>組織能力才是</strong>。
+</div>
+
+<h2 id="ch1-6">1.6 如何取得算力資源</h2>
+
+<table>
+<tr><th>管道</th><th>適合對象</th><th>優點</th><th>缺點</th></tr>
+<tr><td>雲端隨選 (On-demand)</td><td>小團隊、實驗</td><td>彈性、無前期成本</td><td>貴、可能搶不到</td></tr>
+<tr><td>雲端預留 (Reserved)</td><td>確定長期需求</td><td>便宜 30-60%</td><td>綁約、閒置風險</td></tr>
+<tr><td>Spot/Preemptible</td><td>容錯訓練</td><td>便宜 60-90%</td><td>隨時被搶走</td></tr>
+<tr><td>自建叢集</td><td>大公司/研究院</td><td>完全控制</td><td>資本支出大、維運重</td></tr>
+<tr><td>GPU 租賃商</td><td>Startup</td><td>短期彈性</td><td>品質不穩定</td></tr>
+</table>
+
+<pre><code class="language-python"># 計算不同取得方式的年化成本
+def annual_gpu_cost(strategy: str, num_gpus: int = 8, hours_per_day: float = 20):
+    """估算不同 GPU 取得策略的年化成本 (H100)"""
+    costs = {
+        "on_demand": 3.50,
+        "reserved_1yr": 2.10,
+        "reserved_3yr": 1.40,
+        "spot": 1.05,
+        "own_hardware": 0.80,
+    }
+    hourly = costs[strategy]
+    annual = hourly * hours_per_day * 365 * num_gpus
+    return {"strategy": strategy, "hourly_per_gpu": hourly, "annual_total": annual, "monthly_total": annual / 12}
+
+print("📊 8x H100 年化成本比較 (每天使用 20hr):")
+for s in ["on_demand", "reserved_1yr", "reserved_3yr", "spot", "own_hardware"]:
+    r = annual_gpu_cost(s)
+    print(f"  {s:15s}: ${r['annual_total']:>10,.0f}/yr  (${r['monthly_total']:>8,.0f}/mo)")
+</code></pre>
+
+<h2 id="ch1-7">1.7 不請自來的建議</h2>
+
+<div class="callout tip">
+<strong>給 ML 新手的 5 條建議：</strong>
+</div>
+
+<ol>
+<li><strong>先學會用，再學會建</strong> — 先用 API 解決問題，確認問題值得解決後再投資自建</li>
+<li><strong>投資 MLOps 而非更大的模型</strong> — 能可靠地部署 7B 比偶爾跑通 70B 有價值 100 倍</li>
+<li><strong>記錄一切</strong> — 每次實驗的超參、seed、git hash、數據版本</li>
+<li><strong>學分散式系統，不只是 PyTorch</strong> — 真正的瓶頸在通訊、容錯、排程</li>
+<li><strong>找一個好的 mentor</strong> — ML 有太多口耳相傳的 know-how 不在教科書裡</li>
+</ol>
+
+<details class="qa" open>
+<summary>📝 理解確認 Q&A</summary>
+<p><strong>Q1: 為什麼 Spot Instance 便宜這麼多？風險是什麼？</strong></p>
+<p>A: Spot 便宜因為雲端商用閒置容量賣給你，但隨時可以收回（通常 2 分鐘通知）。風險是訓練中斷、checkpoint 可能來不及存。解法：頻繁 checkpoint + 彈性容錯框架。</p>
+<p><strong>Q2: 什麼情況下自建叢集比租雲端划算？</strong></p>
+<p>A: 通常 GPU 利用率 > 70% 且持續 > 2 年就划算。但要加上：機房電費、冷卻、網管人力、硬體故障替換。很多公司低估了維運成本。</p>
+</details>
+
+<!-- 🧪 第一章驗證考題 -->
+<div class="quiz-box">
+<h3>🧪 第一章驗證考題</h3>
+
+<details open>
+<summary><strong>Q1:</strong> 如果你的團隊有 512 張 H100，MFU 從 35% 提升到 45%，等效於「免費」獲得了多少張額外的 H100？</summary>
+<p><strong>答案：</strong>MFU 35%→45% 代表有效算力從 512×0.35=179.2 提升到 512×0.45=230.4，差額 = 51.2 張 H100 的等效算力。換算成雲端成本，以 $3.5/hr/GPU 計，每月省下 51.2 × $3.5 × 24 × 30 ≈ <strong>$128,000/月</strong>。這就是為什麼系統工程優化的 ROI 極高。</p>
+</details>
+
+<details open>
+<summary><strong>Q2:</strong> 一家公司每天有 100K 次 API 呼叫（平均 800 tokens/次），目前用 GPT-4o-mini ($0.15/1M input tokens)。什麼時候應該考慮自建？</summary>
+<p><strong>答案：</strong>月費 = 100K × 30 × 800 / 1M × $0.15 = <strong>$360/月</strong>。這個量級完全不值得自建（一張 A100 月租就 $2000+）。通常要到 <strong>$10K+/月 API 費用</strong>且有持續增長趨勢時才考慮自建。自建還要加上工程師人力（$15K+/月）。結論：大多數中小公司應該繼續用 API。</p>
+</details>
+
+<details open>
+<summary><strong>Q3:</strong> Chinchilla optimal 建議 70B 模型要用多少 tokens 訓練？如果你只有一半的數據量，會發生什麼？</summary>
+<p><strong>答案：</strong>Chinchilla 規則：最佳 token 數 ≈ 20× 參數量。70B → 1.4T tokens。如果只有 700B tokens（一半），模型會 <strong>undertrained</strong>（欠訓練）：loss 比 optimal 高，但不會過擬合。實務上的影響是你「浪費了參數」——同樣的 700B tokens 用在 35B 模型上效果可能更好。這就是為什麼 Llama 2 用了 2T tokens 訓練 70B（超過 Chinchilla optimal），因為推論時小模型更便宜。</p>
+</details>
+
+<details open>
+<summary><strong>Q4:</strong> 你的老闆說「我們要從頭預訓練一個 13B 模型」。列出 3 個你應該先問的問題來評估是否合理。</summary>
+<p><strong>答案：</strong>(1) <strong>「我們有什麼獨特的數據是公開模型沒見過的？」</strong>如果答案是「沒有」，微調就夠了。(2) <strong>「預算多少？訓練 13B + 2T tokens 在 H100 上約需 $500K-1M，團隊準備好了嗎？」</strong>(3) <strong>「下游任務的 baseline 是什麼？用 Llama 3 13B 微調能到幾分？」</strong>如果微調已經 90+，預訓練的邊際改善可能只有 1-2%，不值得。</p>
+</details>
+
+<details open>
+<summary><strong>Q5:</strong> 為什麼 Meta 開源 Llama 系列？這對 AI 算力市場有什麼影響？</summary>
+<p><strong>答案：</strong>Meta 的策略：(1) <strong>降低競爭對手的護城河</strong>——如果最好的模型是免費的，OpenAI/Google 的 API 訂閱價值下降；(2) <strong>讓生態系建在 Meta 的模型上</strong>——開發者用 Llama 建工具 = Meta 的影響力；(3) <strong>吸引人才</strong>——發表論文+開源代碼是最好的招聘廣告。對算力市場的影響：更多公司做微調/推理（需要 GPU）但更少公司做預訓練，推理需求的增長會遠超訓練需求。</p>
+</details>
+</div>
+
+
+<!-- ==================== CHAPTER 2 ==================== -->
+<h1 id="ch2">第二章：如何選擇雲端供應商 ☁️</h1>
+
+<!-- 📖 術語表 -->
+<div class="glossary-box">
+<h3>📖 術語表 — 第二章核心詞彙</h3>
+<table>
+<tr><th>English</th><th>中文</th><th>白話定義</th><th>生活比喻</th></tr>
+<tr><td>SageMaker</td><td>AWS ML 託管平台</td><td>AWS 提供的一站式 ML 訓練/部署服務</td><td>雲端廚房的「外燴套餐」——食材備好、設備齊全，你只管煮</td></tr>
+<tr><td>Vertex AI</td><td>GCP ML 託管平台</td><td>Google 的 ML 平台，整合 TPU + BigQuery 生態</td><td>Google 自家的「米其林中央廚房」</td></tr>
+<tr><td>TPU (Tensor Processing Unit)</td><td>張量處理單元</td><td>Google 自研的 AI 晶片，專為矩陣運算設計</td><td>只做一種菜的專業料理機，做那道菜比通用廚具快</td></tr>
+<tr><td>Preemptible/Spot</td><td>可搶佔實例</td><td>用雲端閒置容量，隨時可能被收回</td><td>特價品出清——便宜但數量有限、賣完為止</td></tr>
+<tr><td>Egress Cost</td><td>出站流量費</td><td>從雲端下載數據到外部的費用</td><td>停車場的「出場費」——進去免費，出來收錢</td></tr>
+<tr><td>Vendor Lock-in</td><td>供應商鎖定</td><td>遷移到其他雲端的成本太高導致被綁定</td><td>手機換系統——照片、App、習慣全部要重新來過</td></tr>
+<tr><td>JAX</td><td>JAX 框架</td><td>Google 開發的高性能數值計算框架，支援自動微分+JIT</td><td>PyTorch 的「賽車改裝版」——更快但需要更多駕駛技術</td></tr>
+<tr><td>Karpenter</td><td>K8s 自動擴展器</td><td>AWS 的 Kubernetes 節點自動配置工具</td><td>自動幫你叫 Uber 的管家——需要車時自動安排最便宜的</td></tr>
+<tr><td>FSx Lustre</td><td>高效能檔案系統</td><td>AWS 的平行檔案系統，專為 HPC/ML 設計</td><td>多車道的資料高速公路——多個 GPU 同時讀不塞車</td></tr>
+<tr><td>SIGTERM</td><td>終止信號</td><td>作業系統通知程式「即將被關閉」的信號</td><td>咖啡廳的「我們 10 分鐘後打烊」廣播</td></tr>
+<tr><td>PyTorch Elastic</td><td>彈性訓練框架</td><td>支援動態增減 worker 數量的訓練框架</td><td>球隊的替補制度——有人受傷自動換人上場繼續比賽</td></tr>
+</table>
+</div>
+
+<!-- 前置知識 -->
+<div class="prereq-box">
+<h4>📋 前置知識 — 閱讀本章前你需要知道</h4>
+<p>本章需要你了解：(1) 第一章的 GPU 基本概念（TFLOPS、HBM、MFU）；(2) 雲端基本概念——知道 AWS/GCP/Azure 是什麼、VM（虛擬機）可以遠端租用；(3) 容器和 Kubernetes 的大概念（可以把多個程式打包、自動管理）；(4) 知道什麼是 checkpoint（模型存檔）。不需要有實際的雲端帳號經驗。</p>
+</div>
+
+<details class="beginner" open>
+<summary>🌱 從零開始理解：雲端供應商是什麼？</summary>
+<h4>生活比喻</h4>
+<p>想像你要開餐廳。你可以：(A) 自己買地蓋房子裝修廚房 (自建伺服器) (B) 租一間已經裝修好的商業廚房，按月付租金 (雲端)。雲端供應商就是出租「AI 廚房」的房東——AWS、GCP、Azure 是三大房東。</p>
+<h4>白話解釋</h4>
+<p>雲端供應商提供你「隨用隨付」的 GPU 算力。你不需要買硬體、管機房、換壞掉的顯卡，只要上網點幾下就能開一台有 8 張 H100 的機器。</p>
+<h4>為什麼工作上需要知道這個？</h4>
+<p>選錯雲端 = 多花 2-3 倍的錢 + 被鎖定在不好用的工具鏈裡。這個選擇影響未來 2-3 年的開發效率。</p>
+</details>
+
+<h2 id="ch2-1">2.1 三大雲的 ML 生態比較</h2>
+
+<table>
+<tr><th>面向</th><th>AWS</th><th>GCP</th><th>Azure</th></tr>
+<tr><td>GPU 選擇</td><td>A100, H100, Trainium, Inferentia</td><td>A100, H100, TPU v4/v5</td><td>A100, H100, ND series</td></tr>
+<tr><td>ML 平台</td><td>SageMaker</td><td>Vertex AI</td><td>Azure ML</td></tr>
+<tr><td>獨特優勢</td><td>Trainium 性價比、企業整合</td><td>TPU + JAX 生態、Colab</td><td>OpenAI 獨家合作</td></tr>
+<tr><td>容器/K8s</td><td>EKS + Karpenter</td><td>GKE + 自動擴展</td><td>AKS</td></tr>
+<tr><td>儲存</td><td>S3 + FSx Lustre</td><td>GCS + Filestore</td><td>Blob + NetApp</td></tr>
+<tr><td>適合誰</td><td>企業級、已在 AWS 的公司</td><td>研究導向、JAX/TPU 用戶</td><td>Microsoft 生態、OpenAI 用戶</td></tr>
+</table>
+
+<div class="callout">
+<strong>💡 選擇原則：</strong>80% 的情況下，<strong>你公司已經在用哪家雲就繼續用那家</strong>。跨雲的數據傳輸成本和工程開銷遠超省下的 GPU 費用差異。
+</div>
+
+<h2 id="ch2-2">2.2 GPU 實例類型與定價策略</h2>
+
+<pre><code class="language-python"># 各雲端 GPU 實例快速對照與性價比計算
+gpu_instances = {
+    "AWS p5.48xlarge": {
+        "gpus": 8, "gpu_type": "H100", "memory_gb": 640,
+        "on_demand_hr": 98.32, "spot_hr": 35.0, "network_gbps": 3200
+    },
+    "AWS p4d.24xlarge": {
+        "gpus": 8, "gpu_type": "A100", "memory_gb": 320,
+        "on_demand_hr": 32.77, "spot_hr": 13.0, "network_gbps": 400
+    },
+    "AWS trn1.32xlarge": {
+        "gpus": 16, "gpu_type": "Trainium", "memory_gb": 512,
+        "on_demand_hr": 21.50, "spot_hr": 7.50, "network_gbps": 800
+    },
+    "GCP a3-highgpu-8g": {
+        "gpus": 8, "gpu_type": "H100", "memory_gb": 640,
+        "on_demand_hr": 98.64, "spot_hr": 29.59, "network_gbps": 3200
+    },
+    "GCP TPU v5p-8": {
+        "gpus": 8, "gpu_type": "TPU v5p", "memory_gb": 768,
+        "on_demand_hr": 68.40, "spot_hr": 20.52, "network_gbps": 4800
+    },
+}
+
+tflops_map = {"H100": 990, "A100": 312, "Trainium": 840, "TPU v5p": 920}
+
+print("📊 GPU 性價比分析 (BF16 TFLOPS / $ per hour)")
+print("-" * 70)
+for name, spec in gpu_instances.items():
+    total_tflops = spec["gpus"] * tflops_map[spec["gpu_type"]]
+    perf_per_dollar_od = total_tflops / spec["on_demand_hr"]
+    perf_per_dollar_spot = total_tflops / spec["spot_hr"]
+    print(f"  {name:25s} | {total_tflops:>6} TFLOPS | "
+          f"OD: {perf_per_dollar_od:>5.1f} TF/$ | Spot: {perf_per_dollar_spot:>5.1f} TF/$")
+</code></pre>
+
+<h2 id="ch2-3">2.3 Spot/Preemptible 省錢術</h2>
+
+<p>使用 Spot Instance 做 ML 訓練是<strong>最有效的省錢策略</strong>，但需要工程配套：</p>
+
+<pre><code class="language-python">"""Spot Instance 容錯訓練的核心模式"""
+import signal
+from pathlib import Path
+
+class SpotFriendlyTrainer:
+    """
+    Spot-friendly 訓練器核心設計:
+    1. 頻繁 checkpoint（每 N 步）
+    2. 捕捉 SIGTERM 信號，被終止前搶救進度
+    3. 自動從最近 checkpoint 恢復
+    """
+    
+    def __init__(self, checkpoint_dir: str, save_every_steps: int = 100):
+        self.checkpoint_dir = Path(checkpoint_dir)
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        self.save_every_steps = save_every_steps
+        self.interrupted = False
+        signal.signal(signal.SIGTERM, self._handle_interrupt)
+    
+    def _handle_interrupt(self, signum, frame):
+        print("⚠️ 收到 SIGTERM! 搶存最後 checkpoint...")
+        self.interrupted = True
+    
+    def find_latest_checkpoint(self) -> int:
+        checkpoints = list(self.checkpoint_dir.glob("step_*.pt"))
+        if not checkpoints:
+            return 0
+        latest = max(checkpoints, key=lambda p: int(p.stem.split("_")[1]))
+        return int(latest.stem.split("_")[1])
+    
+    def train(self, model, dataloader, optimizer, total_steps: int):
+        start_step = self.find_latest_checkpoint()
+        if start_step > 0:
+            print(f"🔄 從 step {start_step} 恢復訓練")
+        
+        for step in range(start_step, total_steps):
+            if self.interrupted:
+                self._save_checkpoint(model, optimizer, step)
+                print(f"💾 中斷 checkpoint 已存 @ step {step}")
+                return
+            # ... 正常訓練邏輯 ...
+            if step % self.save_every_steps == 0:
+                self._save_checkpoint(model, optimizer, step)
+    
+    def _save_checkpoint(self, model, optimizer, step):
+        path = self.checkpoint_dir / f"step_{step}.pt"
+        print(f"  💾 Checkpoint saved: {path}")
+</code></pre>
+
+<div class="callout tip">
+<strong>🎯 Spot 使用心得：</strong>
+<ul>
+<li>Checkpoint 存到<strong>持久化儲存</strong>（S3/GCS），不是本機 NVMe</li>
+<li>用 <code>save_every_steps=50-100</code>，存一次 < 30 秒，但丟失 100 步可能 10+ 分鐘</li>
+<li>配合 auto-scaling group 自動啟動新實例繼續訓練</li>
+</ul>
+</div>
+
+<h2 id="ch2-4">2.4 選擇框架：決策矩陣</h2>
+
+<pre><code class="language-python">def cloud_decision_matrix(requirements: dict) -> str:
+    """
+    雲端選擇決策矩陣
+    
+    requirements: 各維度的權重 (1-10)
+    """
+    scores = {
+        "AWS": {"existing_infra": 9, "gpu_availability": 7, "price": 7,
+                "ml_platform": 8, "research_flexibility": 6, "enterprise_compliance": 10},
+        "GCP": {"existing_infra": 6, "gpu_availability": 8, "price": 8,
+                "ml_platform": 8, "research_flexibility": 10, "enterprise_compliance": 7},
+        "Azure": {"existing_infra": 7, "gpu_availability": 6, "price": 6,
+                  "ml_platform": 7, "research_flexibility": 5, "enterprise_compliance": 9}
+    }
+    
+    results = {}
+    for cloud, cloud_scores in scores.items():
+        weighted = sum(cloud_scores[dim] * requirements.get(dim, 5) for dim in cloud_scores)
+        results[cloud] = weighted
+    
+    winner = max(results, key=results.get)
+    print("🏆 雲端推薦排名:")
+    for rank, (cloud, score) in enumerate(sorted(results.items(), key=lambda x: -x[1]), 1):
+        marker = " ← 推薦" if cloud == winner else ""
+        print(f"  {rank}. {cloud}: {score} 分{marker}")
+    return winner
+
+# 範例：已在 AWS 的中型公司，想做 LLM 微調
+recommendation = cloud_decision_matrix({
+    "existing_infra": 10, "gpu_availability": 8, "price": 7,
+    "ml_platform": 6, "research_flexibility": 3, "enterprise_compliance": 8
+})
+</code></pre>
+
+<details class="qa" open>
+<summary>📝 理解確認 Q&A</summary>
+<p><strong>Q1: AWS Trainium 跟 NVIDIA H100 的根本差異是什麼？</strong></p>
+<p>A: Trainium 是 AWS 自研晶片，用 Neuron SDK 而非 CUDA。優點：性價比好 40-50%、供貨穩定。缺點：生態系不成熟、不能跑所有 PyTorch op。選擇原則：標準 Transformer 架構且不需客製 CUDA kernel，值得試。</p>
+<p><strong>Q2: 為什麼「現有基礎設施」的權重這麼高？</strong></p>
+<p>A: 跨雲遷移隱性成本：(1) 數據傳輸費 PB 級 = 數萬美金 (2) 重寫 IAM/CI/CD (3) 團隊學習曲線 (4) 服務間延遲增加。省下的 GPU 費用遠不及這些成本。</p>
+<p><strong>Q3: Spot 被中斷時，梯度累積到一半怎麼辦？</strong></p>
+<p>A: 丟掉就好。中斷在 step 之間就零損失；在 step 中間最多損失一步計算。現代框架自動處理：SIGTERM → 等 step 完成 → 存 checkpoint → 優雅退出。</p>
+</details>
+
+<!-- 🧪 第二章驗證考題 -->
+<div class="quiz-box">
+<h3>🧪 第二章驗證考題</h3>
+
+<details open>
+<summary><strong>Q1:</strong> 你的團隊在 GCP 上訓練，老闆說「AWS 的 H100 比較便宜，我們搬過去」。列出 3 個反對的理由和 1 個支持的理由。</summary>
+<p><strong>答案：</strong><br>
+反對：(1) <strong>Egress 費用</strong>——50TB 訓練數據從 GCS 搬到 S3 = $0.08/GB × 50,000GB = $4,000 傳輸費，加上工程時間；(2) <strong>工具鏈重寫</strong>——如果用了 TPU/JAX，換 H100 要重寫訓練腳本為 PyTorch FSDP，可能 2-4 週工程時間；(3) <strong>Pipeline 中斷</strong>——CI/CD、monitoring、logging 全部要重新接線。<br>
+支持：(1) 如果長期(2yr+)算力需求很大，且 AWS 提供了 Reserved 的顯著折扣 or Trainium 適合你的架構，年化省 $100K+ 可能值得遷移一次性成本。</p>
+</details>
+
+<details open>
+<summary><strong>Q2:</strong> 你用 Spot Instance 訓練，過去一週被中斷了 12 次。每次恢復需要 15 分鐘載入 checkpoint。如何優化？</summary>
+<p><strong>答案：</strong>(1) <strong>減少 checkpoint 間隔</strong>：從每 100 步改為每 50 步，減少中斷後回滾的訓練量；(2) <strong>使用 RAM disk 或本地 NVMe 作為一級快取</strong>，再 async 上傳到 S3，避免 checkpoint 載入瓶頸在網路 I/O；(3) <strong>切換到混合策略</strong>：用 1-2 台 on-demand 保底（不會中斷），其餘用 Spot，PyTorch Elastic 自動 re-shard；(4) <strong>使用 Nebula/SharedFS checkpoint</strong>——把 checkpoint 放在共享檔案系統（FSx Lustre），新節點啟動後不用從 S3 下載，直接 mount 讀取，恢復 < 2 分鐘。</p>
+</details>
+
+<details open>
+<summary><strong>Q3:</strong> Google 宣布 TPU v6 性能翻倍。你目前用 H100 訓練。什麼條件下值得遷移到 TPU？什麼條件下不值得？</summary>
+<p><strong>答案：</strong><br>
+<strong>值得遷移：</strong>(1) 你的模型是純 Transformer（attention + FFN），沒有客製 CUDA kernel；(2) 團隊已經在用 JAX，遷移幾乎零成本；(3) 訓練規模 > 1000 chips 且 Google 提供 committed use discount。<br>
+<strong>不值得：</strong>(1) 你有大量 CUDA-specific 代碼（flash attention custom kernel、CUTLASS gemm）；(2) 團隊只會 PyTorch，學 JAX/XLA 的時間成本 > 3 個月；(3) 你需要最新的 community models（HuggingFace 生態 95% 是 PyTorch first）；(4) 你的 pipeline 依賴 NVIDIA 專有工具（NCCL tuning、Nsight profiling）。</p>
+</details>
+
+<details open>
+<summary><strong>Q4:</strong> 比較 FSx Lustre (AWS) vs GCS FUSE (GCP) 作為訓練數據儲存。各自的延遲和吞吐特性如何影響數據載入？</summary>
+<p><strong>答案：</strong><br>
+<strong>FSx Lustre：</strong>平行檔案系統，設計為 HPC/ML 工作負載。優勢：隨機讀 latency ~1ms、aggregate throughput 可達 TB/s 級、支援 POSIX 語義（直接 open/read/seek）。劣勢：需要 VPC 內部署、容量需預先配置、較貴 ($0.14/GB/月)。<br>
+<strong>GCS FUSE：</strong>把物件儲存 mount 為檔案系統。優勢：無限容量、便宜 ($0.02/GB/月)、與 GCS 原生整合。劣勢：首次讀 latency 50-200ms（物件儲存本質）、小檔案 random read 效能差、不支援完整 POSIX（如 append 效能低）。<br>
+<strong>影響：</strong>如果訓練數據是大量小文件（如 ImageNet 的百萬張圖片），FSx Lustre 勝出 10-50x；如果是少量大文件（如 tokenized text shards），GCS FUSE 配合 prefetch 也能餵飽 GPU。</p>
+</details>
+
+<details open>
+<summary><strong>Q5:</strong> 你的公司同時有 AWS 和 GCP 帳號。Research 團隊想用 GCP TPU，Production 團隊在 AWS 上。設計一個最小摩擦的多雲 ML 工作流。</summary>
+<p><strong>答案：</strong>設計原則：<strong>訓練在最優硬體上，部署在已有 infra 上</strong>。<br>
+(1) <strong>模型格式標準化</strong>：所有模型存成 SafeTensors/ONNX，不綁定框架；(2) <strong>Artifact Registry 用 S3 + 跨雲 sync</strong>：研究團隊訓完 push to GCS，有個 Lambda/Cloud Function 自動同步到 S3；(3) <strong>容器化一切</strong>：訓練腳本用 Docker，配置用 Hydra/OmegaConf，換環境只改 yaml；(4) <strong>Evaluation 跑在兩邊都跑</strong>——確保 GCP 訓出的模型在 AWS 推論時精度一致；(5) <strong>統一 experiment tracking</strong>：用與雲無關的工具（W&B / MLflow），不用 SageMaker Experiments 或 Vertex ML Metadata 避免鎖定。</p>
+</details>
+</div>
+
+
+
+
+
+
+
+<h1>🖥️ Part 2: 硬體基礎設施 (Enhanced Edition)</h1>
+<p><em>增強版：每章新增 📖 術語表、🧩 前置知識、🧪 驗證考題</em></p>
+
+<!-- ============ CHAPTER 4: ACCELERATORS ============ -->
+<section id="ch-compute-accelerators">
+<h2>第四章：運算加速器 (Compute Accelerators)</h2>
+
+<!-- NEW: 📖 術語表 -->
+<div class="glossary-box">
+<h4>📖 術語表 — 本章關鍵詞</h4>
+<table>
+<thead><tr><th>English</th><th>中文</th><th>白話定義</th><th>生活比喻</th></tr></thead>
+<tbody>
+<tr><td>TFLOPS</td><td>兆次浮點運算/秒</td><td>GPU 每秒能做多少兆次計算</td><td>工廠每秒能生產多少零件</td></tr>
+<tr><td>HBM (High Bandwidth Memory)</td><td>高頻寬記憶體</td><td>GPU 專用的超高速記憶體，堆疊式晶片</td><td>廚師手邊的備料台，比走去冰箱拿快 10 倍</td></tr>
+<tr><td>Tensor Core</td><td>張量核心</td><td>NVIDIA GPU 中專門做矩陣乘法的硬體單元</td><td>計算機上的「×」按鈕升級成一次算整個九九乘法表</td></tr>
+<tr><td>NVLink</td><td>NV 互連</td><td>GPU 之間的高速直連通道</td><td>辦公室隔壁同事之間的內線電話（vs 打外線）</td></tr>
+<tr><td>NVSwitch</td><td>NV 交換機</td><td>讓節點內所有 GPU 全互連的晶片</td><td>電話總機，任何兩人都能直撥不用轉接</td></tr>
+<tr><td>MFU (Model FLOPs Utilization)</td><td>模型算力利用率</td><td>實際計算速度 ÷ GPU 理論峰值的百分比</td><td>你開 200 匹馬力的車，實際只用到 90 匹 = MFU 45%</td></tr>
+<tr><td>FP8 / BF16 / FP16</td><td>8/16 位浮點格式</td><td>數字精度格式，位數越少越快但越不精確</td><td>用 1 位小數（3.1）vs 10 位小數（3.1415926535）記圓周率</td></tr>
+<tr><td>PCIe (Peripheral Component Interconnect Express)</td><td>週邊元件互連匯流排</td><td>CPU 和 GPU 之間的標準通道</td><td>高速公路的匝道，連接城市（CPU）和工業區（GPU）</td></tr>
+<tr><td>TDP (Thermal Design Power)</td><td>熱設計功耗</td><td>GPU 最大功耗，決定散熱需求</td><td>引擎馬力越大，需要越大的散熱水箱</td></tr>
+<tr><td>SXM vs PCIe Form Factor</td><td>GPU 安裝規格</td><td>SXM 有 NVLink，PCIe 版沒有（或較少）</td><td>跑車底盤 vs 家用車底盤，引擎一樣但傳動系統不同</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- NEW: 🧩 前置知識 -->
+<div class="prereq-box">
+<h4>🧩 前置知識速覽</h4>
+<ul>
+<li><strong>浮點數格式：</strong>FP32（32 bits, 標準精度）、FP16/BF16（16 bits, 訓練常用）、FP8（8 bits, H100+ 推論加速）。BF16 比 FP16 範圍更大（不易 overflow），是目前訓練首選。</li>
+<li><strong>矩陣乘法：</strong>深度學習 90%+ 計算都是矩陣乘法（GEMM）。一個 Transformer layer 的 forward pass 包含 QKV projection、Attention、FFN — 全是 GEMM。</li>
+<li><strong>記憶體層次：</strong>Register → L1 Cache → L2 Cache → HBM → CPU RAM → SSD。越靠近計算單元越快但越小。HBM 是 GPU 的「主記憶體」。</li>
+<li><strong>頻寬 vs 延遲：</strong>頻寬 = 水管粗細（GB/s），延遲 = 水龍頭打開到水流出的時間（μs）。大資料傳輸看頻寬，小資料傳輸看延遲。</li>
+</ul>
+</div>
+
+<!-- ORIGINAL CONTENT START -->
+<div class="beginner-box">
+<h4>🌱 從零開始理解：什麼是 TFLOP？</h4>
+<p><strong>生活比喻：</strong>想像你在切菜。TFLOP（每秒兆次浮點運算）就像「每秒能切幾刀」。一把普通菜刀每秒切 5 刀（CPU），而一台工業切菜機每秒切 5000 刀（GPU）。GPU 不是刀更鋒利，而是有<em>上千把刀同時切</em>。</p>
+<p><strong>白話解釋：</strong>TFLOP = Tera Floating-Point Operations Per Second = 每秒 10<sup>12</sup> 次浮點計算。訓練 LLM 時，模型的每一層都需要大量矩陣乘法，TFLOPS 越高，訓練越快。</p>
+<p><strong>為什麼工作上需要：</strong>選擇 GPU 時，TFLOPS 決定了你的訓練時間和成本。選錯 GPU 可能讓 3 天的任務變成 3 週。</p>
+<p><strong>先備知識：</strong>浮點數（FP32/FP16/BF16）、矩陣乘法基本概念</p>
+</div>
+
+<h3>4.1 GPU 規格比較表</h3>
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:14px;">
+<thead style="background:#f0f0f0;">
+<tr><th>GPU</th><th>架構</th><th>HBM</th><th>頻寬</th><th>FP16 TFLOPS</th><th>FP8 TFLOPS</th><th>TDP</th><th>互連</th></tr>
+</thead>
+<tbody>
+<tr><td>A100 SXM</td><td>Ampere</td><td>80 GB HBM2e</td><td>2.0 TB/s</td><td>312</td><td>—</td><td>400W</td><td>NVLink 3 (600 GB/s)</td></tr>
+<tr><td>H100 SXM</td><td>Hopper</td><td>80 GB HBM3</td><td>3.35 TB/s</td><td>990</td><td>1,979</td><td>700W</td><td>NVLink 4 (900 GB/s)</td></tr>
+<tr><td>H200</td><td>Hopper</td><td>141 GB HBM3e</td><td>4.8 TB/s</td><td>990</td><td>1,979</td><td>700W</td><td>NVLink 4 (900 GB/s)</td></tr>
+<tr><td>B200</td><td>Blackwell</td><td>192 GB HBM3e</td><td>8.0 TB/s</td><td>2,250</td><td>4,500</td><td>1000W</td><td>NVLink 5 (1,800 GB/s)</td></tr>
+<tr><td>MI300X</td><td>CDNA 3</td><td>192 GB HBM3</td><td>5.3 TB/s</td><td>1,307</td><td>2,615</td><td>750W</td><td>Infinity Fabric (896 GB/s)</td></tr>
+</tbody>
+</table>
+
+<h3>4.2 記憶體頻寬層次圖</h3>
+<pre><code class="language-python">"""
+GPU 記憶體頻寬層次 (H100 SXM 為例)
+
+概念：GPU 的運算速度遠快於記憶體供料速度，
+這個差距叫「memory wall」。理解這個層次有助於
+判斷你的訓練是 compute-bound 還是 memory-bound。
+
+┌─────────────────────────────────────────┐
+│  Tensor Core (FP16)    990 TFLOPS       │  ← 計算能力
+├─────────────────────────────────────────┤
+│  HBM3 記憶體頻寬      3,350 GB/s       │  ← 算力/頻寬比 = 296
+├─────────────────────────────────────────┤
+│  NVLink 4 (GPU↔GPU)   900 GB/s         │  ← 節點內互連
+├─────────────────────────────────────────┤
+│  PCIe Gen5 (CPU↔GPU)   128 GB/s        │  ← 最慢瓶頸
+└─────────────────────────────────────────┘
+"""
+</code></pre>
+
+<h3>4.3 NVLink 與 NVSwitch</h3>
+<div class="beginner-box">
+<h4>🌱 從零開始理解：NVLink 是什麼？</h4>
+<p><strong>生活比喻：</strong>8 個廚師（GPU）在同一個廚房工作。NVLink 就像廚師之間的「傳菜走廊」。PCIe 是窄小的單人走廊（128 GB/s），NVLink 是寬敞的 6 車道高速公路（900 GB/s）。NVSwitch 則是「立交橋」，讓任何兩個廚師都能直接傳菜，不用繞路。</p>
+</div>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:14px;">
+<thead style="background:#f0f0f0;">
+<tr><th>互連技術</th><th>頻寬 (雙向)</th><th>拓撲</th><th>用途</th></tr>
+</thead>
+<tbody>
+<tr><td>PCIe Gen4 x16</td><td>64 GB/s</td><td>CPU↔GPU, GPU↔NIC</td><td>資料載入、模型參數從 CPU 搬到 GPU</td></tr>
+<tr><td>PCIe Gen5 x16</td><td>128 GB/s</td><td>同上</td><td>H100/B200 世代</td></tr>
+<tr><td>NVLink 3 (A100)</td><td>600 GB/s</td><td>節點內 GPU↔GPU</td><td>Tensor Parallel、梯度同步</td></tr>
+<tr><td>NVLink 4 (H100)</td><td>900 GB/s</td><td>節點內 GPU↔GPU</td><td>同上，頻寬提升 50%</td></tr>
+<tr><td>NVLink 5 (B200)</td><td>1,800 GB/s</td><td>節點內 GPU↔GPU</td><td>支援 NVLink 跨節點 (72 GPU)</td></tr>
+<tr><td>NVSwitch</td><td>全互連</td><td>節點內 all-to-all</td><td>8 GPU 任意兩兩通訊不降速</td></tr>
+<tr><td>AMD Infinity Fabric</td><td>896 GB/s</td><td>MI300X 內部 chiplet 互連</td><td>8 個 XCD 之間的通訊</td></tr>
+</tbody>
+</table>
+
+<h3>4.4 Python 實戰：nvidia-smi 解析</h3>
+<pre><code class="language-python">import subprocess
+import xml.etree.ElementTree as ET
+
+def get_gpu_info():
+    """解析 nvidia-smi 取得 GPU 狀態
+    
+    概念：nvidia-smi 是 NVIDIA 驅動提供的監控工具，
+    輸出 XML 格式包含溫度、記憶體、使用率等即時資訊。
+    訓練時監控這些指標可以提早發現 OOM 或散熱問題。
+    """
+    result = subprocess.run(
+        ['nvidia-smi', '-q', '-x'],
+        capture_output=True, text=True
+    )
+    root = ET.fromstring(result.stdout)
+    
+    gpus = []
+    for gpu in root.findall('gpu'):
+        info = {
+            'name': gpu.find('product_name').text,
+            'memory_total': gpu.find('fb_memory_usage/total').text,
+            'memory_used': gpu.find('fb_memory_usage/used').text,
+            'memory_free': gpu.find('fb_memory_usage/free').text,
+            'utilization': gpu.find('utilization/gpu_util').text,
+            'temperature': gpu.find('temperature/gpu_temp').text,
+            'power_draw': gpu.find('gpu_power_readings/power_draw').text,
+        }
+        gpus.append(info)
+    return gpus
+
+for i, gpu in enumerate(get_gpu_info()):
+    print(f"GPU {i}: {gpu['name']}")
+    print(f"  記憶體: {gpu['memory_used']} / {gpu['memory_total']}")
+    print(f"  使用率: {gpu['utilization']}")
+    print(f"  溫度: {gpu['temperature']}")
+    print(f"  功耗: {gpu['power_draw']}")
+</code></pre>
+
+<h3>4.5 A100 vs H100 vs B200 實務差異</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:14px;">
+<thead style="background:#f0f0f0;">
+<tr><th>面向</th><th>A100 (2020)</th><th>H100 (2022)</th><th>B200 (2024)</th></tr>
+</thead>
+<tbody>
+<tr><td>適合場景</td><td>中型模型訓練 (≤13B)、推論</td><td>大型模型訓練 (70B+)、FP8 推論</td><td>超大模型 (405B+)、MoE</td></tr>
+<tr><td>性價比甜蜜點</td><td>已逐步退役，現貨便宜</td><td>目前主力，雲端最常見</td><td>2025 Q2+ 逐步上線</td></tr>
+<tr><td>FP8 支援</td><td>❌ 無</td><td>✅ Transformer Engine</td><td>✅ 更成熟，FP4 實驗中</td></tr>
+<tr><td>記憶體瓶頸</td><td>80GB 不夠放 70B FP16</td><td>80GB 仍然吃緊，需 TP=8</td><td>192GB 可單卡放 70B FP8</td></tr>
+<tr><td>能耗/散熱</td><td>400W 氣冷可行</td><td>700W 需加強散熱</td><td>1000W 液冷必備</td></tr>
+<tr><td>雲端每小時成本</td><td>~$2-3/hr</td><td>~$4-5/hr</td><td>~$8-12/hr (預估)</td></tr>
+</tbody>
+</table>
+
+<div class="qa-box">
+<h4>📝 理解確認 Q&A</h4>
+<details open>
+<summary><strong>Q1：為什麼 H100 的 FP8 TFLOPS 是 FP16 的兩倍？</strong></summary>
+<p><strong>A：</strong>FP8 每個數字只佔 8 bits（FP16 佔 16 bits），同樣的 Tensor Core 每個時鐘週期可以處理兩倍數量的 FP8 運算。代價是精度降低，但 Transformer Engine 會自動在關鍵層保持高精度。</p>
+</details>
+<details open>
+<summary><strong>Q2：NVLink 和 PCIe 的頻寬差距為何重要？</strong></summary>
+<p><strong>A：</strong>Tensor Parallelism 需要 GPU 之間每一層都交換 activation。以 70B TP=8 為例，NVLink 4（900 GB/s）比 PCIe（128 GB/s）快 7 倍，80 層累積差距巨大。</p>
+</details>
+<details open>
+<summary><strong>Q3：什麼情況下應該選 MI300X 而非 H100？</strong></summary>
+<p><strong>A：</strong>「推論為主 + 模型很大 + 預算有限」。MI300X 有 192 GB HBM 可不切分放下 70B FP16，而 H100 只有 80 GB 必須 TP=2+。但訓練生態（NCCL/DeepSpeed/Megatron）仍以 CUDA 為首選。</p>
+</details>
+</div>
+
+<!-- NEW: 🧪 驗證考題 Ch4 -->
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 舉一反三</h4>
+
+<details open>
+<summary><strong>Q1：如果你的 70B 模型 MFU 只有 30%（而非業界標準 45%），可能的瓶頸在哪？如何診斷？</strong></summary>
+<p><strong>A：</strong>MFU 低表示 GPU 算力沒被充分利用。可能原因：<br>
+(1) <strong>Memory-bound</strong>：batch size 太小，Tensor Core 空轉等 HBM 讀寫。診斷：用 <code>nsight compute</code> 看 memory throughput 是否接近峰值。<br>
+(2) <strong>Communication-bound</strong>：AllReduce 時間 > 計算時間。診斷：用 NCCL profiler 看通訊佔比。<br>
+(3) <strong>DataLoader I/O bound</strong>：GPU idle 等資料。診斷：nvidia-smi 看 GPU util 是否週期性掉到 0%。<br>
+(4) <strong>Python GIL / CPU bottleneck</strong>：preprocessing 太慢。診斷：htop 看 CPU 是否滿載。<br>
+修復順序：先確認 GPU util > 95%（排除 I/O），再用 profiler 看計算 vs 通訊比。</p>
+</details>
+
+<details open>
+<summary><strong>Q2：B200 的 HBM 頻寬是 H100 的 2.4 倍（8.0 vs 3.35 TB/s）。這對推論 latency 的影響比對訓練 throughput 的影響更大，為什麼？</strong></summary>
+<p><strong>A：</strong>推論（尤其是 autoregressive decode）是 <strong>memory-bandwidth bound</strong>——每生成一個 token 需要讀取整個模型權重一次，但計算量極小（batch=1 時只做 1 次矩陣-向量乘）。所以 HBM 頻寬直接決定 token/s。<br>
+訓練是 <strong>compute-bound</strong>——batch size 大，同一份權重被大量資料重複使用（arithmetic intensity 高），瓶頸在 TFLOPS 而非頻寬。<br>
+數字驗證：70B FP16 推論 decode，每 token 讀 140GB 權重。H100: 140/3350 = 42ms/token。B200: 140/8000 = 17.5ms/token。加速 2.4x，幾乎和頻寬比成正比。</p>
+</details>
+
+<details open>
+<summary><strong>Q3：你有預算買 8 張 H100 PCIe 或 4 張 H100 SXM（總成本相近）。訓練 13B 模型該選哪個？</strong></summary>
+<p><strong>A：</strong>選 <strong>4 張 H100 SXM</strong>。原因：<br>
+(1) 13B FP16 = 26GB，4 張 × 80GB = 320GB 綽綽有餘。<br>
+(2) SXM 有 NVLink 4（900 GB/s），PCIe 版只有 PCIe Gen5（128 GB/s）互連。Tensor Parallel 或梯度同步快 7x。<br>
+(3) 4 GPU TP=4 的通訊開銷遠低於 8 GPU（ring size 小）。<br>
+(4) SXM 的 TDP 限制更高（700W vs PCIe 版通常 350W），持續算力更強。<br>
+唯一選 8×PCIe 的情況：推論服務需要更多併發（8 卡各跑獨立 request）。</p>
+</details>
+
+<details open>
+<summary><strong>Q4：MI300X 有 192GB HBM 但訓練生態不如 CUDA。如果你的團隊要在 MI300X 上訓練 Llama-70B，最大的工程挑戰是什麼？</strong></summary>
+<p><strong>A：</strong>三大挑戰：<br>
+(1) <strong>ROCm 軟體成熟度</strong>：PyTorch ROCm 版本落後 CUDA 約 1-2 個月，某些 op 缺少 kernel 或效能差。Megatron-LM 官方不支援 ROCm。<br>
+(2) <strong>通訊庫</strong>：RCCL（ROCm 版 NCCL）在多節點 AllReduce 效能仍落後 NCCL 15-30%，尤其在 Infinity Fabric 跨節點時。<br>
+(3) <strong>Flash Attention</strong>：需要用 AMD 自己的 composable_kernel 或 Triton ROCm backend 重寫，效能驗證和除錯門檻高。<br>
+建議：用 AMD 官方的 Megatron-LM fork + ROCm Docker image，先在單節點驗證精度對齊再擴展。</p>
+</details>
+</div>
+
+</section>
+
+<!-- ============ CHAPTER 5: STORAGE ============ -->
+<section id="ch-storage">
+<h2>第五章：儲存系統 (Storage for ML Training)</h2>
+
+<!-- NEW: 📖 術語表 -->
+<div class="glossary-box">
+<h4>📖 術語表 — 本章關鍵詞</h4>
+<table>
+<thead><tr><th>English</th><th>中文</th><th>白話定義</th><th>生活比喻</th></tr></thead>
+<tbody>
+<tr><td>NVMe SSD</td><td>非揮發性記憶體快速儲存</td><td>直接接在 PCIe 上的超快 SSD</td><td>手邊的筆記本，翻開就能看到（vs 去圖書館借書）</td></tr>
+<tr><td>Checkpoint</td><td>檢查點</td><td>訓練中途保存模型狀態，以便從中斷恢復</td><td>遊戲存檔 — 死了可以從上次存檔點重來</td></tr>
+<tr><td>Lustre / FSx</td><td>平行分散式檔案系統</td><td>多台伺服器組成的高速共享硬碟</td><td>圖書館有 100 個窗口同時借書（vs 只有 1 個）</td></tr>
+<tr><td>I/O Bound</td><td>輸入輸出瓶頸</td><td>GPU 等資料的狀態，算力浪費</td><td>廚師備好了但食材還沒送到，只能空等</td></tr>
+<tr><td>DataLoader</td><td>資料載入器</td><td>PyTorch 負責讀取和預處理資料的元件</td><td>餐廳備料員，把食材從冷藏庫拿出來切好給廚師</td></tr>
+<tr><td>num_workers</td><td>平行載入執行緒數</td><td>DataLoader 同時讀資料的 process 數量</td><td>備料員人數 — 太少廚師等，太多搶冰箱擠成一團</td></tr>
+<tr><td>prefetch_factor</td><td>預取倍數</td><td>每個 worker 提前準備好的 batch 數</td><td>備料員提前切好下一道的食材放旁邊等</td></tr>
+<tr><td>Memory-mapped file (mmap)</td><td>記憶體映射檔案</td><td>把硬碟檔案「假裝」成記憶體，按需讀取</td><td>電子書不用全部下載，滑到哪頁才載入那頁</td></tr>
+<tr><td>Throughput</td><td>吞吐量</td><td>單位時間傳輸的資料量 (GB/s)</td><td>水管每秒流多少公升水</td></tr>
+<tr><td>Durability (11-9s)</td><td>耐久性 99.999999999%</td><td>S3 保證一年內資料遺失機率 < 0.000000001%</td><td>把東西放保險箱，宇宙毀滅之前都不會丟</td></tr>
+<tr><td>Async Upload</td><td>非同步上傳</td><td>背景上傳不阻塞訓練</td><td>邊煮飯邊讓洗碗機自動運轉（不用等洗完才煮）</td></tr>
+<tr><td>Sharded Checkpoint</td><td>分片檢查點</td><td>每張 GPU 只存自己那一份，並行寫入</td><td>8 個人同時寫日記 vs 1 個人寫完整本</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- NEW: 🧩 前置知識 -->
+<div class="prereq-box">
+<h4>🧩 前置知識速覽</h4>
+<ul>
+<li><strong>訓練資料流水線：</strong>S3/Lustre（持久儲存）→ DataLoader workers（CPU 讀取+預處理）→ GPU（計算）。任何一環慢了，GPU idle 浪費錢。</li>
+<li><strong>Checkpoint 為什麼重要：</strong>大模型訓練可能跑數天到數週。硬體故障率 = 節點數 × 單節點故障率。64 節點跑 2 週，平均會遇到 1-3 次故障。沒 checkpoint = 從頭來過。</li>
+<li><strong>頻寬單位：</strong>1 GB/s = 8 Gbps。S3 的「100 Gbps」= 12.5 GB/s。別把 bits 和 bytes 搞混。</li>
+<li><strong>POSIX vs Object Store：</strong>Lustre/EFS 是 POSIX（像一般硬碟，有目錄結構），S3 是 Object Store（flat key-value，沒有真正的目錄）。PyTorch 原生支援 POSIX，存 S3 需要額外 library。</li>
+</ul>
+</div>
+
+<!-- ORIGINAL CONTENT -->
+<div class="beginner-box">
+<h4>🌱 從零開始理解：為什麼儲存速度影響訓練？</h4>
+<p><strong>生活比喻：</strong>GPU 是超高速攪拌機，資料是食材。如果冰箱門（儲存）太小，攪拌機就會空轉等待食材。這叫「I/O bound」——GPU 利用率掉到 30% 以下，你付了 100% 的雲端費用卻只用了 30% 的算力。</p>
+<p><strong>白話解釋：</strong>大規模訓練的資料流水線：S3/Lustre → DataLoader Workers → GPU。任何一環慢了，GPU 就會 idle。</p>
+<p><strong>為什麼工作上需要：</strong>ImageNet（144 GB）小問題，但訓練 LLM 的 token 資料集可達 10+ TB。如果 DataLoader 來不及餵 GPU，你的 8×H100 實際上只發揮了 4×H100 的效能。</p>
+</div>
+
+<h3>5.1 儲存層次與吞吐量</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:14px;">
+<thead style="background:#f0f0f0;">
+<tr><th>儲存類型</th><th>吞吐量</th><th>延遲</th><th>容量</th><th>適用場景</th></tr>
+</thead>
+<tbody>
+<tr><td>NVMe SSD (本地)</td><td>3-7 GB/s</td><td>~100 μs</td><td>1-4 TB/節點</td><td>Checkpoint 暫存、小資料集快取</td></tr>
+<tr><td>AWS FSx for Lustre</td><td>100+ GB/s (叢集)</td><td>~1 ms</td><td>PB 級</td><td>分散式訓練資料讀取</td></tr>
+<tr><td>AWS S3</td><td>~100 Gbps/帳號</td><td>10-50 ms (首位元組)</td><td>無限</td><td>長期儲存、Checkpoint 持久化</td></tr>
+<tr><td>Amazon EFS</td><td>3-10 GB/s</td><td>~1 ms</td><td>PB 級</td><td>共享 config、小模型部署</td></tr>
+<tr><td>WekaFS / GPFS</td><td>100+ GB/s</td><td>&lt;1 ms</td><td>PB 級</td><td>HPC 叢集 (如 Ring PCS)</td></tr>
+</tbody>
+</table>
+
+<h3>5.2 Checkpoint 策略</h3>
+<pre><code class="language-python">"""
+Checkpoint 大小估算公式：
+
+模型參數記憶體 = params × bytes_per_param
+Optimizer 狀態 = params × (4+4+4) for Adam FP32 = params × 12 bytes
+
+範例：70B 模型
+- 模型 FP16: 70e9 × 2 = 140 GB
+- Adam 狀態:  70e9 × 12 = 840 GB (分散在多卡)
+- 單個 Checkpoint 總大小: ~140-980 GB (取決於是否存 optimizer)
+
+Checkpoint 寫入時間 = size / write_bandwidth
+- NVMe: 980 GB / 5 GB/s = 196 秒 ← 本地暫存
+- S3:   980 GB / 10 GB/s = 98 秒 ← 多執行緒上傳
+- Lustre: 980 GB / 50 GB/s = 19.6 秒 ← 分散式寫入
+"""
+
+import os
+import time
+import torch
+import torch.distributed as dist
+from torch.distributed.checkpoint import save, load
+
+def estimate_checkpoint_size(model, include_optimizer=True):
+    """估算 checkpoint 大小 (bytes)"""
+    param_bytes = sum(p.numel() * p.element_size() for p in model.parameters())
+    if include_optimizer:
+        optimizer_bytes = sum(p.numel() for p in model.parameters()) * 12
+        total = param_bytes + optimizer_bytes
+    else:
+        total = param_bytes
+    return total
+
+def timed_checkpoint_save(model, path, use_distributed=True):
+    """帶計時的 checkpoint 儲存"""
+    start = time.time()
+    if use_distributed and dist.is_initialized():
+        save(model.state_dict(), path)
+    else:
+        torch.save(model.state_dict(), path)
+    elapsed = time.time() - start
+    size_gb = os.path.getsize(path) / 1e9 if os.path.isfile(path) else 0
+    throughput = size_gb / elapsed if elapsed > 0 else 0
+    print(f"Checkpoint saved: {size_gb:.1f} GB in {elapsed:.1f}s ({throughput:.1f} GB/s)")
+</code></pre>
+
+<div class="qa-box">
+<h4>📝 理解確認 Q&A</h4>
+<details open>
+<summary><strong>Q1：為什麼 Lustre 寫入比 S3 快，但大家還是把 Checkpoint 存 S3？</strong></summary>
+<p><strong>A：</strong>Lustre 是暫存層（ephemeral），叢集關閉後資料消失。S3 是持久層（11-9 耐久性）。最佳實踐：每 N 步寫 Lustre（快速恢復），每 M 步非同步上傳 S3（災難恢復）。S3 成本也遠低於 Lustre（~$0.023 vs ~$0.14/GB/月）。</p>
+</details>
+<details open>
+<summary><strong>Q2：DataLoader 的 num_workers 應該設多少？</strong></summary>
+<p><strong>A：</strong>經驗法則：num_workers = min(CPU 核心數 / GPU 數, 能填滿 GPU 的最小值)。例如 96 核 8 GPU → 每卡最多 12 workers。觀察 GPU util：< 90% 且 CPU < 50% → 增加 workers；CPU 滿載 → 換 mmap 或 prefetch。</p>
+</details>
+</div>
+
+<!-- NEW: 🧪 驗證考題 Ch5 -->
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 舉一反三</h4>
+
+<details open>
+<summary><strong>Q1：你的 64-GPU 叢集訓練 70B 模型，每 1000 步存一次 checkpoint（含 optimizer）。如果用 S3 多執行緒上傳（10 GB/s），每次 checkpoint 會讓訓練暫停多久？一天存 10 次的總停機時間？</strong></summary>
+<p><strong>A：</strong>計算：<br>
+Checkpoint 大小 = 140 GB (模型) + 840 GB (optimizer) = 980 GB<br>
+但用 ZeRO-2/3 或分散式 checkpoint 時，每張卡只存 980/64 = 15.3 GB<br>
+<strong>情境 A（同步存 S3）：</strong>15.3 GB / 10 GB/s = 1.5 秒/卡。但 64 卡同時寫 S3 會競爭帳號級頻寬（100 Gbps = 12.5 GB/s total）！實際 = 980 GB / 12.5 GB/s = 78 秒。一天 10 次 = 13 分鐘。<br>
+<strong>情境 B（先寫 NVMe + 非同步上傳 S3）：</strong>15.3 GB / 5 GB/s = 3 秒暫停，後台上傳不阻塞。一天 10 次 = 30 秒！<br>
+結論：永遠用 NVMe 暫存 + async S3 upload。</p>
+</details>
+
+<details open>
+<summary><strong>Q2：你發現 GPU utilization 週期性掉到 0%（每 30 秒掉一次持續 2 秒）。如何判斷是 DataLoader 問題還是 checkpoint 問題？</strong></summary>
+<p><strong>A：</strong>診斷方法：<br>
+(1) <strong>頻率判斷</strong>：Checkpoint 通常每 N 步一次（如 1000 步，可能 10 分鐘一次）。30 秒一次太頻繁，更可能是 DataLoader。<br>
+(2) <strong>確認方法</strong>：加 <code>pin_memory=True</code> + 增加 <code>prefetch_factor</code> 看是否消失 → DataLoader。或暫時關閉 checkpoint 看是否消失。<br>
+(3) <strong>Profiler</strong>：<code>torch.profiler</code> 的 timeline 會清楚顯示 CPU→GPU copy 等待（DataLoader）vs disk write 等待（checkpoint）。<br>
+(4) <strong>另一個常見原因</strong>：epoch 切換時 <code>DistributedSampler</code> shuffle + 重新 seek，也會造成短暫 stall。</p>
+</details>
+
+<details open>
+<summary><strong>Q3：你的訓練資料集 15 TB 在 S3 上。FSx for Lustre（$0.14/GB/月）vs 每次訓練直接從 S3 streaming 讀取。哪個更划算？</strong></summary>
+<p><strong>A：</strong>取決於訓練頻率和持續時間：<br>
+<strong>FSx 成本：</strong>15,000 GB × $0.14 = $2,100/月（固定成本，不管用不用）<br>
+<strong>S3 streaming 成本：</strong>S3 GET requests（$0.0004/1000 requests）+ 出站流量（同 region 免費）。如果每個 epoch 讀完全部資料一次 → 幾乎免費。<br>
+<strong>但真正的成本是 GPU idle！</strong>如果 S3 streaming 讓 GPU util 從 95% 降到 70%，64×H100 的每小時成本 = 64 × $5 = $320/hr。25% idle = $80/hr 浪費。訓練跑 200hr → 浪費 $16,000 >> FSx $2,100。<br>
+<strong>結論：</strong>如果訓練 > 2 週/月，FSx 幾乎必選。S3 streaming 只適合小資料集或極偶爾的訓練。</p>
+</details>
+
+<details open>
+<summary><strong>Q4：Sharded checkpoint（每 GPU 存自己的分片）vs 聚合後單一大檔案。在 64 GPU 場景各有什麼問題？</strong></summary>
+<p><strong>A：</strong><br>
+<strong>Sharded（每卡獨立寫）：</strong><br>
+✅ 寫入快（並行，無通訊）<br>
+✅ 不需要 gather 到 rank 0（省記憶體）<br>
+❌ 恢復時 GPU 數量必須相同（64 分片只能用 64 卡讀回）<br>
+❌ 產生大量小檔案，S3 list 操作慢<br>
+<strong>聚合單檔案：</strong><br>
+✅ 通用性高（任意 GPU 數恢復）<br>
+✅ 方便分享和部署<br>
+❌ 需要 gather（rank 0 記憶體可能爆）<br>
+❌ 寫入時間 = 全部大小 / 單節點頻寬<br>
+<strong>最佳實踐：</strong>訓練中用 sharded（快速恢復），每天一次聚合存 S3（通用備份）。PyTorch 2.0+ 的 <code>torch.distributed.checkpoint</code> 支援彈性恢復（不同 GPU 數也能讀 sharded ckpt）。</p>
+</details>
+</div>
+
+</section>
+
+<!-- ============ CHAPTER 6: NETWORK ============ -->
+<section id="ch-network">
+<h2>第六章：網路通訊 (Networking for Distributed Training)</h2>
+
+<!-- NEW: 📖 術語表 -->
+<div class="glossary-box">
+<h4>📖 術語表 — 本章關鍵詞</h4>
+<table>
+<thead><tr><th>English</th><th>中文</th><th>白話定義</th><th>生活比喻</th></tr></thead>
+<tbody>
+<tr><td>AllReduce</td><td>全歸約</td><td>所有 GPU 把梯度加總，每人都拿到結果</td><td>全班考試交卷後，老師算出平均分然後發給每個人</td></tr>
+<tr><td>Ring AllReduce</td><td>環形全歸約</td><td>GPU 排成環，依序傳遞加總，2(N-1) 步完成</td><td>傳話遊戲圍成圓圈，每人加一句再傳下去</td></tr>
+<tr><td>InfiniBand (IB)</td><td>無限頻寬</td><td>HPC 專用超低延遲網路協定</td><td>專屬高速公路（vs 一般 Ethernet 是省道）</td></tr>
+<tr><td>RDMA</td><td>遠端直接記憶體存取</td><td>GPU/NIC 直接讀寫遠端記憶體，跳過 CPU</td><td>快遞員直接把包裹放進你家冰箱（不用你開門收）</td></tr>
+<tr><td>EFA (Elastic Fabric Adapter)</td><td>AWS 彈性網路介面卡</td><td>AWS 的 RDMA 網路，用 SRD 協定</td><td>AWS 版本的高速公路匝道，專門給 GPU 叢集用</td></tr>
+<tr><td>NCCL</td><td>NVIDIA 集合通訊庫</td><td>NVIDIA 官方的多 GPU 通訊庫</td><td>GPU 之間對講機的「頻道管理軟體」</td></tr>
+<tr><td>Bus Bandwidth</td><td>匯流排頻寬</td><td>AllReduce benchmark 中的有效頻寬指標</td><td>高速公路實際車流量 ÷ 車道數（排除收費站延遲）</td></tr>
+<tr><td>Communication Bound</td><td>通訊瓶頸</td><td>通訊時間 > 計算時間，加更多 GPU 反而更慢</td><td>10 人會議但只有 1 支麥克風，人越多等越久</td></tr>
+<tr><td>Gradient Accumulation</td><td>梯度累積</td><td>多個 micro-batch 的梯度本地累加後再同步</td><td>攢夠一整車再發貨（vs 每件都快遞）</td></tr>
+<tr><td>Overlap (Computation-Communication)</td><td>計算通訊重疊</td><td>一邊算下一層一邊傳上一層的梯度</td><td>一邊洗碗一邊等洗衣機轉（平行家事）</td></tr>
+<tr><td>Fat-tree Topology</td><td>胖樹拓撲</td><td>HPC 網路架構，上層交換機頻寬 = 下層總和</td><td>高速公路主幹道車道數 = 所有匝道車道數之和（不塞車）</td></tr>
+<tr><td>Oversubscription</td><td>超額訂閱</td><td>上層頻寬 < 下層總和，可能塞車</td><td>8 條匝道匯入 4 線道主幹 = 2:1 超額</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- NEW: 🧩 前置知識 -->
+<div class="prereq-box">
+<h4>🧩 前置知識速覽</h4>
+<ul>
+<li><strong>梯度同步：</strong>Data Parallel 的每個 step，所有 GPU 的梯度必須取平均。梯度大小 = 模型參數量 × 精度 bytes。70B BF16 = 140 GB 梯度要在所有節點間同步。</li>
+<li><strong>頻寬 vs 延遲：</strong>大訊息（>100MB）看頻寬，小訊息（<1MB）看延遲。AllReduce 用大訊息，所以主要看頻寬。但 Pipeline Parallel 的 micro-batch 切換是小訊息，看延遲。</li>
+<li><strong>Gbps vs GB/s：</strong>400 Gbps = 50 GB/s（除以 8）。InfiniBand NDR 400 Gbps = 每秒傳 50 GB。</li>
+<li><strong>TCP vs RDMA：</strong>TCP 走 kernel → overhead 大。RDMA 繞過 CPU/kernel 直接存取遠端記憶體 → 延遲低 10 倍以上。分散式訓練必須用 RDMA。</li>
+</ul>
+</div>
+
+<!-- ORIGINAL CONTENT -->
+<div class="beginner-box">
+<h4>🌱 從零開始理解：為什麼網路是分散式訓練的命脈？</h4>
+<p><strong>生活比喻：</strong>想像 8 間廚房（8 個節點 × 8 GPU = 64 GPU）同時煮一道大菜。每隔 1 秒，所有廚房要「對答案」——把各自的半成品混合再分回去（AllReduce）。如果廚房之間的傳送帶太慢，廚師大部分時間都在<em>等快遞</em>，而不是在煮菜。</p>
+<p><strong>白話解釋：</strong>Data Parallelism 的每一步都需要同步梯度。梯度大小 = 模型參數量 × 精度。70B FP16 的梯度 = 140 GB。如果網路只有 100 Gbps (12.5 GB/s)，一次 AllReduce 需要 11.2 秒。</p>
+<p><strong>為什麼工作上需要：</strong>網路頻寬直接決定你能擴展到多少節點。頻寬不足時，加更多 GPU 反而<em>更慢</em>（通訊開銷超過計算加速）。</p>
+</div>
+
+<h3>6.1 節點內 vs 節點間通訊</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:14px;">
+<thead style="background:#f0f0f0;">
+<tr><th>層級</th><th>技術</th><th>頻寬</th><th>延遲</th><th>適用</th></tr>
+</thead>
+<tbody>
+<tr><td rowspan="2">節點內</td><td>NVLink 4 + NVSwitch</td><td>900 GB/s (per GPU)</td><td>&lt;1 μs</td><td>Tensor Parallel, Pipeline Parallel</td></tr>
+<tr><td>PCIe Gen5</td><td>128 GB/s</td><td>~2 μs</td><td>CPU↔GPU 資料搬運</td></tr>
+<tr><td rowspan="3">節點間</td><td>InfiniBand NDR400</td><td>400 Gbps = 50 GB/s</td><td>~1 μs</td><td>HPC 叢集</td></tr>
+<tr><td>AWS EFA</td><td>3200 Gbps (p5.48xlarge)</td><td>~2 μs</td><td>AWS 雲端分散式訓練</td></tr>
+<tr><td>RoCE v2</td><td>100-400 Gbps</td><td>~2-5 μs</td><td>自建 GPU 叢集</td></tr>
+</tbody>
+</table>
+
+<p><strong>關鍵觀察：</strong></p>
+<ul>
+<li>節點內 NVLink（900 GB/s）比節點間 InfiniBand（50 GB/s）快 <strong>18 倍</strong></li>
+<li>這就是為什麼 Tensor Parallel 只在節點內做，Data Parallel / ZeRO 負責節點間</li>
+<li>AWS EFA 的 p5.48xlarge 提供 3200 Gbps（400 GB/s），接近 NVLink 等級</li>
+</ul>
+
+<h3>6.2 AllReduce 時間計算</h3>
+<div class="beginner-box">
+<h4>🌱 AllReduce 是什麼？</h4>
+<p>AllReduce = 「所有人把自己的梯度加總，然後每個人都拿到加總結果」。Ring AllReduce 是最常用的演算法：N 個 GPU 排成環，每個 GPU 依序傳給下一個，總共 2×(N-1) 步。</p>
+</div>
+
+<pre><code class="language-python">"""
+AllReduce 通訊時間估算
+
+Ring AllReduce 公式：
+  T_allreduce = 2 × (N-1)/N × M / B
+
+  N = GPU 數量（跨節點部分）
+  M = 訊息大小（bytes）
+  B = 網路頻寬（bytes/sec）
+"""
+
+def estimate_allreduce_time(
+    model_params_billion: float,
+    num_nodes: int,
+    gpus_per_node: int = 8,
+    bytes_per_param: int = 2,
+    network_bandwidth_gbps: float = 400,
+    efficiency: float = 0.7,
+):
+    """估算跨節點 AllReduce 時間"""
+    total_gpus = num_nodes * gpus_per_node
+    gradient_size_bytes = model_params_billion * 1e9 * bytes_per_param
+    gradient_size_gb = gradient_size_bytes / 1e9
+    bandwidth_bytes_per_sec = network_bandwidth_gbps * 1e9 / 8
+    ring_factor = 2 * (num_nodes - 1) / num_nodes
+    theoretical_time = ring_factor * gradient_size_bytes / bandwidth_bytes_per_sec
+    actual_time = theoretical_time / efficiency
+
+    print(f"=== AllReduce 時間估算 ===")
+    print(f"模型: {model_params_billion}B | 梯度: {gradient_size_gb:.1f} GB")
+    print(f"節點: {num_nodes} ({total_gpus} GPUs) | 頻寬: {network_bandwidth_gbps} Gbps")
+    print(f"理論: {theoretical_time*1000:.1f} ms | 實際(eff={efficiency}): {actual_time*1000:.1f} ms")
+    return actual_time
+
+# 範例
+print("【7B, 4 nodes, 400 Gbps】")
+estimate_allreduce_time(7, 4)
+print("\n【70B, 16 nodes, 400 Gbps】")
+estimate_allreduce_time(70, 16)
+print("\n【70B, 16 nodes, 100 Gbps (RoCE)】")
+estimate_allreduce_time(70, 16, network_bandwidth_gbps=100)
+</code></pre>
+
+<h3>6.3 ZeRO 通訊量分析</h3>
+<pre><code class="language-python">"""
+ZeRO 通訊量比較
+
+DDP:    2M (AllReduce = ReduceScatter + AllGather)
+ZeRO-1: 2M (同 DDP，只省 optimizer 記憶體)
+ZeRO-2: 2M (ReduceScatter grad + AllGather param update)
+ZeRO-3: 3M (額外 AllGather forward 時取參數)
+
+關鍵洞察：ZeRO-3 通訊量多 50%，但能訓練 N 倍大的模型。
+"""
+
+def zero_communication_analysis(model_params_billion, num_gpus, strategy="ddp"):
+    M = model_params_billion * 1e9 * 2  # BF16 bytes
+    comm = {"ddp": 2*M, "zero1": 2*M, "zero2": 2*M, "zero3": 3*M}
+    model_mem = M
+    grad_mem = M
+    optim_mem = model_params_billion * 1e9 * 12
+    mem_per_gpu = {
+        "ddp": model_mem + grad_mem + optim_mem,
+        "zero1": model_mem + grad_mem + optim_mem / num_gpus,
+        "zero2": model_mem + grad_mem / num_gpus + optim_mem / num_gpus,
+        "zero3": (model_mem + grad_mem + optim_mem) / num_gpus,
+    }
+    c = comm[strategy] / 1e9
+    m = mem_per_gpu[strategy] / 1e9
+    print(f"{strategy.upper()}: 通訊={c:.1f}GB/step | 記憶體={m:.1f}GB/GPU | "
+          f"80GB可放: {'✅' if m < 75 else '❌'}")
+
+print("=== 70B, 64 GPUs ===")
+for s in ["ddp", "zero1", "zero2", "zero3"]:
+    zero_communication_analysis(70, 64, s)
+</code></pre>
+
+<h3>6.4 EFA vs InfiniBand vs RoCE 選擇指南</h3>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:14px;">
+<thead style="background:#f0f0f0;">
+<tr><th>面向</th><th>InfiniBand NDR</th><th>AWS EFA</th><th>RoCE v2</th></tr>
+</thead>
+<tbody>
+<tr><td>頻寬</td><td>400 Gbps/port</td><td>3200 Gbps (p5.48xl)</td><td>100-400 Gbps</td></tr>
+<tr><td>延遲</td><td>~1 μs</td><td>~2 μs</td><td>~2-5 μs</td></tr>
+<tr><td>RDMA</td><td>原生 IB Verbs</td><td>SRD</td><td>RoCE + PFC</td></tr>
+<tr><td>擴展性</td><td>數千節點 (fat-tree)</td><td>數萬節點</td><td>~幾百節點</td></tr>
+<tr><td>成本</td><td>自建 (交換機昂貴)</td><td>按需 (EC2 費用)</td><td>自建 (比 IB 便宜)</td></tr>
+<tr><td>適用</td><td>PCS/HPC、頂級性能</td><td>雲端彈性訓練</td><td>預算有限自建</td></tr>
+<tr><td>NCCL</td><td>原生最佳化</td><td>aws-ofi-nccl plugin</td><td>需調優 GDR</td></tr>
+</tbody>
+</table>
+
+<div class="qa-box">
+<h4>📝 理解確認 Q&A</h4>
+<details open>
+<summary><strong>Q1：為什麼 Tensor Parallel 只在節點內做？</strong></summary>
+<p><strong>A：</strong>TP 每層都需 AllReduce（80 層 = 160+ 次/step）。NVLink 900 GB/s + &lt;1μs 延遲可承受。跨節點 IB 50 GB/s + 1μs+ 延遲會累積成巨大開銷。Data Parallel 每步只需 1 次 AllReduce，可容忍高延遲。</p>
+</details>
+<details open>
+<summary><strong>Q2：AllReduce benchmark 只跑出 200 Gbps（理論 400），可能原因？</strong></summary>
+<p><strong>A：</strong>(1) 訊息太小（&lt;10MB），延遲主導；(2) NCCL 未用 GDR，走 PCIe→CPU→NIC；(3) 交換機 oversubscription；(4) PFC/ECN 設定不當導致重傳；(5) rank 映射跨 NUMA。</p>
+</details>
+<details open>
+<summary><strong>Q3：ZeRO-3 通訊量比 DDP 多 50%，為什麼有時反而更快？</strong></summary>
+<p><strong>A：</strong>ZeRO-3 可 prefetch（提前 AllGather 下一層）+ overlap（通訊計算重疊）。batch 夠大時計算時間遮蓋 AllGather 延遲。且 ZeRO-3 省記憶體 → 允許更大 batch → 更長計算去遮蓋通訊。</p>
+</details>
+</div>
+
+<!-- NEW: 🧪 驗證考題 Ch6 -->
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 舉一反三</h4>
+
+<details open>
+<summary><strong>Q1：如果網路頻寬從 400 Gbps 加倍到 800 Gbps，訓練 70B 模型在 16 節點上的 AllReduce 時間會精確減半嗎？為什麼？</strong></summary>
+<p><strong>A：</strong><strong>不會精確減半。</strong>原因：<br>
+(1) <strong>延遲不變</strong>：Ring AllReduce 的 latency term α×2(N-1) 不受頻寬影響。頻寬加倍只降低 bandwidth term。<br>
+(2) <strong>軟體開銷恆定</strong>：NCCL kernel launch、memory copy、synchronization barrier 有固定開銷（~10-50μs/op），不隨頻寬縮放。<br>
+(3) <strong>PCIe 瓶頸</strong>：如果 NIC 是 PCIe 接入（非 NVLink 直連），PCIe Gen5 128 GB/s 可能成為新瓶頸（800 Gbps = 100 GB/s 已接近 PCIe 極限）。<br>
+<strong>實際效果：</strong>大訊息（>1GB）接近 2x 加速；小訊息（<10MB）可能只有 1.2-1.5x。整體 step time 取決於 overlap 程度。</p>
+</details>
+
+<details open>
+<summary><strong>Q2：你有 32 節點（256 GPU）要訓練 Llama-405B。設計並行策略：TP、PP、DP 各多少？為什麼？</strong></summary>
+<p><strong>A：</strong>分析約束條件：<br>
+(1) <strong>記憶體</strong>：405B FP16 = 810 GB 純參數。TP=8（一個節點）→ 每卡 ~101 GB > 80 GB ❌。需要 ZeRO-3 或 TP×PP。<br>
+(2) <strong>最佳方案</strong>：TP=8 (節點內 NVLink) × PP=4 (4 節點串聯) × DP=8 (剩餘 8 組)。<br>
+   - TP=8：每層 810/80/8 ≈ 12.6 GB/卡 ✅（加 activation/optimizer 後 ~60 GB）<br>
+   - PP=4：405B 有 126 層，每 PP stage ~31 層<br>
+   - DP=8：32 / (PP=4) = 8 個 data parallel replicas<br>
+(3) <strong>通訊分析</strong>：TP 用 NVLink（900 GB/s，無瓶頸）；PP 跨節點傳 activation（幾 MB/micro-batch，延遲敏感）；DP 跨 8 組同步梯度（但 ZeRO-1 已足夠，記憶體由 TP+PP 解決）。<br>
+<strong>Megatron-LM 預設：</strong>TP=8, PP=4-8, DP=remaining，與分析一致。</p>
+</details>
+
+<details open>
+<summary><strong>Q3：Gradient Accumulation 如何減少通訊次數？它有什麼代價？8 步累積和 1 步同步在 16 節點場景下的通訊時間差多少？</strong></summary>
+<p><strong>A：</strong><br>
+<strong>機制：</strong>Gradient Accumulation = 本地跑 K 個 micro-batch，梯度本地相加，最後只做 1 次 AllReduce。通訊次數從 K 次降到 1 次。<br>
+<strong>時間差（70B, 16 nodes, 400 Gbps, eff=0.7）：</strong><br>
+- 每次 AllReduce ≈ 2×(15/16)×140GB / (50×0.7 GB/s) ≈ 7.5 秒<br>
+- 1 步同步：每 step 都等 7.5s<br>
+- 8 步累積：每 8 steps 等 7.5s = 平均 0.94s/step<br>
+- 節省：7.5 - 0.94 = 6.56s/step × 假設 10,000 steps = 18.2 小時！<br>
+<strong>代價：</strong><br>
+(1) 等效 batch size = K × micro_batch × DP_size。可能太大影響收斂。<br>
+(2) 記憶體：需存 activation 給 K 個 micro-batch（或用 activation checkpointing）。<br>
+(3) 收斂：大 batch 可能需要 learning rate warmup / LAMB optimizer。</p>
+</details>
+
+<details open>
+<summary><strong>Q4：你的 AllReduce benchmark 在 4 節點跑 350 Gbps，但擴到 32 節點時掉到 220 Gbps。最可能的硬體瓶頸是什麼？怎麼驗證？</strong></summary>
+<p><strong>A：</strong>最可能原因：<strong>交換機 oversubscription（非 full-bisection bandwidth）</strong>。<br>
+<strong>解釋：</strong>4 節點可能都在同一 leaf switch 下（直接互連，無 spine 瓶頸）。32 節點跨多個 leaf，流量經 spine switch。如果 spine uplink 頻寬 < leaf 下行總和（如 2:1 oversubscription），跨 leaf 通訊就會塞車。<br>
+<strong>驗證方法：</strong><br>
+(1) 測試 intra-leaf pair vs inter-leaf pair 的 iperf3/nccl-tests 差異<br>
+(2) 確認交換機 fabric 拓撲（<code>ibnetdiscover</code> 或雲端 placement group 設定）<br>
+(3) 如果是 AWS：確認所有節點在同一 placement group（cluster strategy）<br>
+<strong>修復：</strong>用 non-blocking fat-tree spine、或 AWS cluster placement group、或 rail-optimized topology（每 GPU 走獨立 rail 到獨立 spine）。</p>
+</details>
+
+<details open>
+<summary><strong>Q5：為什麼 AWS EFA 的 p5.48xlarge 標稱 3200 Gbps 但實際 AllReduce 達不到？和 InfiniBand 400 Gbps 比哪個實際更快？</strong></summary>
+<p><strong>A：</strong><br>
+<strong>3200 Gbps 是多 NIC 聚合</strong>：p5.48xlarge 有 32 個 EFA 介面（每個 100 Gbps）。NCCL 需要正確配置 multi-NIC（<code>NCCL_NET_GDR_LEVEL</code>、<code>NCCL_SOCKET_NTHREADS</code>），否則只用到部分介面。<br>
+<strong>SRD vs IB Verbs</strong>：EFA 用 SRD（Scalable Reliable Datagram）不是傳統 RDMA，有輕微 protocol overhead。實測 bus bandwidth 通常到 2400-2800 Gbps（理論的 75-87%）。<br>
+<strong>vs InfiniBand 400 Gbps</strong>：EFA 實際 ~2500 Gbps >> IB 400 Gbps × 效率 80% = 320 Gbps。所以 EFA p5 遠快於單 port IB。<br>
+但 HPC 叢集通常每節點有 8× IB port（8×400 = 3200 Gbps），此時和 EFA 相當。<br>
+<strong>結論：</strong>p5 EFA 在大訊息 AllReduce 幾乎和頂級 IB 集群打平，優勢在彈性和免硬體維護。</p>
+</details>
+</div>
+
+</section>
+
+
+
+
+
+
+
+
+<h1>🚀 Part 3: 訓練 — 並行策略與效能優化 (Enhanced)</h1>
+
+<!-- ============================================ -->
+<!-- SECTION 3.1: Model Parallelism -->
+<!-- ============================================ -->
+
+<section id="ch3-1-model-parallelism">
+<h2>3.1 模型並行策略 (Model Parallelism)</h2>
+
+<div class="prereq-box">
+<h4>📚 前置知識速覽</h4>
+<ul>
+<li><strong>GPU 記憶體概念：</strong>每張 GPU 有固定 VRAM（如 A100=80GB），模型+optimizer+activation 必須塞進去</li>
+<li><strong>分散式通訊原語：</strong>AllReduce（全員加總）、AllGather（全員收集）、ReduceScatter（分散加總）</li>
+<li><strong>NVLink vs InfiniBand：</strong>節點內 NVLink ~600GB/s；跨節點 InfiniBand ~50GB/s，差 12 倍</li>
+<li><strong>矩陣乘法基礎：</strong>Linear layer 做的事就是 Y = X @ W，X=[batch, in], W=[in, out]</li>
+<li><strong>PyTorch DDP：</strong>每張卡有完整模型副本，forward 各自算，backward 同步梯度（AllReduce）</li>
+</ul>
+</div>
+
+<div class="glossary-box">
+<h4>📖 術語表 — 3.1 Model Parallelism</h4>
+<table>
+<tr><th>English</th><th>中文</th><th>白話解釋</th><th>比喻</th></tr>
+<tr><td>DDP (Distributed Data Parallel)</td><td>分散式資料並行</td><td>每張卡複製完整模型，各處理不同 batch 資料，同步梯度</td><td>8 個廚師各有完整食譜副本，各做不同桌的菜，最後交換心得</td></tr>
+<tr><td>FSDP (Fully Sharded Data Parallel)</td><td>全切片資料並行</td><td>模型參數/梯度/optimizer 切成 N 份分散到 N 張卡，需要時再拼回來</td><td>8 個廚師共用一本食譜，各撕一頁帶著，煮到某步驟時去跟其他人借其他頁</td></tr>
+<tr><td>ZeRO (Zero Redundancy Optimizer)</td><td>零冗餘優化器</td><td>DeepSpeed 的分片技術，Stage 1/2/3 分別切 optimizer/gradient/params</td><td>公司裡別每人買一台印表機，共用就好 — Stage 越高共用越多</td></tr>
+<tr><td>Tensor Parallelism (TP)</td><td>張量並行</td><td>把單一層的權重矩陣橫切或縱切到多張卡，每卡算部分結果</td><td>一張大拼圖切成 4 塊，4 個人各拼一塊再拼回來</td></tr>
+<tr><td>Pipeline Parallelism (PP)</td><td>管線並行</td><td>把模型按層切段，GPU 0 算第 1-8 層，GPU 1 算 9-16 層...</td><td>工廠流水線：工人 A 切菜 → 工人 B 炒菜 → 工人 C 裝盤</td></tr>
+<tr><td>Sequence Parallelism (SP)</td><td>序列並行</td><td>長序列切割分散到多卡，各卡只處理部分 tokens 的 attention</td><td>一本 500 頁的書分 4 人同時摘要不同章節</td></tr>
+<tr><td>Expert Parallelism (EP)</td><td>專家並行</td><td>MoE 模型中每個 expert 放不同 GPU，router 決定 token 去哪</td><td>醫院分診：護士（router）判斷你該看哪科（expert）</td></tr>
+<tr><td>AllGather</td><td>全收集</td><td>每張卡把自己的分片廣播給所有卡，所有卡得到完整資料</td><td>每人唸自己那頁食譜，大家都聽到完整食譜</td></tr>
+<tr><td>ReduceScatter</td><td>規約散佈</td><td>所有卡的資料先加總再分片，每卡只拿到加總後的一小塊</td><td>每人算自己那題期末考分數，再各只領回自己那題的全班平均</td></tr>
+<tr><td>Bubble (氣泡)</td><td>管線氣泡</td><td>Pipeline Parallelism 中 GPU 等待上一階段完成而閒置的時間</td><td>流水線上一個工人做完才能交給下一個，中間的等待時間</td></tr>
+<tr><td>Micro-batch</td><td>微批次</td><td>把一個大 batch 切成小塊依序送入 pipeline 以減少氣泡</td><td>不等一大箱貨到齊才開工，一小包一小包持續送</td></tr>
+<tr><td>3D Parallelism</td><td>三維並行</td><td>TP + PP + DP 同時使用，適合超大模型（100B+）訓練</td><td>工廠有流水線(PP)、每站多人分工(TP)、同時開多條線(DP)</td></tr>
+</table>
+</div>
+
+<h3>3.1.1 DDP (Distributed Data Parallel)</h3>
+<p><strong>概念：</strong>最基礎的多 GPU 訓練。每張卡有完整模型副本，各自處理不同 batch，backward 時 AllReduce 同步梯度。</p>
+<p><strong>限制：</strong>模型必須能完整放進單卡記憶體（含 optimizer states）。</p>
+
+<h3>3.1.2 ZeRO / FSDP</h3>
+<p><strong>核心思想：</strong>既然 DDP 每張卡都存完整副本很浪費，不如把 optimizer states / gradients / parameters 切片分散。</p>
+
+<table>
+<tr><th>ZeRO Stage</th><th>分散內容</th><th>記憶體節省（N張卡）</th><th>通訊量</th></tr>
+<tr><td>Stage 1</td><td>Optimizer States</td><td>~4x → 分N份</td><td>同 DDP</td></tr>
+<tr><td>Stage 2</td><td>+ Gradients</td><td>~6x → 分N份</td><td>同 DDP</td></tr>
+<tr><td>Stage 3</td><td>+ Parameters</td><td>~8x → 分N份</td><td>1.5x DDP</td></tr>
+</table>
+
+<pre><code class="python">"""
+FSDP (Fully Sharded Data Parallel) = PyTorch 原生 ZeRO Stage 3
+概念：模型參數、梯度、optimizer 全部切片分散
+WHY：不需要 DeepSpeed，原生 PyTorch 就能訓練超大模型
+"""
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
+    MixedPrecision,
+    ShardingStrategy,
+)
+from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
+from transformers import LlamaDecoderLayer
+
+# 混合精度設定
+mixed_precision_policy = MixedPrecision(
+    param_dtype=torch.bfloat16,
+    reduce_dtype=torch.bfloat16,
+    buffer_dtype=torch.bfloat16,
+)
+
+# 自動包裝策略：每個 Transformer Layer 獨立 shard
+auto_wrap_policy = transformer_auto_wrap_policy(
+    transformer_layer_cls={LlamaDecoderLayer}
+)
+
+model = FSDP(
+    model,
+    sharding_strategy=ShardingStrategy.FULL_SHARD,  # = ZeRO-3
+    mixed_precision=mixed_precision_policy,
+    auto_wrap_policy=auto_wrap_policy,
+    device_id=torch.cuda.current_device(),
+    limit_all_gathers=True,
+)
+
+# ShardingStrategy 選項：
+# FULL_SHARD = ZeRO-3（最省記憶體）
+# SHARD_GRAD_OP = ZeRO-2（省記憶體 + 快）
+# NO_SHARD = DDP（最快，記憶體最多）
+# HYBRID_SHARD = 節點內 FULL_SHARD + 節點間 DDP（推薦多節點）
+</code></pre>
+
+<h3>3.1.3 Tensor Parallelism (TP)</h3>
+<p><strong>概念：</strong>把單一層的矩陣運算切割到多張 GPU。例如一個 [4096, 4096] 的線性層，切成 4 份 [4096, 1024] 分別放在 4 張卡上。</p>
+<p><strong>適用場景：</strong>同一節點內（NVLink 高頻寬）。跨節點通訊太慢不適合。</p>
+<p><strong>通訊模式：</strong>Column parallel → AllGather；Row parallel → ReduceScatter。每層需要 2 次集合通訊。</p>
+
+<pre><code class="python">"""
+Tensor Parallelism 概念示意（Megatron-LM 風格）
+"""
+# 概念：一個大矩陣 W [H, 4H] 切成 TP=4 份
+# GPU 0: W[:, 0:H]
+# GPU 1: W[:, H:2H]
+# GPU 2: W[:, 2H:3H]
+# GPU 3: W[:, 3H:4H]
+
+# Column Parallel Linear (MLP 第一層)
+# 輸入 X 廣播到所有 GPU → 各自算 X @ W_i → 結果 concat
+
+# Row Parallel Linear (MLP 第二層)
+# 各 GPU 有部分輸入 → 各自算 → AllReduce 加總得到完整輸出
+
+# 實務 Megatron-LM 設定：
+# torchrun --nproc_per_node=8 train.py \
+#   --tensor-model-parallel-size 4 \
+#   --pipeline-model-parallel-size 2
+</code></pre>
+
+<h3>3.1.4 Pipeline Parallelism (PP)</h3>
+<p><strong>概念：</strong>把模型按層切割，前 N 層放 GPU 0，接下來 N 層放 GPU 1...。像工廠流水線。</p>
+<p><strong>問題：</strong>Naive PP 有大量「氣泡」（bubble）——GPU 等待前一階段完成。</p>
+<p><strong>解法：</strong>Micro-batching（GPipe）或 1F1B schedule（PipeDream）減少氣泡。</p>
+
+<pre><code class="python">"""
+Pipeline Parallelism 記憶體計算
+假設 32 層 Transformer，PP=4 → 每張卡 8 層
+"""
+# 氣泡率 = (PP - 1) / (PP - 1 + num_microbatches)
+# PP=4, microbatches=12 → bubble = 3/15 = 20%
+# PP=4, microbatches=32 → bubble = 3/35 = 8.6%
+
+# 規則：microbatches >> PP size 才能降低氣泡
+
+ds_config = {
+    "train_batch_size": 256,
+    "train_micro_batch_size_per_gpu": 8,
+    "pipeline": {
+        "stages": 4,
+        "partition_method": "parameters"
+    }
+}
+</code></pre>
+
+<h3>3.1.5 Sequence Parallelism (SP)</h3>
+<p><strong>概念：</strong>長序列訓練（>8K tokens）時，attention 的記憶體是 O(seq_len²)。SP 把序列切割到多張卡。</p>
+<p><strong>搭配：</strong>通常和 TP 一起使用。TP 切參數，SP 切 activation（LayerNorm、Dropout）。</p>
+
+<h3>3.1.6 Expert Parallelism (EP)</h3>
+<p><strong>概念：</strong>MoE 模型中，每個 expert 放在不同 GPU。Router 決定 token 送到哪個 expert。</p>
+<p><strong>通訊：</strong>All-to-All。</p>
+<p><strong>實例：</strong>Mixtral 8x7B 有 8 個 expert，EP=8 時每張卡放一個 expert。</p>
+
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 3.1 Model Parallelism</h4>
+
+<details open>
+<summary>Q1：你有 4 張 A100-80GB（同節點 NVLink），要訓練一個 13B 模型（bf16 params=26GB, AdamW optimizer=156GB）。選哪種並行策略？計算記憶體。</summary>
+<p><strong>答案：</strong></p>
+<p>總記憶體需求：params 26GB + gradients 26GB + optimizer 156GB + activations ~20GB ≈ 228GB</p>
+<p>單卡 80GB，4 卡共 320GB。</p>
+<p><strong>選 FSDP ZeRO-3 (FULL_SHARD)：</strong>參數/梯度/optimizer 各切 4 份。</p>
+<ul>
+<li>每卡 params: 26/4 = 6.5GB</li>
+<li>每卡 gradients: 26/4 = 6.5GB</li>
+<li>每卡 optimizer: 156/4 = 39GB</li>
+<li>每卡 activations: ~20GB（不分片）</li>
+<li>每卡 total ≈ 72GB ✅ 放得進 80GB</li>
+</ul>
+<p>ZeRO-2 不夠（params 26GB 不切，每卡還需 26+26/4+156/4=72.5GB，加 activation 會超）。TP 也可以但 FSDP 更簡單。</p>
+</details>
+
+<details open>
+<summary>Q2：Pipeline Parallelism PP=8，你想把氣泡率降到 10% 以下，至少需要幾個 microbatches？</summary>
+<p><strong>答案：</strong></p>
+<p>公式：bubble = (PP-1) / (PP-1 + M)，要 < 0.1</p>
+<p>7 / (7 + M) < 0.1 → 7 < 0.7 + 0.1M → M > 63</p>
+<p><strong>至少需要 64 個 microbatches。</strong>這也是為什麼 PP 度數越大，需要的 global batch size 越大。</p>
+</details>
+
+<details open>
+<summary>Q3：Tensor Parallelism 為什麼不適合跨節點？給出具體頻寬計算。</summary>
+<p><strong>答案：</strong></p>
+<p>TP 每一層的 forward 需要 2 次 collective（AllGather + ReduceScatter）。以 Llama-3-8B (hidden=4096, TP=4) 為例：</p>
+<ul>
+<li>每次通訊量 ≈ 4096 × 4096 × 2 bytes (bf16) = 32MB</li>
+<li>32 層 × 2 次/層 = 64 次通訊/forward</li>
+<li>NVLink (600GB/s): 32MB / 600GB/s = 0.05ms/次 → 可忽略</li>
+<li>InfiniBand (50GB/s): 32MB / 50GB/s = 0.64ms/次 → 64次 = 41ms overhead</li>
+</ul>
+<p>跨節點 41ms overhead 佔 forward 時間 30%+，不划算。PP 只在 stage 邊界通訊一次，跨節點友好。</p>
+</details>
+
+<details open>
+<summary>Q4：HYBRID_SHARD 和 FULL_SHARD 差在哪？什麼時候用？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li><strong>FULL_SHARD：</strong>所有 GPU 間切片。8 節點 × 8 卡 = 64 張卡共同切片。跨節點 AllGather 走 IB 很慢。</li>
+<li><strong>HYBRID_SHARD：</strong>節點內 FULL_SHARD（8 卡切片，NVLink 快），節點間 DDP（只 AllReduce 梯度）。</li>
+</ul>
+<p><strong>選擇標準：</strong>如果模型切成「一個節點的卡數」份就能放進記憶體 → HYBRID_SHARD。如果連切到一個節點內都放不下 → FULL_SHARD。</p>
+<p>例：70B bf16，params=140GB。8 卡切片 = 17.5GB/卡 ✅ → HYBRID_SHARD。405B bf16=810GB，8 卡切片 = 101GB/卡 ❌ → 需要 FULL_SHARD 跨節點切。</p>
+</details>
+
+<details open>
+<summary>Q5：你的團隊要訓練 Mixtral 8x22B (MoE)，共 141B 活躍參數。有 128 張 H100。設計並行策略。</summary>
+<p><strong>答案：</strong></p>
+<p>Mixtral 8x22B：每個 expert 22B，8 個 experts，shared layers ~9B。總量 ≈ 176B，但每 token 只激活 2 experts (44B + 9B = 53B 活躍)。</p>
+<p>策略（128 H100 = 16 nodes × 8 GPUs）：</p>
+<ul>
+<li><strong>EP=8：</strong>8 個 experts 放 8 張卡（每卡 1 expert = 22B × 2 bytes = 44GB）</li>
+<li><strong>TP=2：</strong>每個 expert 內部再切 2 份（22GB/卡）— 因為 22B 的 optimizer 要 264GB</li>
+<li><strong>DP=8：</strong>128 / (EP8 × TP2) = 8 份 data parallel</li>
+</ul>
+<p>每卡記憶體：expert params 22GB + optimizer 66GB (ZeRO-1 on DP8 → 66/8=8.3GB) + activation ≈ 合理放入 80GB。</p>
+</details>
+</div>
+
+</section>
+
+<!-- ============================================ -->
+<!-- SECTION 3.2: GPU Memory Anatomy -->
+<!-- ============================================ -->
+
+<section id="ch3-2-memory">
+<h2>3.2 GPU 記憶體解剖學</h2>
+
+<div class="prereq-box">
+<h4>📚 前置知識速覽</h4>
+<ul>
+<li><strong>VRAM vs RAM：</strong>GPU 有獨立記憶體（VRAM），A100=80GB、H100=80GB，不能用主機 RAM 直接補</li>
+<li><strong>fp32/bf16/fp16 差異：</strong>fp32=4 bytes, bf16/fp16=2 bytes per number。精度換空間</li>
+<li><strong>Adam optimizer 原理：</strong>對每個 parameter 追蹤一階動量(m)和二階動量(v)，各需同 shape 的 fp32 tensor</li>
+<li><strong>Activation：</strong>forward pass 中間結果，backward 計算梯度時需要。層數×序列長度×隱藏層大小</li>
+<li><strong>Gradient Checkpointing 概念：</strong>不存 activation，backward 時重算。用 30% 時間換 70% 記憶體</li>
+</ul>
+</div>
+
+<div class="glossary-box">
+<h4>📖 術語表 — 3.2 GPU 記憶體</h4>
+<table>
+<tr><th>English</th><th>中文</th><th>白話解釋</th><th>比喻</th></tr>
+<tr><td>Model Parameters</td><td>模型參數</td><td>神經網路的權重矩陣，訓練要學的東西</td><td>廚師的食譜（固定佔空間）</td></tr>
+<tr><td>Gradients</td><td>梯度</td><td>告訴每個參數該往哪個方向調整多少的信號</td><td>GPS 導航指示（跟食譜一樣大）</td></tr>
+<tr><td>Optimizer States</td><td>優化器狀態</td><td>Adam 追蹤的動量和方差，用於智慧更新參數</td><td>每個食譜旁邊的「最近修改紀錄本」— 比食譜還厚 3 倍</td></tr>
+<tr><td>Activations</td><td>激活值/中間結果</td><td>forward 每層的輸出，backward 算梯度需要</td><td>做菜時每個步驟的半成品（要留著才知道哪步出錯）</td></tr>
+<tr><td>Gradient Checkpointing</td><td>梯度檢查點</td><td>只保存部分層的 activation，其餘 backward 時重算</td><td>只拍幾張半成品照片，其餘現場重做一次確認</td></tr>
+<tr><td>Mixed Precision</td><td>混合精度</td><td>forward/backward 用低精度(bf16)加速，weight update 用 fp32 保精度</td><td>草稿用鉛筆快寫(bf16)，最後定稿用鋼筆(fp32)</td></tr>
+<tr><td>Master Weights</td><td>主權重副本</td><td>optimizer 保留的 fp32 精度完整權重，混合精度訓練必備</td><td>公司保險箱裡的正本文件（精確但佔空間）</td></tr>
+<tr><td>Memory Fragmentation</td><td>記憶體碎片化</td><td>頻繁 malloc/free 造成不連續的空閒小塊，大 tensor 放不進去</td><td>停車場有 10 個空位但分散各處，大巴士進不去</td></tr>
+<tr><td>Offloading</td><td>卸載</td><td>把暫時不用的 tensor 從 GPU 移到 CPU RAM 或 NVMe SSD</td><td>把不常用的檔案從桌上移到倉庫，需要時再搬回來</td></tr>
+<tr><td>Peak Memory</td><td>峰值記憶體</td><td>訓練過程中記憶體使用的最高點（通常在 forward 末尾）</td><td>上下班尖峰時段的捷運人數</td></tr>
+</table>
+</div>
+
+<div class="beginner-box">
+<h4>🌱 從零開始理解：GPU 記憶體都被誰吃了？</h4>
+<p><strong>生活比喻：</strong>80GB 的 GPU 記憶體就像 80 坪的辦公室。模型參數是固定的辦公桌（16坪），optimizer 是每張桌子旁的大型檔案櫃（48坪！），剩下才是工作空間（activations）。難怪房間不夠用。</p>
+</div>
+
+<h3>記憶體組成公式</h3>
+<pre><code class="python">"""
+GPU 記憶體解剖 — 以 Llama-3-8B 為例
+參數量：8.03B parameters
+"""
+def calculate_training_memory(
+    num_params_B: float,
+    precision: str = "bf16",
+    optimizer: str = "adamw",
+    seq_len: int = 4096,
+    batch_size: int = 1,
+    num_layers: int = 32,
+    hidden_size: int = 4096,
+    use_gradient_checkpointing: bool = False,
+):
+    params_B = num_params_B * 1e9
+    bytes_per_param = {"fp32": 4, "bf16": 2, "fp16": 2}[precision]
+    model_memory_GB = params_B * bytes_per_param / 1e9
+    gradient_memory_GB = model_memory_GB
+
+    if optimizer == "adamw":
+        # fp32 master copy + fp32 momentum + fp32 variance = 12 bytes
+        optimizer_memory_GB = params_B * 12 / 1e9
+    elif optimizer == "sgd":
+        optimizer_memory_GB = params_B * 4 / 1e9
+
+    if use_gradient_checkpointing:
+        activation_GB = (num_layers ** 0.5) * seq_len * hidden_size * batch_size * 34 * 2 / 1e9
+    else:
+        activation_GB = num_layers * seq_len * hidden_size * batch_size * 34 * 2 / 1e9
+
+    total_GB = model_memory_GB + gradient_memory_GB + optimizer_memory_GB + activation_GB
+    return {
+        "model_params_GB": round(model_memory_GB, 1),
+        "gradients_GB": round(gradient_memory_GB, 1),
+        "optimizer_GB": round(optimizer_memory_GB, 1),
+        "activations_GB": round(activation_GB, 1),
+        "total_GB": round(total_GB, 1),
+    }
+
+# === Llama-3-8B 實例 ===
+result = calculate_training_memory(8.03, "bf16", "adamw", 4096, 4, 32, 4096, False)
+# model_params_GB: 16.1 GB
+# gradients_GB: 16.1 GB
+# optimizer_GB: 96.4 GB    ← 最大元兇！
+# activations_GB: ~36 GB
+# total_GB: ~164.6 GB      → 需要至少 3 張 A100-80GB
+</code></pre>
+
+<table>
+<tr><th>組件</th><th>公式</th><th>Llama-3-8B (bf16)</th><th>佔比</th></tr>
+<tr><td>模型參數</td><td>P × bytes_per_param</td><td>16.1 GB</td><td>~10%</td></tr>
+<tr><td>梯度</td><td>P × bytes_per_param</td><td>16.1 GB</td><td>~10%</td></tr>
+<tr><td>Optimizer (AdamW)</td><td>P × 12 bytes</td><td>96.4 GB</td><td>~58%</td></tr>
+<tr><td>Activations (bs=4)</td><td>~34 × L × H × S × B × 2</td><td>~36 GB</td><td>~22%</td></tr>
+<tr><td><strong>Total</strong></td><td></td><td><strong>~164.6 GB</strong></td><td></td></tr>
+</table>
+
+<p><strong>關鍵洞察：</strong>Optimizer states 佔了近 60% 的記憶體！這就是為什麼 ZeRO 優先切 optimizer（Stage 1）效果就很顯著。</p>
+
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 3.2 GPU 記憶體</h4>
+
+<details open>
+<summary>Q1：你要 full fine-tune Llama-3-70B (bf16)，用 AdamW，不用 gradient checkpointing，batch_size=1, seq=4096。計算總記憶體需求，需要幾張 H100-80GB？</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li>Params: 70B × 2 bytes = 140 GB</li>
+<li>Gradients: 140 GB</li>
+<li>Optimizer: 70B × 12 = 840 GB</li>
+<li>Activations (80 layers, hidden=8192, bs=1): ~80 × 4096 × 8192 × 34 × 2 / 1e9 ≈ 146 GB</li>
+<li>Total ≈ 1,266 GB</li>
+</ul>
+<p>1,266 / 80 = 15.8 → <strong>至少 16 張 H100</strong>（用 FSDP ZeRO-3 切片）。實務上加 GC 可以降 activation 到 ~26GB，total ≈ 1,146GB → 15 張。</p>
+</details>
+
+<details open>
+<summary>Q2：為什麼用 QLoRA (4-bit) 微調 70B 只需要 1 張 A100？計算。</summary>
+<p><strong>答案：</strong></p>
+<ul>
+<li>模型以 4-bit 載入：70B × 0.5 bytes = 35 GB</li>
+<li>LoRA adapters (rank=64, ~0.1% params): 70M × 2 bytes = 0.14 GB</li>
+<li>Optimizer (只優化 LoRA params): 70M × 12 = 0.84 GB</li>
+<li>Gradients (只有 LoRA): 0.14 GB</li>
+<li>Activations (with GC, bs=1): ~5 GB</li>
+<li>Total ≈ 41 GB ✅ 放得進 80GB A100</li>
+</ul>
+<p>核心：QLoRA 凍結 99.9% 參數不訓練，4-bit 量化再壓縮原模型，所以記憶體從 1,266GB 降到 41GB。</p>
+</details>
+
+<details open>
+<summary>Q3：Gradient Checkpointing 省了多少記憶體？值不值得？給出 tradeoff 數字。</summary>
+<p><strong>答案：</strong></p>
+<p>以 Llama-3-8B (32 layers, bs=4) 為例：</p>
+<ul>
+<li>不用 GC：activation ≈ 36 GB</li>
+<li>用 GC：activation ≈ √32 × (36/32) ≈ 6.4 GB（省 82%）</li>
+<li>時間代價：多 ~30% 計算時間（重算 forward）</li>
+</ul>
+<p><strong>值得的場景：</strong>省下的 30GB 可以換成 batch_size 從 4 → 8（throughput +80%，遠超 30% 時間損失）。或者讓本來需要 3 卡的訓練縮到 2 卡。</p>
+</details>
+
+<details open>
+<summary>Q4：你觀察到 nvidia-smi 顯示 78GB used，但 PyTorch 只 allocated 60GB。剩下 18GB 去哪了？如何回收？</summary>
+<p><strong>答案：</strong></p>
+<p>18GB = PyTorch caching allocator 的 reserved pool（已向 CUDA 申請但未分配給 tensor）。原因：</p>
+<ul>
+<li>PyTorch 為了避免頻繁 cudaMalloc，會保留一個記憶體池</li>
+<li>已 delete 的 tensor 記憶體回到池中但不歸還 CUDA</li>
+<li>記憶體碎片化：池中有空間但不連續</li>
+</ul>
+<p><strong>回收方法：</strong></p>
+<pre><code class="python">torch.cuda.empty_cache()  # 歸還未使用的 cached memory 給 CUDA
+# 或設定環境變數減少碎片：
+# PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+</code></pre>
+</details>
+</div>
+
+</section>
+
+<!-- ============================================ -->
+<!-- SECTION 3.3: Performance Optimization -->
+<!-- ============================================ -->
+
+<section id="ch3-3-performance">
+<h2>3.3 訓練效能優化</h2>
+
+<div class="prereq-box">
+<h4>📚 前置知識速覽</h4>
+<ul>
+<li><strong>FLOPS：</strong>Floating Point Operations Per Second，GPU 每秒能做多少次浮點運算</li>
+<li><strong>Throughput：</strong>tokens/sec 或 samples/sec，實際訓練速度</li>
+<li><strong>A100 bf16 理論峰值：</strong>312 TFLOPS；H100 bf16 = 989 TFLOPS</li>
+<li><strong>Kernel：</strong>GPU 上執行的一個計算單元（如一次矩陣乘法）。多個小 kernel 合併叫 fusion</li>
+<li><strong>I/O bound vs Compute bound：</strong>瓶頸在讀寫記憶體還是在計算。大矩陣乘法是 compute bound，LayerNorm 是 I/O bound</li>
+</ul>
+</div>
+
+<div class="glossary-box">
+<h4>📖 術語表 — 3.3 訓練效能</h4>
+<table>
+<tr><th>English</th><th>中文</th><th>白話解釋</th><th>比喻</th></tr>
+<tr><td>MFU (Model FLOPS Utilization)</td><td>模型算力利用率</td><td>實際訓練 FLOPS / GPU 理論峰值 FLOPS</td><td>跑車實際車速 / 儀表板極速 = 你開到幾成功力</td></tr>
+<tr><td>HFU (Hardware FLOPS Utilization)</td><td>硬體算力利用率</td><td>含 recomputation 的實際 FLOPS / 峰值（比 MFU 高）</td><td>加上暖車和繞路的總里程 / 最短距離的極速時間</td></tr>
+<tr><td>AMP (Automatic Mixed Precision)</td><td>自動混合精度</td><td>PyTorch 自動決定哪些 op 用 fp16/bf16 哪些用 fp32</td><td>自動排檔車：上坡(複雜op)自動降檔(fp32)，平路自動升檔(bf16)</td></tr>
+<tr><td>GradScaler</td><td>梯度縮放器</td><td>fp16 專用，先放大 loss 再縮小梯度，防止 underflow</td><td>拍暗場照片先過曝再後製調暗，保留細節</td></tr>
+<tr><td>Kernel Fusion</td><td>算核融合</td><td>把多個小 GPU 操作合併成一個大操作，減少記憶體讀寫</td><td>去超市一次買齊 vs 跑 5 趟各買一樣 — 省交通時間</td></tr>
+<tr><td>torch.compile</td><td>圖編譯</td><td>PyTorch 2.0 JIT 編譯器，自動做 kernel fusion + memory planning</td><td>請專業物流公司重新規劃你的送貨路線（10-30% 加速）</td></tr>
+<tr><td>Gradient Accumulation</td><td>梯度累積</td><td>多個 micro-batch 的梯度加總後才更新一次參數</td><td>不每做一口菜就洗碗，累積一大堆再一次洗（有效 batch 變大）</td></tr>
+<tr><td>NUMA Affinity</td><td>NUMA 親和性</td><td>確保 GPU 用的 CPU 和 RAM 在同一 socket，避免跨 socket 延遲</td><td>確保你的工具放在自己桌上而不是隔壁辦公室</td></tr>
+<tr><td>Prefetch</td><td>預取</td><td>DataLoader 提前載入下一批資料，GPU 不用等 CPU 準備</td><td>廚師助手提前備好下一道菜的食材</td></tr>
+<tr><td>TF32</td><td>TensorFloat-32</td><td>A100+ 專屬格式，19-bit 但 matmul 速度接近 fp16</td><td>介於鉛筆(fp16)和鋼筆(fp32)之間的自動鉛筆 — 夠精又快</td></tr>
+</table>
+</div>
+
+<div class="beginner-box">
+<h4>🌱 從零開始理解：什麼是「訓練效能」？</h4>
+<p><strong>生活比喻：</strong>GPU 就像一台跑車，理論極速 300km/h（peak FLOPS）。但實際路況（記憶體瓶頸、通訊等待、資料載入）讓你只跑到 120km/h。MFU = 你實際速度 / 理論極速 = 40%。業界標準是 40-60% MFU 算優秀。</p>
+</div>
+
+<h3>3.3.1 MFU 計算</h3>
+<pre><code class="python">"""
+MFU (Model FLOPS Utilization) 計算
+衡量訓練效率的黃金指標
+"""
+def calculate_mfu(tokens_per_second, num_params_B, num_gpus, gpu_peak_tflops):
+    # Transformer FLOPs: 6 * tokens * params (forward 2x + backward 4x)
+    actual_tflops = 6 * tokens_per_second * num_params_B * 1e9 / 1e12
+    peak_tflops = num_gpus * gpu_peak_tflops
+    mfu = actual_tflops / peak_tflops
+    return round(mfu * 100, 1)
+
+# 8x A100 訓練 Llama-3-8B，實測 45K tokens/sec
+mfu = calculate_mfu(45000, 8.03, 8, 312)
+# MFU ≈ 43.5% (good! 40-55% 正常範圍)
+</code></pre>
+
+<h3>3.3.2 Mixed Precision Training</h3>
+<pre><code class="python">"""
+AMP — forward/backward 用 bf16（快），weight update 用 fp32（精準）
+速度 ~2x，記憶體 ~0.5x，精度幾乎無損
+"""
+from torch.cuda.amp import autocast
+
+for batch in dataloader:
+    optimizer.zero_grad()
+    with autocast(dtype=torch.bfloat16):
+        output = model(batch["input_ids"])
+        loss = loss_fn(output, batch["labels"])
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    optimizer.step()
+
+# bf16 vs fp16：
+# bf16: 指數 8-bit（同 fp32），不需 GradScaler
+# fp16: 指數 5-bit，容易 overflow，需要 GradScaler
+# 推薦：A100+ 用 bf16；V100 只支援 fp16
+</code></pre>
+
+<h3>3.3.3-3.3.7 其他優化技術</h3>
+<ul>
+<li><strong>Gradient Checkpointing：</strong>activation O(L)→O(√L)，多 30% 計算時間</li>
+<li><strong>Gradient Accumulation：</strong>effective_batch = micro_batch × accum_steps × GPUs</li>
+<li><strong>DataLoader：</strong>num_workers, pin_memory, prefetch_factor, persistent_workers</li>
+<li><strong>torch.compile：</strong>一行加速 10-30%，mode="reduce-overhead" 推薦</li>
+<li><strong>NUMA Affinity：</strong>numactl 綁定 GPU 對應的 CPU socket</li>
+</ul>
+
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 3.3 訓練效能</h4>
+
+<details open>
+<summary>Q1：你在 4×H100 上訓練 Llama-3-8B，觀測到 80K tokens/sec。計算 MFU 並判斷是否正常。</summary>
+<p><strong>答案：</strong></p>
+<p>H100 bf16 peak = 989 TFLOPS/卡</p>
+<p>actual TFLOPS = 6 × 80,000 × 8.03×10⁹ / 10¹² = 3,854 TFLOPS</p>
+<p>peak = 4 × 989 = 3,956 TFLOPS</p>
+<p>MFU = 3,854 / 3,956 = <strong>97.4%</strong></p>
+<p>⚠️ 這個數字不合理！實務 MFU 最高 55-60%。可能原因：tokens/sec 計算錯誤（可能把 gradient accumulation 的多個 micro-batch tokens 重複計算了），或 num_params 算錯。重新檢查 throughput 計算方法。</p>
+</details>
+
+<details open>
+<summary>Q2：你的訓練 MFU 只有 25%，如何系統性診斷瓶頸？列出檢查清單。</summary>
+<p><strong>答案：</strong></p>
+<ol>
+<li><strong>GPU utilization (nvidia-smi)：</strong>如果 GPU util < 90% → 可能 I/O bound（DataLoader 太慢）</li>
+<li><strong>DataLoader：</strong>num_workers 是否足夠？pin_memory=True？prefetch_factor=2+？</li>
+<li><strong>通訊 overhead：</strong>用 torch.profiler 看 NCCL 通訊佔比。如果 >30% → 減少 TP degree 或用 HYBRID_SHARD</li>
+<li><strong>Kernel launch overhead：</strong>嘗試 torch.compile — 如果加速 >20% 代表之前小 kernel 太多</li>
+<li><strong>記憶體頻寬：</strong>batch size 太小導致 matmul 不夠大 → 增加 batch（用 gradient accumulation）</li>
+<li><strong>NUMA：</strong>nvidia-smi topo -m 確認 GPU-CPU 親和性</li>
+<li><strong>網路：</strong>跨節點用 NCCL_IB_DISABLE=0 確認 InfiniBand 啟用</li>
+</ol>
+</details>
+
+<details open>
+<summary>Q3：effective batch size = 2048 tokens × 512 sequences = 1M tokens。你有 8 GPU，每卡只能放 micro_batch=16。如何設定 gradient accumulation？</summary>
+<p><strong>答案：</strong></p>
+<p>effective_batch = micro_batch × grad_accum × num_gpus</p>
+<p>512 = 16 × grad_accum × 8</p>
+<p>grad_accum = 512 / 128 = <strong>4 steps</strong></p>
+<p>每卡做 4 次 forward+backward 累積梯度，才做一次 optimizer.step()。</p>
+<p>注意：gradient accumulation 不增加記憶體（梯度 in-place 累加），但增加時間（4x forward+backward per update）。</p>
+</details>
+
+<details open>
+<summary>Q4：torch.compile 為什麼第一次 forward 很慢？怎麼處理？</summary>
+<p><strong>答案：</strong></p>
+<p>第一次慢是因為 compilation overhead：</p>
+<ul>
+<li>Dynamo tracing：追蹤 Python 計算圖</li>
+<li>AOTAutograd：生成 backward graph</li>
+<li>Inductor：生成優化的 Triton/CUDA kernel</li>
+<li>Auto-tuning：測試不同 kernel 配置找最快的</li>
+</ul>
+<p>典型編譯時間：30s-5min（依模型大小）。</p>
+<p><strong>處理方法：</strong>前幾個 step 設為 warmup，不計入 throughput 統計。或用 torch.compile(mode="default") 減少編譯時間。production 可以 torch._dynamo.config.cache_size_limit 快取編譯結果。</p>
+</details>
+
+<details open>
+<summary>Q5：bf16 訓練時 loss 突然變 NaN，但 fp32 同樣設定正常。原因和解法？</summary>
+<p><strong>答案：</strong></p>
+<p>bf16 精度只有 7-bit mantissa（fp32 有 23-bit）。可能原因：</p>
+<ul>
+<li><strong>Gradient explosion：</strong>梯度值超出 bf16 範圍（>3.4e38 不會，但精度損失累積）→ 解法：降低 learning rate，加 gradient clipping (max_norm=1.0)</li>
+<li><strong>Loss scale 問題：</strong>某些 op（如 cross_entropy 的 log）在極端值時精度不足 → 解法：確保 loss function 在 fp32 計算</li>
+<li><strong>LayerNorm 的 variance 太小：</strong>在 bf16 下接近 0 → 加 eps=1e-5（而非 1e-8）</li>
+</ul>
+<p>Debug 技巧：<code>torch.autograd.detect_anomaly()</code> + 逐層檢查 <code>torch.isnan(param.grad).any()</code></p>
+</details>
+</div>
+
+</section>
+
+<!-- ============================================ -->
+<!-- SECTION 3.4: Decision Tree -->
+<!-- ============================================ -->
+
+<section id="ch3-4-decision-tree">
+<h2>3.4 並行策略決策樹</h2>
+
+<div class="prereq-box">
+<h4>📚 前置知識速覽</h4>
+<ul>
+<li><strong>已掌握 3.1-3.3：</strong>各種並行策略（DDP/FSDP/TP/PP/EP）的優缺點和適用場景</li>
+<li><strong>硬體規格記憶：</strong>A100=80GB, H100=80GB, NVLink=600GB/s, IB=50GB/s</li>
+<li><strong>記憶體計算能力：</strong>能估算任意模型的 params+optimizer+activation 總需求</li>
+<li><strong>LoRA/QLoRA 概念：</strong>凍結大部分參數只訓練小 adapter → 記憶體需求驟降</li>
+</ul>
+</div>
+
+<div class="glossary-box">
+<h4>📖 術語表 — 3.4 決策樹</h4>
+<table>
+<tr><th>English</th><th>中文</th><th>白話解釋</th><th>比喻</th></tr>
+<tr><td>3D Parallelism</td><td>三維並行</td><td>TP+PP+DP 三種並行同時使用的超大規模訓練方案</td><td>工廠有流水線(PP)、每站多人分工(TP)、同時開多條線(DP)</td></tr>
+<tr><td>Full Fine-Tuning</td><td>全量微調</td><td>所有參數都訓練，記憶體需求同 pretraining</td><td>整間房子重新裝修</td></tr>
+<tr><td>LoRA (Low-Rank Adaptation)</td><td>低秩適配</td><td>凍結原模型，只訓練小型 adapter 矩陣（0.1-1% params）</td><td>不重新裝修房子，只換窗簾和地毯</td></tr>
+<tr><td>QLoRA</td><td>量化低秩適配</td><td>4-bit 量化原模型 + LoRA，單卡微調 70B 模型</td><td>把房子縮小成模型屋(4-bit)再換迷你窗簾(LoRA)</td></tr>
+<tr><td>Linear Scaling Rule</td><td>線性縮放規則</td><td>batch size 加倍時 learning rate 也加倍</td><td>路變寬(batch大)就可以開快一點(lr大)</td></tr>
+<tr><td>Cosine Schedule</td><td>餘弦學習率排程</td><td>LR 從高到低按 cosine 曲線衰減</td><td>先衝刺(大lr學大方向)再精修(小lr微調細節)</td></tr>
+<tr><td>Warmup</td><td>預熱</td><td>訓練初期 LR 從 0 緩慢升到目標值，避免初始不穩定</td><td>引擎剛啟動先怠速暖機再全力加速</td></tr>
+<tr><td>Throughput</td><td>吞吐量</td><td>單位時間處理的 tokens 數量（tokens/sec/GPU）</td><td>工廠每小時產出幾個產品</td></tr>
+</table>
+</div>
+
+<div class="decision-tree">
+<h4>🌳 並行策略選擇流程</h4>
+<pre style="font-size: 14px; line-height: 1.6;">
+模型能放進單卡嗎？（含 optimizer + activations）
+│
+├─ ✅ 能 → 用 DDP（最簡單、最快）
+│         ├─ 想省記憶體換更大 batch？→ 加 Gradient Checkpointing
+│         └─ 想再快一點？→ 加 torch.compile
+│
+└─ ❌ 不能 → 模型參數本身放不進單卡？
+            │
+            ├─ ❌ 參數放得進，optimizer 放不下
+            │    → ZeRO Stage 1-2 (FSDP SHARD_GRAD_OP)
+            │
+            └─ ✅ 參數本身就放不進
+                 │
+                 ├─ 單節點？→ FSDP FULL_SHARD 或 TP
+                 │
+                 └─ 多節點？
+                      ├─ &lt; 100B → HYBRID_SHARD
+                      └─ ≥ 100B → 3D: TP(節點內) + PP(跨節點) + DP(全域)
+
+MoE → 加 Expert Parallelism
+長序列 >8K → 加 Sequence Parallelism
+微調而非預訓練 → 先考慮 LoRA/QLoRA
+</pre>
+</div>
+
+<h3>實務推薦組合</h3>
+<table>
+<tr><th>模型大小</th><th>GPU 配置</th><th>推薦策略</th><th>預期 MFU</th></tr>
+<tr><td>1-7B</td><td>1-8x A100</td><td>DDP + AMP + GC</td><td>45-55%</td></tr>
+<tr><td>7-13B</td><td>8x A100</td><td>FSDP ZeRO-2/3 + AMP + GC</td><td>40-50%</td></tr>
+<tr><td>13-70B</td><td>16-64x A100/H100</td><td>FSDP HYBRID_SHARD 或 TP+PP+DP</td><td>38-48%</td></tr>
+<tr><td>70B+</td><td>64-512x H100</td><td>3D (TP8+PP4+DP16)</td><td>35-45%</td></tr>
+<tr><td>MoE 8x7B</td><td>32-128x H100</td><td>EP8 + TP2 + DP + FSDP</td><td>30-42%</td></tr>
+</table>
+
+<pre><code class="python">"""
+完整訓練設定：Llama-3-8B on 8x A100-80GB
+FSDP + AMP + Gradient Checkpointing + torch.compile
+"""
+from transformers import TrainingArguments
+
+training_args = TrainingArguments(
+    output_dir="./output",
+    bf16=True, tf32=True,
+    torch_compile=True,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=8,  # effective = 4*8*8gpus = 256
+    gradient_checkpointing=True,
+    gradient_checkpointing_kwargs={"use_reentrant": False},
+    fsdp="full_shard auto_wrap",
+    fsdp_config={
+        "fsdp_transformer_layer_cls_to_wrap": "LlamaDecoderLayer",
+        "fsdp_backward_prefetch": "backward_pre",
+        "limit_all_gathers": True,
+    },
+    learning_rate=2e-5,
+    lr_scheduler_type="cosine",
+    warmup_ratio=0.03,
+    max_grad_norm=1.0,
+    dataloader_num_workers=8,
+    dataloader_pin_memory=True,
+)
+</code></pre>
+
+<div class="quiz-box">
+<h4>🧪 驗證考題 — 3.4 決策樹</h4>
+
+<details open>
+<summary>Q1：你有 2 台機器各 8 張 A100 (16 GPUs total)，要預訓練一個 30B 模型。設計完整並行策略並計算記憶體。</summary>
+<p><strong>答案：</strong></p>
+<p>30B bf16 記憶體需求：</p>
+<ul>
+<li>Params: 60GB, Gradients: 60GB, Optimizer: 360GB, Activation(GC): ~15GB</li>
+<li>Total: ~495GB。16 卡 × 80GB = 1,280GB 夠用。</li>
+</ul>
+<p><strong>策略：FSDP HYBRID_SHARD</strong></p>
+<ul>
+<li>節點內 8 卡 FULL_SHARD：每卡 params 60/8=7.5GB + optimizer 360/8=45GB + grad 60/8=7.5GB + act 15GB = 75GB ✅</li>
+<li>節點間 DDP：2 節點只需 AllReduce 梯度（60GB 用 bf16 通訊 = 每次 7.5GB 跨 IB）</li>
+</ul>
+<p>不需要 TP 或 PP — HYBRID_SHARD 已足夠且最簡單。</p>
+</details>
+
+<details open>
+<summary>Q2：面試題：「你只有 1 張 A100-80GB，要 inference 一個 70B 模型，怎麼做？」</summary>
+<p><strong>答案：</strong></p>
+<p>70B fp16 = 140GB，放不進 80GB。三種方案：</p>
+<ol>
+<li><strong>4-bit 量化 (GPTQ/AWQ)：</strong>70B × 0.5 bytes = 35GB + KV cache ~10GB = 45GB ✅</li>
+<li><strong>CPU offload (llama.cpp)：</strong>部分層放 CPU RAM，逐層搬到 GPU 計算。慢但能跑。</li>
+<li><strong>8-bit 量化 (bitsandbytes)：</strong>70B × 1 byte = 70GB + overhead ≈ 78GB 勉強塞進 80GB</li>
+</ol>
+<p>推薦：<strong>4-bit AWQ</strong>，精度損失 <1% perplexity，速度接近 fp16 的 80%。</p>
+</details>
+
+<details open>
+<summary>Q3：你的 MoE 模型有 16 experts × 7B params each + 3B shared。設計 EP+TP+DP 策略 for 64 H100。</summary>
+<p><strong>答案：</strong></p>
+<p>總參數：16×7B + 3B = 115B（但每 token 只激活 2 experts = 14B + 3B = 17B）</p>
+<ul>
+<li><strong>EP=16：</strong>16 experts → 16 GPUs，每卡 1 expert (7B × 2 bytes = 14GB)</li>
+<li><strong>TP=1：</strong>7B 單卡放得下，不需 TP</li>
+<li><strong>DP=4：</strong>64 / 16 = 4 份 data parallel</li>
+</ul>
+<p>每卡記憶體：expert 14GB + shared 6GB + optimizer(ZeRO-1 on DP4) (7B×12/4)=21GB + activation ~10GB = 51GB ✅</p>
+<p>通訊：All-to-All for expert routing（每 token 需要送到正確 expert 所在的 GPU）。確保用 NVLink 或高速 IB。</p>
+</details>
+
+<details open>
+<summary>Q4：客戶說「我們只要微調 Llama-3-70B 加入 domain knowledge，預算 4 張 A100」。推薦方案？</summary>
+<p><strong>答案：</strong></p>
+<p>4 張 A100 = 320GB。Full fine-tuning 70B 需要 ~1,266GB → 不可能。</p>
+<p><strong>推薦：QLoRA (4-bit + LoRA rank=64)</strong></p>
+<ul>
+<li>模型 4-bit: 35GB（分到 4 卡各 ~9GB with device_map="auto"）</li>
+<li>LoRA params: ~0.14GB</li>
+<li>Optimizer: ~0.84GB</li>
+<li>Total per card: ~12GB → 可以用大 batch！</li>
+</ul>
+<p>或者 <strong>FSDP + LoRA (bf16)</strong> 如果精度要求高：模型 140GB/4=35GB/卡 + LoRA optimizer 夠放。</p>
+<p>QLoRA 效果通常接近 full fine-tuning 的 95%+，是預算有限的最佳選擇。</p>
+</details>
+
+<details open>
+<summary>Q5：面試終極題：從零設計 GPT-4 級別 (1.8T MoE) 的訓練基礎設施。需要多少 GPU？什麼並行策略？預估訓練時間？</summary>
+<p><strong>答案：</strong></p>
+<p>假設：1.8T params MoE (16 experts × 111B + shared 24B)，每 token 激活 2 experts (222B + 24B = 246B active)</p>
+<p><strong>記憶體估算：</strong></p>
+<ul>
+<li>每 expert 111B bf16 = 222GB → 單卡放不下 → 需要 TP</li>
+<li>TP=8 per expert: 222/8 = 27.5GB/卡</li>
+<li>EP=16: 16 experts 各佔 8 卡 = 128 卡 for experts</li>
+<li>PP=4: 把 shared layers + routing 分 4 stages</li>
+<li>DP=8: 數據並行</li>
+<li>Total: 128(EP×TP) × 4(PP) × 8(DP) ≈ <strong>4,096 H100</strong></li>
+</ul>
+<p><strong>訓練時間：</strong></p>
+<ul>
+<li>假設 10T tokens，MFU 40%</li>
+<li>FLOPS needed: 6 × 246B × 10T = 14.8e24 FLOPS</li>
+<li>4096 × H100 989 TFLOPS × 40% MFU = 1.62e18 FLOPS/sec</li>
+<li>Time = 14.8e24 / 1.62e18 = 9.1e6 sec ≈ <strong>105 天</strong></li>
+</ul>
+<p>這與已知 GPT-4 訓練規模（數千 A100，3-6 個月）一致。</p>
+</details>
+</div>
+
+</section>
+
+
+
+
+
+
+
+<h1 style="text-align:center; border:none; font-size:2em;">🔧 Part 4: Debug / Inference / 附錄 (Enhanced)</h1>
+<p style="text-align:center; color:#666;">增強版：術語表 + 前置知識 + 驗證考題 + code syntax highlighting</p>
+
+<!-- ============================================================ -->
+<section id="ch-debug">
+<h1>🔧 第十章：分散式訓練 Debug 實戰</h1>
+
+<!-- 📖 術語表 -->
+<div class="glossary-box">
+<h3>📖 術語表 — Chapter 10 核心概念</h3>
+<table>
+<tr><th>英文</th><th>中文</th><th>白話解釋</th><th>生活比喻</th></tr>
+<tr><td>OOM (Out of Memory)</td><td>記憶體溢出</td><td>GPU VRAM 不夠放模型+資料+中間計算結果</td><td>冰箱放不下所有食材，東西掉出來了</td></tr>
+<tr><td>CUDA Caching Allocator</td><td>CUDA 快取分配器</td><td>PyTorch 預先向 GPU 要一大塊記憶體，自己管理分配</td><td>先買一整層停車場，再自己分配車位給租戶</td></tr>
+<tr><td>Gradient Checkpointing</td><td>梯度檢查點</td><td>不存所有中間結果，需要時重新計算，用時間換空間</td><td>不抄筆記、考試時重新推導公式——省紙但花時間</td></tr>
+<tr><td>NaN (Not a Number)</td><td>非數值</td><td>計算結果無意義（0/0、∞-∞），會像病毒擴散到所有計算</td><td>一滴墨水掉進水缸，整缸水都染黑</td></tr>
+<tr><td>Gradient Explosion</td><td>梯度爆炸</td><td>梯度值越來越大，最終變成 Inf 或 NaN</td><td>麥克風對著喇叭 → 回音越來越大 → 爆音</td></tr>
+<tr><td>Gradient Clipping</td><td>梯度裁剪</td><td>把過大的梯度「砍」到固定上限</td><td>音量限制器：聲音再大也不超過某個分貝</td></tr>
+<tr><td>Mixed Precision</td><td>混合精度</td><td>用 fp16 算 forward（快），用 fp32 累加 gradient（準）</td><td>草稿用鉛筆快速畫，定稿才用精密尺</td></tr>
+<tr><td>Loss Scaling</td><td>損失縮放</td><td>fp16 太小的 gradient 會變成 0，先放大 loss 再算 gradient</td><td>拍微距照片時先放大鏡頭，拍完再縮回原尺寸</td></tr>
+<tr><td>Distributed Barrier</td><td>分散式柵欄</td><td>所有 GPU process 等到齊了才一起往下走</td><td>接力賽換棒：下一棒選手必須等前一棒跑到才能出發</td></tr>
+<tr><td>NCCL</td><td>NVIDIA 集體通訊庫</td><td>GPU 之間高效傳資料的底層函式庫（AllReduce 等）</td><td>快遞物流中心：負責把包裹在所有倉庫間同步</td></tr>
+<tr><td>Profiling</td><td>效能分析</td><td>測量程式每個部分花多少時間/記憶體</td><td>健康檢查：量血壓、驗血、照 X 光找出哪裡有問題</td></tr>
+<tr><td>Tiny Model</td><td>迷你模型</td><td>結構相同但參數極少的模型，用於快速驗證 pipeline</td><td>建築模型：1:100 比例的模型確認設計沒問題再蓋大樓</td></tr>
+</table>
+</div>
+
+<!-- 前置知識 -->
+<div class="prereq-box">
+<h3>📋 前置知識速覽 — 讀本章前你需要知道的</h3>
+<ul>
+<li><strong>Python pdb 基本操作</strong>：breakpoint()、n(next)、s(step)、p(print)、c(continue)</li>
+<li><strong>GPU vs CPU 記憶體</strong>：VRAM 是 GPU 專用記憶體（A100=80GB），RAM 是系統記憶體（通常更大）。兩者獨立，不能混用</li>
+<li><strong>PyTorch Tensor 基礎</strong>：.device（在哪張卡）、.dtype（精度）、.shape（維度）、.grad（梯度）</li>
+<li><strong>Forward / Backward</strong>：Forward = 從 input 算到 output；Backward = 從 loss 反向算每個參數的梯度</li>
+<li><strong>torch.distributed</strong>：多 GPU 訓練的通訊 API。rank = 每個 process 的編號，world_size = 總 process 數</li>
+<li><strong>環境變數</strong>：Linux 用 <code>export VAR=value</code> 或命令前加 <code>VAR=value python x.py</code></li>
+</ul>
+</div>
+
+<!-- 原有的 beginner box -->
+<div class="beginner-box">
+<h3>🌱 從零開始理解：為什麼 ML Debug 這麼難？</h3>
+<p><strong>生活比喻：</strong>想像你在指揮 8 個廚師同時煮同一道菜，每個人負責不同步驟。某一道菜出問題了，你要找出是哪個廚師、哪個步驟、哪個時間點出錯——而且所有廚師都在同時動作。</p>
+<p><strong>白話解釋：</strong>ML 訓練的 debug 難在：(1) 多 GPU/多機器同時執行，(2) 錯誤可能只在特定資料出現，(3) OOM 不告訴你「哪行 code 吃了記憶體」，(4) NaN 可能在幾千步後才爆炸。</p>
+<p><strong>為什麼工作上需要：</strong>訓練一個 7B 模型跑 3 天後 loss 變 NaN，如果不會系統性 debug，只能從頭重跑——浪費數千美元 GPU 費用。</p>
+<p><strong>先備知識：</strong>基本 Python debugging（pdb）、GPU 概念（VRAM vs RAM）、PyTorch tensor 基礎。</p>
+</div>
+
+<h2>10.1 CUDA OOM 系統性除錯</h2>
+
+<h3>OOM 錯誤解讀</h3>
+<pre><code class="language-python">"""
+概念：CUDA OOM 是 ML 最常見的錯誤
+當 GPU VRAM 不夠時，PyTorch 會拋出：
+RuntimeError: CUDA out of memory. Tried to allocate X GiB
+(Y GiB already allocated; Z GiB free; W GiB reserved)
+
+關鍵欄位解讀：
+- allocated = 你的 tensor 實際用了多少
+- reserved = PyTorch caching allocator 預留的總量
+- free = 當前可用
+- reserved - allocated = 記憶體碎片（被鎖住但沒用到的）
+"""
+import torch
+
+def print_gpu_memory(tag=""):
+    """即時印出 GPU 記憶體使用狀況"""
+    if torch.cuda.is_available():
+        allocated = torch.cuda.memory_allocated() / 1024**3
+        reserved = torch.cuda.memory_reserved() / 1024**3
+        max_allocated = torch.cuda.max_memory_allocated() / 1024**3
+        print(f"[{tag}] Allocated: {allocated:.2f} GB | "
+              f"Reserved: {reserved:.2f} GB | "
+              f"Peak: {max_allocated:.2f} GB | "
+              f"Fragmentation: {reserved - allocated:.2f} GB")
+
+# 在 training loop 的關鍵位置插入
+print_gpu_memory("Before forward")
+outputs = model(**batch)
+print_gpu_memory("After forward")   # ← 通常這裡是高峰
+loss = outputs.loss
+loss.backward()
+print_gpu_memory("After backward")
+optimizer.step()
+print_gpu_memory("After optimizer step")  # ← optimizer state 加入
+</code></pre>
+
+<h3>OOM 常見原因與解法</h3>
+<pre>
+┌─────────────────────────────────┬──────────────────────────────────────┐
+│ 原因                            │ 解法                                 │
+├─────────────────────────────────┼──────────────────────────────────────┤
+│ Batch size 太大                 │ 減半 batch，用 gradient accumulation │
+│ Activation 佔太多               │ gradient checkpointing               │
+│ Optimizer state (Adam=2x)       │ 換 Adafactor 或 8-bit Adam          │
+│ 記憶體碎片化                    │ torch.cuda.empty_cache() +           │
+│                                 │ 設定 max_split_size_mb               │
+│ DataLoader prefetch 太多        │ 減少 num_workers / prefetch_factor   │
+│ 沒有 del intermediate tensors   │ 手動 del + gc.collect()              │
+│ 模型太大放不進單卡              │ 用 model parallelism / offload       │
+└─────────────────────────────────┴──────────────────────────────────────┘
+</pre>
+
+<pre><code class="language-python"># Gradient Checkpointing：用計算換記憶體
+from torch.utils.checkpoint import checkpoint
+
+class CheckpointedTransformerBlock(nn.Module):
+    def forward(self, x):
+        # 不存 activation，backward 時重新計算
+        return checkpoint(self._forward_impl, x, use_reentrant=False)
+    
+    def _forward_impl(self, x):
+        x = x + self.attn(self.norm1(x))
+        x = x + self.ffn(self.norm2(x))
+        return x
+
+# HuggingFace 一行開啟：
+model.gradient_checkpointing_enable()
+</code></pre>
+
+<div class="qa-box">
+<h4>📝 理解確認</h4>
+<p><strong>Q1：</strong>PyTorch 報 OOM 時顯示 "74.12 GiB already allocated" 但 nvidia-smi 顯示 76.80 GiB used，差異從哪來？</p>
+<p><strong>A1：</strong>差異來自 PyTorch 的 caching allocator。"reserved" 是 PyTorch 向 CUDA 要來但還沒分配給 tensor 的記憶體池（為了避免頻繁 malloc）。nvidia-smi 看到的是 reserved 總量，而 allocated 是實際在用的。差值 = 記憶體碎片 + 預留池。</p>
+<p><strong>Q2：</strong>Gradient checkpointing 為什麼能省記憶體？代價是什麼？</p>
+<p><strong>A2：</strong>正常 forward 會保留所有 layer 的 activation 給 backward 用。Checkpointing 只保留少數 checkpoint 點的 activation，backward 到某段時重新 forward 計算。省 O(N) → O(√N) 記憶體，代價是約多 33% 計算時間（重算一次 forward）。</p>
+<p><strong>Q3：</strong>Adam optimizer 為什麼需要 2 倍 model parameter 的額外記憶體？</p>
+<p><strong>A3：</strong>Adam 對每個 parameter 維護兩個 state：(1) first moment (mean of gradients)，(2) second moment (mean of squared gradients)。每個都跟 parameter 同 shape 同 dtype，所以 7B params × fp32 × 2 states = 56 GB 額外記憶體。</p>
+</div>
+
+<h2>10.2 Tiny Model 快速開發技巧</h2>
+
+<div class="beginner-box">
+<h3>🌱 從零開始理解：為什麼要用 Tiny Model？</h3>
+<p><strong>生活比喻：</strong>建築師不會等 30 層大樓蓋好才驗收——先做模型確認設計對了。Tiny model 就是你的「建築模型」。</p>
+<p><strong>白話解釋：</strong>把 7B 模型縮小到 1M 參數，所有 code path 都一樣但 10 秒跑完。確認 pipeline 正確後再切回大模型。</p>
+</div>
+
+<pre><code class="language-python">from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+
+def create_tiny_model(model_name="meta-llama/Llama-2-7b-hf"):
+    """建立一個結構相同但超小的模型，用於驗證 training pipeline"""
+    config = AutoConfig.from_pretrained(model_name)
+    config.hidden_size = 64
+    config.intermediate_size = 128
+    config.num_hidden_layers = 2
+    config.num_attention_heads = 2
+    config.num_key_value_heads = 2
+    
+    model = AutoModelForCausalLM.from_config(config)
+    print(f"Tiny model params: {sum(p.numel() for p in model.parameters()):,}")
+    return model
+
+# 使用範例
+tiny_model = create_tiny_model()
+dummy_input = torch.randint(0, 100, (4, 128))
+outputs = tiny_model(input_ids=dummy_input, labels=dummy_input)
+print(f"Loss: {outputs.loss.item():.4f}")
+outputs.loss.backward()
+print("✅ Pipeline validated with tiny model")
+</code></pre>
+
+<h2>10.3 多節點 Debug 工具鏈</h2>
+
+<pre><code class="language-python"># ForkedPdb：多 GPU 環境的 breakpoint
+import sys, pdb
+import torch.distributed as dist
+
+class ForkedPdb(pdb.Pdb):
+    """在 forked process 中可用的 debugger"""
+    def interaction(self, *args, **kwargs):
+        _stdin = sys.stdin
+        try:
+            sys.stdin = open('/dev/stdin')
+            pdb.Pdb.interaction(self, *args, **kwargs)
+        finally:
+            sys.stdin = _stdin
+
+def distributed_breakpoint():
+    """只在 rank 0 設 breakpoint，其他 rank barrier 等待"""
+    if dist.get_rank() == 0:
+        ForkedPdb().set_trace()
+    dist.barrier()
+</code></pre>
+
+<pre><code class="language-bash"># CUDA_LAUNCH_BLOCKING：精確定位 GPU 錯誤
+$ CUDA_LAUNCH_BLOCKING=1 python train.py
+
+# py-spy：不停機 profiling
+$ py-spy top --pid 12345
+$ py-spy record -o profile.svg --pid 12345 --duration 30
+
+# strace：看 process 卡在哪個 syscall
+$ strace -p 12345 -e trace=network,file -f 2>&1 | head -50
+</code></pre>
+
+<h2>10.4 NaN / Inf 偵測與處理</h2>
+
+<pre><code class="language-python">import torch
+from torch import nn
+
+class NaNDetector:
+    """Hook-based NaN 偵測器：在每個 layer 的 output 檢查 NaN/Inf"""
+    def __init__(self, model):
+        self.hooks = []
+        self.nan_detected = False
+        for name, module in model.named_modules():
+            hook = module.register_forward_hook(self._make_hook(name))
+            self.hooks.append(hook)
+    
+    def _make_hook(self, name):
+        def hook(module, input, output):
+            if isinstance(output, torch.Tensor):
+                if torch.isnan(output).any():
+                    print(f"⚠️ NaN in: {name}, count={torch.isnan(output).sum()}")
+                    self.nan_detected = True
+                if torch.isinf(output).any():
+                    print(f"⚠️ Inf in: {name}, count={torch.isinf(output).sum()}")
+        return hook
+    
+    def remove_hooks(self):
+        for h in self.hooks:
+            h.remove()
+
+# Gradient Norm 監控
+def check_gradients(model, step, threshold=100.0):
+    total_norm = 0.0
+    for name, p in model.named_parameters():
+        if p.grad is not None:
+            param_norm = p.grad.data.norm(2).item()
+            total_norm += param_norm ** 2
+            if param_norm > threshold:
+                print(f"  🚨 Step {step}: {name} grad_norm={param_norm:.2f}")
+    return total_norm ** 0.5
+</code></pre>
+
+<h3>Debug 工作流程圖</h3>
+<pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                    ML Debug 系統性流程                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Training 出錯                                                   │
+│       │                                                          │
+│       ├── OOM? ──── → print_gpu_memory() 找高峰                 │
+│       │                 ├─ Forward 最高 → gradient checkpoint    │
+│       │                 ├─ Optimizer 暴增 → 8-bit Adam          │
+│       │                 └─ 碎片化 → empty_cache + restart        │
+│       │                                                          │
+│       ├── NaN/Inf? ── → NaNDetector hook 定位 layer             │
+│       │                  ├─ LayerNorm → 檢查 eps 值             │
+│       │                  ├─ Attention → 檢查 mask               │
+│       │                  └─ Loss → 檢查 log(0)                  │
+│       │                                                          │
+│       ├── Hang? ──── → strace -p PID                            │
+│       │                 ├─ futex → NCCL timeout                  │
+│       │                 ├─ read → DataLoader IO 瓶頸            │
+│       │                 └─ poll → 網路問題                       │
+│       │                                                          │
+│       └── 不收斂? ── → tiny model 驗證                          │
+│                         ├─ Tiny 也不收斂 → code bug             │
+│                         └─ Tiny 收斂 → hyperparameter 問題      │
+└─────────────────────────────────────────────────────────────────┘
+</pre>
+
+<h2>10.5 Memory Profiling 深入</h2>
+
+<pre><code class="language-python"># pytorch_memlab：逐行記憶體分析
+from pytorch_memlab import MemReporter, LineProfiler
+
+reporter = MemReporter(model)
+outputs = model(**batch)
+reporter.report()
+
+# torch.profiler：完整效能分析
+from torch.profiler import profile, record_function, ProfilerActivity
+
+with profile(
+    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+    record_shapes=True, profile_memory=True, with_stack=True,
+) as prof:
+    with record_function("training_step"):
+        outputs = model(**batch)
+        loss = outputs.loss
+        loss.backward()
+
+print(prof.key_averages().table(sort_by="self_cuda_memory_usage", row_limit=10))
+prof.export_chrome_trace("trace.json")
+</code></pre>
+
+<!-- Ch.10 驗證考題 -->
+<div class="quiz-box">
+<h3>🧪 第十章驗證考題</h3>
+
+<details open>
+<summary><strong>Q1：Your 70B model gets NaN at step 5000 — describe your systematic debug workflow step by step.</strong></summary>
+<p><strong>Answer：</strong></p>
+<ol>
+<li><strong>確認可重現性</strong>：固定 seed + 同筆 data 重跑。如果不能重現 → 可能是 race condition 或硬體問題</li>
+<li><strong>縮小搜索範圍</strong>：加 NaNDetector hook，找到第一個產生 NaN 的 layer name</li>
+<li><strong>檢查 gradient norm history</strong>：看 step 4990-5000 的 gradient norm 是否急速上升（gradient explosion 前兆）</li>
+<li><strong>檢查 loss scale</strong>：如果用 AMP，查看 loss scaler 是否頻繁 skip steps（grad_scaler._scale 變很小）</li>
+<li><strong>檢查該 batch 的資料</strong>：是否有異常 token（全是 padding、超長序列、label 有非法值）</li>
+<li><strong>開啟 detect_anomaly</strong>：<code>torch.autograd.set_detect_anomaly(True)</code> 定位 backward 中哪個 op 產生 NaN</li>
+<li><strong>常見 root cause</strong>：LayerNorm eps 太小 + fp16 underflow、attention score 沒加 mask 導致 softmax(-inf)、learning rate 過高導致 weight 發散</li>
+<li><strong>修復後驗證</strong>：gradient clipping (max_norm=1.0) + 降低 lr + 從 step 4900 checkpoint 恢復繼續訓練</li>
+</ol>
+</details>
+
+<details open>
+<summary><strong>Q2：Training 卡住 30 分鐘沒有任何 output，GPU utilization 顯示 0%。如何診斷？</strong></summary>
+<p><strong>Answer：</strong></p>
+<ol>
+<li><strong>strace -p PID</strong>：看 process 卡在什麼 syscall
+  <ul>
+  <li><code>futex(WAIT)</code> → 在等 lock，很可能是 NCCL collective op timeout（某個 rank 掛了或網路斷了）</li>
+  <li><code>read(fd=N)</code> blocking → DataLoader 在等 IO（NFS 慢、disk full）</li>
+  <li><code>poll()</code> → 在等網路事件</li>
+  </ul></li>
+<li><strong>檢查所有 node 的 rank process 是否存活</strong>：<code>pdsh -w node[0-3] "ps aux | grep train"</code></li>
+<li><strong>NCCL debug</strong>：重跑加 <code>NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=ALL</code> 看哪個 collective 卡住</li>
+<li><strong>常見原因</strong>：某個 node 的 GPU 掛了（ECC error）、InfiniBand 鏈路斷、某個 rank 的 DataLoader 遇到 corrupted file 卡在 retry</li>
+<li><strong>預防</strong>：設定 <code>NCCL_TIMEOUT=1800</code>（30min 後自動報錯而非永久卡住）、加 watchdog timer</li>
+</ol>
+</details>
+
+<details open>
+<summary><strong>Q3：你的 8×A100 訓練 OOM 了，但 nvidia-smi 顯示只用了 45GB/80GB。為什麼？如何解決？</strong></summary>
+<p><strong>Answer：</strong></p>
+<p><strong>原因</strong>：PyTorch caching allocator 的記憶體碎片化。雖然「總量」夠，但沒有一塊「連續」的空間能容納新的大 tensor allocation。</p>
+<p><strong>診斷</strong>：<code>torch.cuda.memory_summary()</code> 看 "Inactive" segments 是否很多 → 碎片化嚴重。</p>
+<p><strong>解法（按優先級）：</strong></p>
+<ol>
+<li><code>torch.cuda.empty_cache()</code> — 歸還未使用的 cached blocks 給 CUDA</li>
+<li>設定 <code>PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128</code> — 限制 allocator 切分 block 的最大 size，減少碎片</li>
+<li>減少 variable-length sequences（padding to fixed length 避免不同大小的 allocation）</li>
+<li>用 <code>PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True</code>（PyTorch 2.1+）讓 allocator 動態擴展 segment</li>
+</ol>
+</details>
+
+<details open>
+<summary><strong>Q4：如何用 Tiny Model 策略在 10 分鐘內驗證一個新的 training pipeline 是否正確？列出步驟和你會檢查的 assertions。</strong></summary>
+<p><strong>Answer：</strong></p>
+<ol>
+<li><strong>建立 tiny model</strong>：保持原始 architecture（attention type, positional encoding），只縮小 hidden_size=64, layers=2, heads=2</li>
+<li><strong>建立 tiny dataset</strong>：100 個 samples，sequence length=128，確保有 edge cases（空序列、最大長度）</li>
+<li><strong>跑 50 steps 檢查以下 assertions：</strong>
+  <ul>
+  <li>✅ Loss 在前 10 steps 單調下降（確認 gradient flow 正常）</li>
+  <li>✅ <code>loss.item() < initial_loss</code> after 50 steps</li>
+  <li>✅ 所有 parameters 的 <code>.grad is not None</code>（沒有 detached graph）</li>
+  <li>✅ gradient norm > 0 且 < 100（不是 vanishing 也不是 exploding）</li>
+  <li>✅ 沒有 NaN/Inf in any activation</li>
+  <li>✅ checkpoint save → load → 同 input 得到同 output（序列化正確）</li>
+  </ul></li>
+<li><strong>如果用 distributed</strong>：在 2 GPU 上跑 DDP tiny model，確認 loss 和 single-GPU 一致（gradient sync 正確）</li>
+</ol>
+</details>
+
+<details open>
+<summary><strong>Q5：Mixed precision training 中 loss scale 持續降到 1.0 且 training loss 停滯不動。診斷原因及修復方法。</strong></summary>
+<p><strong>Answer：</strong></p>
+<p><strong>症狀解讀</strong>：Loss scaler 反覆偵測到 Inf/NaN gradient → skip step → 降低 scale。當 scale 降到 1.0，fp16 gradient 已經沒有被放大，微小的 gradient 直接 underflow 成 0 → 模型停止學習。</p>
+<p><strong>Root Cause 排查：</strong></p>
+<ol>
+<li>某些 layer 的 weight magnitude 差異極大 → 部分 gradient 在 fp16 下 overflow</li>
+<li>Learning rate 太高 → gradient 爆炸 → scaler 不斷 skip</li>
+<li>某個 layer（通常是 embedding 或 final projection）不適合 fp16</li>
+</ol>
+<p><strong>修復：</strong></p>
+<ol>
+<li>降低 learning rate 2-4x</li>
+<li>對問題 layer 強制使用 fp32：<code>model.lm_head = model.lm_head.float()</code></li>
+<li>改用 bf16（不需要 loss scaling，因為 exponent range 和 fp32 一樣）</li>
+<li>增加 <code>growth_interval</code>（scaler 嘗試恢復的間隔步數）讓 scale 有時間穩定</li>
+</ol>
+</details>
+</div>
+
+</section>
+</code></pre>
+
+<!-- ============================================================ -->
+<section id="ch-inference">
+<h1>⚡ 第十一章：Inference 優化基礎</h1>
+
+<!-- 📖 術語表 -->
+<div class="glossary-box">
+<h3>📖 術語表 — Chapter 11 核心概念</h3>
+<table>
+<tr><th>英文</th><th>中文</th><th>白話解釋</th><th>生活比喻</th></tr>
+<tr><td>KV Cache</td><td>鍵值快取</td><td>存下已生成 token 的 Key/Value，避免每次重算所有 attention</td><td>考試寫計算題：把中間步驟寫在草稿紙上，下一題引用就好不用重算</td></tr>
+<tr><td>Autoregressive</td><td>自回歸生成</td><td>一次只產生一個 token，每個 token 依賴之前所有 token</td><td>寫書法：每個字必須等前一個字乾了才能寫下一個</td></tr>
+<tr><td>TTFT (Time to First Token)</td><td>首 token 延遲</td><td>從送出 prompt 到收到第一個回應 token 的時間</td><td>餐廳點菜後，第一道菜多久才上桌</td></tr>
+<tr><td>Throughput (TPS)</td><td>吞吐量</td><td>每秒生成多少 token（整個系統的處理能力）</td><td>工廠每小時能組裝幾台手機</td></tr>
+<tr><td>Quantization</td><td>量化</td><td>用更少 bits 表示模型權重（fp16→INT8→INT4）</td><td>把高清照片壓縮成中畫質 JPEG：檔案小很多，肉眼看差不多</td></tr>
+<tr><td>NF4 (NormalFloat4)</td><td>正態浮點4位</td><td>量化 level 按正態分佈 quantile 分配，比均勻 INT4 更精確</td><td>彩色筆 16 色：集中在常用的膚色/天空色附近，少見的螢光色只分 1 支</td></tr>
+<tr><td>Continuous Batching</td><td>連續批次處理</td><td>有 request 完成就立刻補新的進來，不等最慢的</td><td>火車月台：一班走了下一班馬上進站，不是等所有乘客上完才開</td></tr>
+<tr><td>PagedAttention</td><td>分頁注意力</td><td>KV Cache 像 OS 虛擬記憶體一樣分頁管理，避免碎片浪費</td><td>圖書館書架：書不需要連續排列，用索引卡找到每本書在哪個架位</td></tr>
+<tr><td>Tensor Parallelism (TP)</td><td>張量平行</td><td>單個 layer 的矩陣切分到多張 GPU，降低單卡 VRAM 需求</td><td>一張大拼圖分給 4 個人各拼一角，最後拼接起來</td></tr>
+<tr><td>Prefill Phase</td><td>預填充階段</td><td>處理整個 prompt 的 attention（compute-bound，高 GPU 利用率）</td><td>廚師一次性備好所有食材（花時間但很充實）</td></tr>
+<tr><td>Decode Phase</td><td>解碼階段</td><td>逐 token 生成（memory-bound，GPU 大部分時間在等記憶體）</td><td>一口一口慢慢吃：嘴巴（計算力）空著等筷子（記憶體）夾菜</td></tr>
+<tr><td>Speculative Decoding</td><td>推測解碼</td><td>小模型先猜一串 token，大模型一次驗證全部，命中就省時間</td><td>秘書先擬 5 封回信，主管一次批改 — 猜對的直接發出去</td></tr>
+</table>
+</div>
+
+<!-- 前置知識 -->
+<div class="prereq-box">
+<h3>📋 前置知識速覽 — 讀本章前你需要知道的</h3>
+<ul>
+<li><strong>Attention 機制</strong>：Q×K^T/√d → softmax → ×V。理解 Q, K, V 分別代表什麼（查詢、鍵、值）</li>
+<li><strong>模型前向傳播</strong>：input tokens → embedding → N layers of attention+FFN → output logits → argmax/sample → next token</li>
+<li><strong>GPU 記憶體計算</strong>：7B params × 2 bytes (fp16) = 14GB VRAM 光放模型，還沒算 KV Cache 和 activation</li>
+<li><strong>HTTP Server 基礎</strong>：API endpoint、request/response、並發(concurrency) 概念</li>
+<li><strong>數值精度</strong>：fp32 (4 bytes) > fp16/bf16 (2 bytes) > INT8 (1 byte) > INT4 (0.5 byte)。精度越低速度越快但可能掉品質</li>
+</ul>
+</div>
+
+<div class="beginner-box">
+<h3>🌱 從零開始理解：Training vs Inference 的根本差異</h3>
+<p><strong>生活比喻：</strong>Training 像是學生花一學期學會解題（慢但只做一次）。Inference 像是考試時要快速答題（每題都要快，而且同時很多學生在考）。</p>
+<p><strong>白話解釋：</strong>Training 追求的是最終品質（可以慢）。Inference 追求的是速度和成本：用戶等 3 秒就不耐煩了，而且同時可能有 1000 人在問。</p>
+</div>
+
+<h2>11.1 關鍵指標</h2>
+<pre>
+┌───────────────────────────────────────────────────────────────┐
+│              Inference 效能指標                                 │
+├───────────────┬───────────────────────────────────────────────┤
+│ Latency       │ 單一請求從發出到收到回應的時間                │
+│ Throughput    │ 單位時間處理的請求數 (tokens/sec, QPS)        │
+│ TTFT          │ Time to First Token：prompt → 第一個 output   │
+│ TPS           │ Tokens Per Second：生成速度                   │
+│ Cost/token    │ = GPU 費用 / 總生成 token 數                  │
+└───────────────┴───────────────────────────────────────────────┘
+</pre>
+
+<h2>11.2 KV Cache：Autoregressive 生成的核心概念</h2>
+
+<pre><code class="language-python"># KV Cache 記憶體估算
+def estimate_kv_cache_memory(
+    batch_size: int, seq_length: int, num_layers: int,
+    num_kv_heads: int, head_dim: int, dtype_bytes: int = 2,
+) -> float:
+    """
+    KV Cache size = 2 × layers × kv_heads × head_dim × seq_len × batch × dtype
+    '2' 因為要存 K 和 V 兩份
+    """
+    cache_bytes = (2 * num_layers * num_kv_heads * head_dim 
+                   * seq_length * batch_size * dtype_bytes)
+    return cache_bytes / (1024 ** 3)
+
+# Llama-2-70B: 32 concurrent 4K requests
+print(estimate_kv_cache_memory(
+    batch_size=32, seq_length=4096, num_layers=80,
+    num_kv_heads=8, head_dim=128, dtype_bytes=2,
+))  # → ~10 GB just for KV Cache
+</code></pre>
+
+<h2>11.3 Quantization 基礎</h2>
+
+<pre><code class="language-python"># 4-bit 量化載入 (bitsandbytes)
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-2-7b-hf",
+    quantization_config=quantization_config,
+    device_map="auto",
+)
+# 7B: fp16=14GB → 4bit=~4GB VRAM
+</code></pre>
+
+<pre>
+Llama-2-7B Quantization 品質比較：
+┌────────────┬──────────────┬────────────┐
+│ Precision  │ Perplexity   │ VRAM (GB)  │
+├────────────┼──────────────┼────────────┤
+│ FP16       │ 5.47         │ 14.0       │
+│ INT8       │ 5.48         │ 7.5        │
+│ INT4 (NF4) │ 5.53         │ 4.0        │
+│ INT4 (GPTQ)│ 5.51         │ 3.8        │
+└────────────┴──────────────┴────────────┘
+</pre>
+
+<h2>11.4 推論引擎比較</h2>
+<pre>
+┌──────────────┬─────────────────────────────────────────────────┐
+│ 引擎          │ 特點                                            │
+├──────────────┼─────────────────────────────────────────────────┤
+│ vLLM         │ PagedAttention, continuous batching, 最高吞吐    │
+│ TensorRT-LLM │ NVIDIA 官方, 極致 latency, 需 compile          │
+│ llama.cpp    │ CPU/Apple Silicon, GGUF, 無需 GPU              │
+│ SGLang       │ RadixAttention, structured generation           │
+└──────────────┴─────────────────────────────────────────────────┘
+</pre>
+
+<pre><code class="language-python"># vLLM 基本使用
+from vllm import LLM, SamplingParams
+
+llm = LLM(
+    model="meta-llama/Llama-2-7b-chat-hf",
+    tensor_parallel_size=2,
+    dtype="auto",
+    gpu_memory_utilization=0.9,
+)
+
+prompts = ["Explain quantum computing:", "Write a poem about AI:"]
+params = SamplingParams(temperature=0.7, max_tokens=256)
+outputs = llm.generate(prompts, params)
+</code></pre>
+
+<!-- Ch.11 驗證考題 -->
+<div class="quiz-box">
+<h3>🧪 第十一章驗證考題</h3>
+
+<details open>
+<summary><strong>Q1：你要 serve 一個 70B 模型給 100 concurrent users（每人 4K context）。計算需要多少 GPU，選擇什麼引擎，解釋 tradeoff。</strong></summary>
+<p><strong>Answer：</strong></p>
+<p><strong>記憶體計算：</strong></p>
+<ul>
+<li>Model weights (fp16): 70B × 2 bytes = 140 GB</li>
+<li>KV Cache (100 users × 4K): estimate_kv_cache_memory(100, 4096, 80, 8, 128, 2) ≈ 32 GB</li>
+<li>Activation + overhead: ~20 GB</li>
+<li>Total: ~192 GB VRAM minimum</li>
+</ul>
+<p><strong>GPU 選擇：</strong> 3× A100 80GB (TP=3) 或 2× H100 80GB (TP=2)。4× A100 更寬裕能支撐 burst。</p>
+<p><strong>引擎選擇：</strong> vLLM — 因為高 concurrent user 場景需要 continuous batching + PagedAttention 最大化 throughput。TensorRT-LLM 如果 latency 更重要（< 100ms TTFT）。</p>
+<p><strong>Tradeoff：</strong> TP=4 比 TP=2 延遲略高（多一次 AllReduce），但能容納更多 KV Cache。可以用 INT8 量化把 model 降到 70GB，省 1 張卡但 perplexity 升 0.01。</p>
+</details>
+
+<details open>
+<summary><strong>Q2：用戶抱怨 TTFT 太慢（5 秒），但 TPS 正常。分析可能原因及優化方案。</strong></summary>
+<p><strong>Answer：</strong></p>
+<p><strong>TTFT 慢 = Prefill 階段（處理 prompt）太慢。</strong></p>
+<p><strong>可能原因：</strong></p>
+<ol>
+<li><strong>Prompt 太長</strong>：4K+ tokens 的 prefill 在 70B 模型上本身就要幾秒。Prefill 是 compute-bound（O(n²) attention）</li>
+<li><strong>排隊等待</strong>：前面有很多 request 正在 decode，新 request 的 prefill 被排在後面</li>
+<li><strong>模型載入/冷啟動</strong>：第一個 request 觸發 model loading</li>
+<li><strong>KV Cache 分配延遲</strong>：需要為 4K context 預分配大塊 memory</li>
+</ol>
+<p><strong>優化方案：</strong></p>
+<ol>
+<li><strong>Chunked Prefill</strong>（vLLM 支援）：把長 prompt 切成小塊，穿插在 decode steps 之間，減少 head-of-line blocking</li>
+<li><strong>Prefix Caching</strong>：如果多個 request 共享相同 system prompt，cache 其 KV → TTFT 只需算 user-specific 部分</li>
+<li><strong>Speculative Decoding 的 prefill 優化</strong>：用小模型先做 prefill 得到初始 KV，大模型 verify</li>
+<li><strong>Separate prefill / decode pools</strong>：用不同的 GPU 群組分別處理 prefill-heavy 和 decode-heavy workload</li>
+</ol>
+</details>
+
+<details open>
+<summary><strong>Q3：INT4 量化後模型在特定 task（code generation）品質明顯下降，但 general QA 正常。如何診斷和修復？</strong></summary>
+<p><strong>Answer：</strong></p>
+<p><strong>診斷：</strong></p>
+<ol>
+<li><strong>Perplexity 分析</strong>：在 code corpus 上算 perplexity。如果 INT4 比 fp16 高 > 5% → 量化對 code token 有損傷</li>
+<li><strong>Layer-wise 分析</strong>：量化每一層後分別測品質，找到哪些層對 code 最敏感（通常是前幾層 embedding 和最後幾層 lm_head）</li>
+<li><strong>Token-level 比較</strong>：fp16 vs INT4 在相同 prompt 下的 top-5 token probability 差異</li>
+</ol>
+<p><strong>修復方案：</strong></p>
+<ol>
+<li><strong>Mixed-precision quantization</strong>：敏感層保持 fp16/INT8，其他層用 INT4（GPTQ 的 act_order=True 有幫助）</li>
+<li><strong>AWQ (Activation-Aware Quantization)</strong>：根據 calibration data 中每個 weight channel 的 activation magnitude 決定量化精度</li>
+<li><strong>Calibration dataset 換成 code</strong>：GPTQ/AWQ 的 calibration data 如果全是 prose text，量化可能犧牲 code-relevant 的 weight precision。混入 code 作為 calibration data 可改善</li>
+<li><strong>嘗試 GGUF Q5_K_M</strong>：比 Q4 多 1 bit 但品質顯著提升，compromise 方案</li>
+</ol>
+</details>
+
+<details open>
+<summary><strong>Q4：解釋 PagedAttention 如何解決 KV Cache 的記憶體碎片問題。和傳統方法相比省多少？</strong></summary>
+<p><strong>Answer：</strong></p>
+<p><strong>傳統方法的問題：</strong></p>
+<ul>
+<li>為每個 request 預分配 max_seq_len 的連續 KV Cache block（如 4096 tokens）</li>
+<li>但實際生成可能只用 200 tokens → 剩餘 3896 的空間浪費</li>
+<li>不同 request 長度不同，產生大量外部碎片</li>
+<li>實際 GPU memory utilization 通常只有 20-40%</li>
+</ul>
+<p><strong>PagedAttention 解法：</strong></p>
+<ul>
+<li>KV Cache 被切成固定大小的「page」（如 16 tokens/page）</li>
+<li>每個 request 按需分配 page（用了 200 tokens = 13 pages）</li>
+<li>Page 不需要物理連續 — 用 page table 映射（和 OS virtual memory 完全相同概念）</li>
+<li>Request 結束後 page 可以立刻回收給其他 request</li>
+</ul>
+<p><strong>節省量：</strong>vLLM 論文報告 PagedAttention 讓 throughput 提升 2-4x（相同硬體），因為能同時 serve 更多 concurrent requests（memory waste 從 60-80% 降到 < 4%）。</p>
+</details>
+
+<details open>
+<summary><strong>Q5：設計一個 production LLM serving 架構，要求支援 1000 QPS、P99 latency < 2s、成本最小化。畫出架構並解釋每個選擇。</strong></summary>
+<p><strong>Answer：</strong></p>
+<pre>
+┌─────────────────────────────────────────────────────────┐
+│                Production LLM Serving                     │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Client → Load Balancer → Router (by prompt length)     │
+│                              │                           │
+│              ┌───────────────┼───────────────┐           │
+│              ▼               ▼               ▼           │
+│         Short Pool      Medium Pool     Long Pool       │
+│        (< 512 tok)    (512-2K tok)    (2K-8K tok)       │
+│         4× H100         8× H100        4× H100         │
+│         TP=1            TP=2            TP=4            │
+│         INT4            INT8            FP16            │
+│                                                          │
+│  All pools: vLLM + continuous batching + prefix cache   │
+│  Autoscaler: scale on pending_requests metric           │
+│  Cache layer: Redis prefix cache for system prompts     │
+└─────────────────────────────────────────────────────────┘
+</pre>
+<p><strong>關鍵設計決策：</strong></p>
+<ol>
+<li><strong>按 prompt length 分流</strong>：短 prompt 用 INT4+TP1（低成本高吞吐），長 prompt 需要更多 VRAM 給 KV Cache</li>
+<li><strong>Prefix caching</strong>：如果 system prompt 相同（如客服場景），KV Cache 可共享 → TTFT 從 2s 降到 0.3s</li>
+<li><strong>Autoscaler</strong>：Kubernetes HPA 監控 queue depth，超過閾值 30s 內 spin up new pods</li>
+<li><strong>成本最小化</strong>：白天高峰用 on-demand，晚上用 spot instances。短 pool 最多（1000 QPS 大部分是短 request）</li>
+<li><strong>P99 < 2s</strong>：max_tokens 上限設為 512 for short pool，超過的 request 降級到 medium pool</li>
+</ol>
+</details>
+</div>
+
+</section>
+
+<!-- ============================================================ -->
+<section id="ch-misc">
+<h1>📚 第十二章：附錄與索引</h1>
+
+<h2>12.1 常用命令速查</h2>
+<pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                     常用 Debug 命令速查                           │
+├─────────────────────────────────────────────────────────────────┤
+│ GPU：  nvidia-smi / watch -n 1 nvidia-smi                       │
+│ Memory: torch.cuda.memory_summary() / max_memory_allocated()    │
+│ Debug: CUDA_LAUNCH_BLOCKING=1 / NCCL_DEBUG=INFO                 │
+│ Profile: py-spy top --pid PID / torch.profiler                  │
+│ Syscall: strace -p PID -e trace=network                         │
+│ NaN: torch.autograd.detect_anomaly() / set_anomaly_enabled      │
+│ Trace: prof.export_chrome_trace("x.json") → chrome://tracing    │
+└─────────────────────────────────────────────────────────────────┘
+</pre>
+
+<h2>12.2 全書知識點索引</h2>
+<pre>
+【基礎】Transformer, Attention, Tokenization, Loss .......... Ch.1-2
+【分散式】DDP, TP/PP, FSDP/ZeRO, AMP, NCCL ................ Ch.3-6
+【資料】Dataset, Streaming, DataLoader, Curriculum .......... Ch.7
+【訓練】LR Schedule, Grad Accum, Clipping, Weight Decay ..... Ch.8
+【Fine-tune】LoRA/QLoRA, RLHF/DPO, Instruction Tuning ...... Ch.9
+【Debug】OOM, Tiny Model, NaN Detection, Profiling .......... Ch.10
+【Inference】KV Cache, Quantization, vLLM, Serving .......... Ch.11
+</pre>
+
+<h2>12.3 推薦學習資源</h2>
+<pre>
+📖 必讀論文：Attention Is All You Need, Megatron-LM, ZeRO,
+             FlashAttention, LoRA, DPO
+🛠️ 框架：HuggingFace Transformers, DeepSpeed, PyTorch FSDP, vLLM
+📊 Benchmark：MMLU, HumanEval, MT-Bench, Open LLM Leaderboard
+🏋️ 練習：(1)Tiny model loop (2)DDP+grad accum (3)QLoRA 7B
+         (4)vLLM deploy (5)NaN detection hook
+</pre>
+
+<h2>12.4 術語對照表</h2>
+<pre>
+Activation = 中間層輸出    | Autoregressive = 自回歸生成
+Backward = 反向傳播        | Checkpoint = 模型存檔點
+Continuous batching = 連續批次 | Data parallelism = 資料平行
+Fine-tuning = 微調         | Gradient = 梯度
+Inference = 推論           | KV Cache = 鍵值快取
+LoRA = 低秩適配           | Mixed precision = 混合精度
+OOM = 記憶體溢出          | PagedAttention = 分頁注意力
+Quantization = 量化        | Tensor parallelism = 張量平行
+Throughput = 吞吐量        | Tokenizer = 分詞器
+VRAM = 顯存               | NCCL = GPU 集體通訊庫
+</pre>
+
+</section>
+
+<!-- Footer -->
+<section id="ebook-footer">
+<hr>
+<p style="text-align: center; color: #666; font-size: 0.9em;">
+📘 ML Engineering 分散式訓練完全攻略 — Part 4 Enhanced Edition<br>
+✨ 增強內容：12 term glossary × 2 chapters + 前置知識 + 10 驗證考題（含詳解）<br>
+© 2026 | Generated for learning purposes
+</p>
+</section>
+
+
+
+
+
+
+<hr>
+<p style="text-align: center; color: #666; font-size: 0.9em;">
+📘 ML Engineering 分散式訓練完全攻略 v2（增強版）— 全書完結<br>
+每章含：📖 術語表 | 📋 前置知識 | 🧪 驗證考題 | 🌱 從零理解 | Python 範例<br>
+© 2026 | Based on <a href="https://github.com/stas00/ml-engineering">stas00/ml-engineering</a>
+</p>
+<script>hljs.highlightAll();</script>
+</body>
+</html>
