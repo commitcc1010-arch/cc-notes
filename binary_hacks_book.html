@@ -36,7 +36,17 @@ hr { border: none; border-top: 2px solid #333; margin: 3rem 0; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
-<script>document.addEventListener("DOMContentLoaded",()=>hljs.highlightAll());</script>
+<script>
+// highlightAll() would re-tokenise the Pygments-highlighted blocks and throw away
+// their existing spans, so only touch blocks that carry no markup yet.
+document.addEventListener("DOMContentLoaded", function () {
+  if (!window.hljs) return;
+  document.querySelectorAll("pre code").forEach(function (el) {
+    if (el.querySelector("span")) return;
+    hljs.highlightElement(el);
+  });
+});
+</script>
 
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 900px; margin: 0 auto; padding: 2rem; background: #fff; color: #24292e; }
@@ -55,6 +65,79 @@ hr { border: none; border-top: 2px solid #333; margin: 3rem 0; }
   tr:nth-child(even) { background: #fafbfc; }
   .interview-followup { background: #fffbeb !important; }
   a { color: #0366d6; }
+</style>
+<style>
+/* Pygments light token colours (code blocks were rendering unstyled) */
+.codehilite { background: transparent; }
+.codehilite .hll { background-color: #ffffcc }
+.codehilite .c { color: #60A0B0; font-style: italic }
+.codehilite .err { border: 1px solid #F00 }
+.codehilite .k { color: #007020; font-weight: bold }
+.codehilite .o { color: #666 }
+.codehilite .ch { color: #60A0B0; font-style: italic }
+.codehilite .cm { color: #60A0B0; font-style: italic }
+.codehilite .cp { color: #007020 }
+.codehilite .cpf { color: #60A0B0; font-style: italic }
+.codehilite .c1 { color: #60A0B0; font-style: italic }
+.codehilite .cs { color: #60A0B0; background-color: #FFF0F0 }
+.codehilite .gd { color: #A00000 }
+.codehilite .ge { font-style: italic }
+.codehilite .ges { font-weight: bold; font-style: italic }
+.codehilite .gr { color: #F00 }
+.codehilite .gh { color: #000080; font-weight: bold }
+.codehilite .gi { color: #00A000 }
+.codehilite .go { color: #888 }
+.codehilite .gp { color: #C65D09; font-weight: bold }
+.codehilite .gs { font-weight: bold }
+.codehilite .gu { color: #800080; font-weight: bold }
+.codehilite .gt { color: #04D }
+.codehilite .kc { color: #007020; font-weight: bold }
+.codehilite .kd { color: #007020; font-weight: bold }
+.codehilite .kn { color: #007020; font-weight: bold }
+.codehilite .kp { color: #007020 }
+.codehilite .kr { color: #007020; font-weight: bold }
+.codehilite .kt { color: #902000 }
+.codehilite .m { color: #40A070 }
+.codehilite .s { color: #4070A0 }
+.codehilite .na { color: #4070A0 }
+.codehilite .nb { color: #007020 }
+.codehilite .nc { color: #0E84B5; font-weight: bold }
+.codehilite .no { color: #60ADD5 }
+.codehilite .nd { color: #555; font-weight: bold }
+.codehilite .ni { color: #D55537; font-weight: bold }
+.codehilite .ne { color: #007020 }
+.codehilite .nf { color: #06287E }
+.codehilite .nl { color: #002070; font-weight: bold }
+.codehilite .nn { color: #0E84B5; font-weight: bold }
+.codehilite .nt { color: #062873; font-weight: bold }
+.codehilite .nv { color: #BB60D5 }
+.codehilite .ow { color: #007020; font-weight: bold }
+.codehilite .w { color: #BBB }
+.codehilite .mb { color: #40A070 }
+.codehilite .mf { color: #40A070 }
+.codehilite .mh { color: #40A070 }
+.codehilite .mi { color: #40A070 }
+.codehilite .mo { color: #40A070 }
+.codehilite .sa { color: #4070A0 }
+.codehilite .sb { color: #4070A0 }
+.codehilite .sc { color: #4070A0 }
+.codehilite .dl { color: #4070A0 }
+.codehilite .sd { color: #4070A0; font-style: italic }
+.codehilite .s2 { color: #4070A0 }
+.codehilite .se { color: #4070A0; font-weight: bold }
+.codehilite .sh { color: #4070A0 }
+.codehilite .si { color: #70A0D0; font-style: italic }
+.codehilite .sx { color: #C65D09 }
+.codehilite .sr { color: #235388 }
+.codehilite .s1 { color: #4070A0 }
+.codehilite .ss { color: #517918 }
+.codehilite .bp { color: #007020 }
+.codehilite .fm { color: #06287E }
+.codehilite .vc { color: #BB60D5 }
+.codehilite .vg { color: #BB60D5 }
+.codehilite .vi { color: #BB60D5 }
+.codehilite .vm { color: #BB60D5 }
+.codehilite .il { color: #40A070 }
 </style>
 </head>
 <body>
@@ -465,7 +548,7 @@ nm<span class="w"> </span>-D<span class="w"> </span>libcrypto.so<span class="w">
 過濾策略包括：(1) 用 <code>-e l</code> 或 <code>-e L</code> 指定只找 UTF-16LE/BE 字串（Windows malware 常用寬字元）；(2) 搭配 grep 過濾已知 pattern（URL、IP、registry path、API name）；(3) 用 <code>-t x</code> 顯示 offset，再與 section 位址交叉比對，只看 <code>.rodata</code> 和 <code>.data</code> section 中的字串（跳過 <code>.text</code> 中的假字串）；(4) 用 FLOSS（FireEye Labs Obfuscated String Solver）自動解碼被 XOR/Base64 混淆的字串；(5) 用 <code>rabin2 -z</code>（radare2）或 <code>binaryai</code> 做結構化字串提取，可區分 data section vs code section。進階替代：<code>binwalk -B</code> 做 entropy 分析找出加密/壓縮區塊，<code>pe-sieve</code>（Windows）做記憶體掃描。
 </blockquote></details>
 <details open><summary><strong>Q4: 在 production 環境中，大部分 binary 都被 <code>strip</code> 過（移除 symbol table）。當你面對一個 stripped binary 的 crash dump，且沒有原始碼，你的除錯策略是什麼？</strong></summary><blockquote>
-策略分幾個層次：(1) 用 <code>readelf -S</code> 確認是否還有 <code>.dynsym</code>（動態符號表，strip 通常保留），至少能看到外部函式呼叫；(2) 如果有 separate debug symbols（通常在 <code>/usr/lib/debug/</code> 或透過 debuginfod），用 <code>gdb</code> 的 <code>set debuginfod enabled on</code> 自動下載；(3) 用 <code>addr2line -e binary -a <crash_address></code> 嘗試映射位址（需要 debug info）；(4) 沒有任何 symbol 時，用 IDA Pro/Ghidra 做反編譯，根據 calling convention 和字串交叉引用推斷函式邊界；(5) 對照 package manager 安裝相同版本的 debuginfo package（如 <code>yum install binary-debuginfo</code>）。Amazon 內部的 binary 通常會把 debug symbols 發布到 separate artifact，可用 <code>eu-unstrip</code> 重新附加。
+策略分幾個層次：(1) 用 <code>readelf -S</code> 確認是否還有 <code>.dynsym</code>（動態符號表，strip 通常保留），至少能看到外部函式呼叫；(2) 如果有 separate debug symbols（通常在 <code>/usr/lib/debug/</code> 或透過 debuginfod），用 <code>gdb</code> 的 <code>set debuginfod enabled on</code> 自動下載；(3) 用 <code>addr2line -e binary -a &lt;crash_address&gt;</code> 嘗試映射位址（需要 debug info）；(4) 沒有任何 symbol 時，用 IDA Pro/Ghidra 做反編譯，根據 calling convention 和字串交叉引用推斷函式邊界；(5) 對照 package manager 安裝相同版本的 debuginfo package（如 <code>yum install binary-debuginfo</code>）。Amazon 內部的 binary 通常會把 debug symbols 發布到 separate artifact，可用 <code>eu-unstrip</code> 重新附加。
 </blockquote></details>
 <details open><summary><strong>Q5: 假設你在一台沒有 <code>file</code>、<code>readelf</code>、<code>objdump</code> 等工具的最小化 container 中（只有 busybox），你如何判斷一個未知檔案是什麼類型？請描述你的手動分析流程。</strong></summary><blockquote>
 在極簡環境中：(1) <code>hexdump -C file | head -4</code> 或 <code>dd if=file bs=1 count=16 | od -A x -t x1z</code> 查看前 16 bytes 的 magic；(2) 手動比對常見 magic：<code>7f454c46</code>=ELF, <code>504b0304</code>=ZIP, <code>89504e47</code>=PNG, <code>25504446</code>=PDF, <code>4d5a</code>=PE；(3) 對 ELF 進一步：第 5 byte 判斷 class（01=32bit, 02=64bit），第 6 byte 判斷 endianness（01=LE, 02=BE），第 18-19 bytes 判斷 machine（3e00=x86-64, 2800=ARM）；(4) <code>cat file | grep -ao '[[:print:]]\{4,\}'</code> 模擬 strings 功能；(5) 用 <code>dd</code> 跳過 header 提取特定 offset 的資料。這個技能在 forensics 和 embedded 環境中極其重要，因為你不能總是依賴工具鏈的存在。
@@ -4105,11 +4188,11 @@ General Dynamic 模型透過 <code>__tls_get_addr()</code> 函數動態查找，
 - 只能用 compile-time constant 初始化<br>
 - 沒有 thread exit 時的 destructor<br>
 - 最輕量（直接 TLS 存取，無額外 runtime 支援）<br><br>
-<code>_Thread_local</code>（C11 / <code><threads.h></code>）：<br>
+<code>_Thread_local</code>（C11 / <code>&lt;threads.h&gt;</code>）：<br>
 - 等同 __thread 的語義（C 沒有 constructor/destructor）<br>
 - 標準化版本，所有 C11 compiler 都支持<br>
 - 通常 #define _Thread_local __thread（GCC 實作）<br><br>
-<code>thread_local</code>（C++11 / <code><thread></code>）：<br>
+<code>thread_local</code>（C++11 / <code>&lt;thread&gt;</code>）：<br>
 - 支持 non-trivial constructor/destructor<br>
 - 可以用 runtime expression 初始化<br>
 - 有 thread exit 時自動呼叫 destructor 的保證<br>
@@ -5289,7 +5372,7 @@ patchelf 的做法是在 ELF 檔案開頭插入新的 LOAD segment（或擴展�
 <summary>Q2: 為什麼 NixOS 需要 patchelf？普通發行版不需要？</summary>
 
 <strong>答案</strong>：普通發行版（Ubuntu、Fedora）所有套件共享同一個 glibc 和 ld-linux.so，路徑固定在 <code>/lib64/</code>。但 NixOS 的設計哲學是：
-- 每個套件版本有獨立的目錄（<code>/nix/store/<hash>/</code>）
+- 每個套件版本有獨立的目錄（<code>/nix/store/&lt;hash&gt;/</code>）
 - 同一系統可以有多個版本的 glibc 共存
 - 不同程式可以依賴不同版本的 .so
 
@@ -6485,7 +6568,7 @@ mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>gre
 <h3 style="color: #b08800;margin-top:2rem;">🎤 Follow-up Interview Questions</h3>
 <div class="interview-followup" style="margin-left:1rem;border-left: 3px solid #b08800;padding-left:1rem;">
 <details open><summary><strong>Q: cgroup v2 的 memory.high 和 memory.max 行為差異是什麼？為什麼 K8s 同時需要 memory.low 和 memory.max？設計考量為何？</strong></summary><blockquote>
-memory.max 是硬上限，超過就觸發 OOM kill（程序被殺）。memory.high 是軟上限，超過時 kernel 會對該 cgroup 施加記憶體回收壓力（throttle allocation），程序變慢但不會被殺。memory.low 是記憶體保護線，低於此值時 kernel 不會回收該 cgroup 的記憶體（即使系統整體記憶體壓力大）。K8s 的設計：requests.memory → memory.low（保證最低可用量），limits.memory → memory.max（防止失控）。這實現了 QoS 分層：Guaranteed pod 的 low=max（完全保護），Burstable pod 的 low<max（可以超用但有上限），BestEffort pod 沒設定（系統壓力時最先被回收）。
+memory.max 是硬上限，超過就觸發 OOM kill（程序被殺）。memory.high 是軟上限，超過時 kernel 會對該 cgroup 施加記憶體回收壓力（throttle allocation），程序變慢但不會被殺。memory.low 是記憶體保護線，低於此值時 kernel 不會回收該 cgroup 的記憶體（即使系統整體記憶體壓力大）。K8s 的設計：requests.memory → memory.low（保證最低可用量），limits.memory → memory.max（防止失控）。這實現了 QoS 分層：Guaranteed pod 的 low=max（完全保護），Burstable pod 的 low&lt;max（可以超用但有上限），BestEffort pod 沒設定（系統壓力時最先被回收）。
 </blockquote></details>
 <details open><summary><strong>Q: 解釋 CPU throttling 的具體機制。cpu.max = "100000 100000" 和 cpu.max = "200000 100000" 在排程器層面有什麼不同？CFS bandwidth throttling 如何影響 tail latency？</strong></summary><blockquote>
 cpu.max 格式是 "quota period"（微秒）。CFS（Completely Fair Scheduler）用 bandwidth control：每個 period（通常 100ms）重置 quota。"100000 100000" = 每 100ms 可用 100ms CPU = 1 core。"200000 100000" = 每 100ms 可用 200ms = 2 cores（可以用兩個核心各跑 100ms）。throttling 發生時：quota 用完 → 該 cgroup 所有 runnable threads 被移出 run queue → 等到下一個 period 才能繼續。這造成嚴重的 tail latency spike：假設一個請求在 period 末尾到達，quota 已耗盡，它可能要等最多 100ms 才能執行。解法：1) 不設 cpu limits（只用 requests 做權重），2) 加大 period 減少 throttle 頻率，3) 用 cpu.weight 替代硬限制。Google 內部建議不設 CPU limits。
@@ -6497,7 +6580,7 @@ PSI 量化資源壓力程度，提供三個指標：some（至少有一個 task 
 cgroup v2 規定：如果一個 cgroup 有子 cgroup 且啟用了 controller（subtree_control 非空），那該 cgroup 本身不能有 process（只有葉節點可以有 process）。原因：資源計量的語義不明確——如果父 cgroup 有 process 也有子 cgroup，memory.current 該怎麼算？子 cgroup 的 memory.max 和父 cgroup 的 process 如何互動？v1 允許這樣做但語義混亂，v2 直接禁止。對 systemd 的影響：systemd 用 slice → scope/service 的階層。每個 service 必須在自己的子 cgroup（leaf）中，slice 只做組織不放 process。例如 <code>/sys/fs/cgroup/system.slice/docker.service/</code> 是 leaf 放 dockerd process，<code>system.slice</code> 本身不放任何 process。
 </blockquote></details>
 <details open><summary><strong>Q: 在生產環境中，如何診斷一個容器被 CPU throttled 了？throttled 的症狀和 OOM killed 的症狀有何不同？</strong></summary><blockquote>
-診斷 CPU throttling：讀取 <code>cpu.stat</code> 中的 <code>nr_throttled</code>（被 throttle 次數）和 <code>throttled_usec</code>（累計 throttle 時間）。症狀差異：OOM kill 是程序直接消失（exit code 137, SIGKILL），throttle 是程序變慢但還活著（延遲升高、throughput 下降）。K8s 中用 <code>kubectl top pod</code> 看到 CPU 接近 limits 就是 throttle 警訊。具體診斷步驟：1) <code>cat /sys/fs/cgroup/<pod-cgroup>/cpu.stat | grep throttled</code> 2) 用 Prometheus 的 <code>container_cpu_cfs_throttled_periods_total</code> 指標 3) 比較 <code>container_cpu_usage_seconds_total</code> 和 limits 的比值。修復：增加 cpu limits、移除 cpu limits（只用 requests）、或優化應用的 CPU 使用模式（避免 burst）。
+診斷 CPU throttling：讀取 <code>cpu.stat</code> 中的 <code>nr_throttled</code>（被 throttle 次數）和 <code>throttled_usec</code>（累計 throttle 時間）。症狀差異：OOM kill 是程序直接消失（exit code 137, SIGKILL），throttle 是程序變慢但還活著（延遲升高、throughput 下降）。K8s 中用 <code>kubectl top pod</code> 看到 CPU 接近 limits 就是 throttle 警訊。具體診斷步驟：1) <code>cat /sys/fs/cgroup/&lt;pod-cgroup&gt;/cpu.stat | grep throttled</code> 2) 用 Prometheus 的 <code>container_cpu_cfs_throttled_periods_total</code> 指標 3) 比較 <code>container_cpu_usage_seconds_total</code> 和 limits 的比值。修復：增加 cpu limits、移除 cpu limits（只用 requests）、或優化應用的 CPU 使用模式（避免 burst）。
 </blockquote></details>
 </div>
 
@@ -7744,13 +7827,13 @@ grep<span class="w"> </span>ISOLATED<span class="w"> </span>/etc/environment<spa
 /proc/PID/root：存取該程序看到的 filesystem（經過 chroot/pivot_root 後的視圖），相當於 open 檔案。/proc/PID/mem：直接讀寫該程序的虛擬記憶體空間，可以修改 code/data in-flight。Process injection 手法：1) <code>open("/proc/PID/mem", O_RDWR)</code> 2) <code>lseek</code> 到目標位址（從 /proc/PID/maps 找到可寫區域）3) <code>write</code> shellcode 到 stack 或 mapped region 4) 修改 instruction pointer（透過 ptrace 或 overwrite return address）。防禦：1) ptrace_scope=1 以上 2) Drop CAP_SYS_PTRACE 3) SELinux/AppArmor deny ptrace 4) seccomp 禁止 process_vm_writev 5) 不給容器 SYS_PTRACE capability。K8s Pod 預設不能互相 ptrace，除非設定 <code>shareProcessNamespace: true</code> 且有 SYS_PTRACE。
 </blockquote></details>
 <details open><summary><strong>Q: 在 Kubernetes 中使用 ephemeral debug container 時，它如何存取目標容器的 filesystem？shareProcessNamespace 的底層原理是什麼？</strong></summary><blockquote>
-<code>kubectl debug</code> 建立 ephemeral container 時，K8s 將新容器加入同一 Pod。如果設定了 <code>--target=<container></code>，新容器會共享目標容器的 PID namespace。底層：kubelet 呼叫 CRI 的 <code>CreateContainer</code> 時指定 <code>LinuxContainerConfig.SecurityContext.NamespaceOptions.Pid = TARGET</code>，讓新容器的 PID NS = 目標容器的 PID NS。結果：debug container 可以看到目標的所有程序（<code>ps aux</code>），並透過 <code>/proc/<target-pid>/root</code> 存取目標的 filesystem。<code>shareProcessNamespace: true</code> 是 Pod 層級設定，讓所有容器共享同一個 PID NS（不只是 debug container）。沒設這個的話，各容器有獨立 PID NS，看不到彼此。安全考量：debug container 通常有更多工具（如 strace、tcpdump），但透過 RBAC 限制誰能 <code>kubectl debug</code>。
+<code>kubectl debug</code> 建立 ephemeral container 時，K8s 將新容器加入同一 Pod。如果設定了 <code>--target=&lt;container&gt;</code>，新容器會共享目標容器的 PID namespace。底層：kubelet 呼叫 CRI 的 <code>CreateContainer</code> 時指定 <code>LinuxContainerConfig.SecurityContext.NamespaceOptions.Pid = TARGET</code>，讓新容器的 PID NS = 目標容器的 PID NS。結果：debug container 可以看到目標的所有程序（<code>ps aux</code>），並透過 <code>/proc/&lt;target-pid&gt;/root</code> 存取目標的 filesystem。<code>shareProcessNamespace: true</code> 是 Pod 層級設定，讓所有容器共享同一個 PID NS（不只是 debug container）。沒設這個的話，各容器有獨立 PID NS，看不到彼此。安全考量：debug container 通常有更多工具（如 strace、tcpdump），但透過 RBAC 限制誰能 <code>kubectl debug</code>。
 </blockquote></details>
 <details open><summary><strong>Q: 容器已經被刪除（docker rm）後，OverlayFS 的 layer 資料是否立即消失？如何做 forensics（數位鑑識）恢復已刪除容器的檔案？</strong></summary><blockquote>
-<code>docker rm</code> 的行為：1) 刪除 container metadata（/var/lib/docker/containers/<id>/）2) 刪除 OverlayFS 的 upperdir（/var/lib/docker/overlay2/<id>/diff/）3) image layers（lowerdir）不受影響（可能被其他容器共用）。Forensics 恢復方法：1) <strong>未被 trim 的 disk</strong>：使用 <code>extundelete</code> 或 <code>photorec</code> 恢復 ext4 上被刪除的檔案 2) <strong>Docker logging</strong>：container stdout/stderr 仍在 /var/lib/docker/containers/<id>/ 的 log 檔案中（docker rm 才刪）3) <strong>auditd/falco 記錄</strong>：如果事先有開 audit，syscall 記錄仍存在 4) <strong>overlay2 的 <code>l/</code> 目錄</strong>：短連結可能殘留 5) <strong>memory forensics</strong>：用 <code>LiME</code> dump host memory，可能找到 page cache 中的殘留資料。預防措施：production 應設定 <code>--log-driver=json-file --log-opt max-size=100m</code> 並外送到集中式 log 系統。
+<code>docker rm</code> 的行為：1) 刪除 container metadata（/var/lib/docker/containers/&lt;id&gt;/）2) 刪除 OverlayFS 的 upperdir（/var/lib/docker/overlay2/&lt;id&gt;/diff/）3) image layers（lowerdir）不受影響（可能被其他容器共用）。Forensics 恢復方法：1) <strong>未被 trim 的 disk</strong>：使用 <code>extundelete</code> 或 <code>photorec</code> 恢復 ext4 上被刪除的檔案 2) <strong>Docker logging</strong>：container stdout/stderr 仍在 /var/lib/docker/containers/&lt;id&gt;/ 的 log 檔案中（docker rm 才刪）3) <strong>auditd/falco 記錄</strong>：如果事先有開 audit，syscall 記錄仍存在 4) <strong>overlay2 的 <code>l/</code> 目錄</strong>：短連結可能殘留 5) <strong>memory forensics</strong>：用 <code>LiME</code> dump host memory，可能找到 page cache 中的殘留資料。預防措施：production 應設定 <code>--log-driver=json-file --log-opt max-size=100m</code> 並外送到集中式 log 系統。
 </blockquote></details>
 <details open><summary><strong>Q: 解釋 hidepid mount 選項（hidepid=0/1/2/invisible）對容器安全的影響。在多租戶環境中如何配置 /proc 來防止資訊洩漏？</strong></summary><blockquote>
-hidepid 控制 /proc 中其他使用者程序的可見性：<strong>hidepid=0</strong>（預設）：所有人可以看到所有 /proc/PID（完整資訊）。<strong>hidepid=1</strong>：可以看到 /proc/PID 目錄存在，但不能讀 cmdline、environ、fd 等敏感檔案。<strong>hidepid=2</strong>：完全看不到其他使用者的 /proc/PID。<strong>hidepid=invisible</strong>（Linux 5.8+）：和 2 相同但更精確的 permission 模型。容器安全：Docker/K8s 為每個容器 mount 獨立的 /proc（PID NS 隔離），所以 hidepid 主要影響 host 層面。但在 <code>shareProcessNamespace: true</code> 的 Pod 中，所有容器共享 /proc，此時 hidepid 無效（因為都在同一 NS）。多租戶配置：host 設 hidepid=2 + gid=<docker-group>（讓 container runtime 能管理所有容器），結合 cgroup NS 隔離讓容器只看到自己的 cgroup tree。
+hidepid 控制 /proc 中其他使用者程序的可見性：<strong>hidepid=0</strong>（預設）：所有人可以看到所有 /proc/PID（完整資訊）。<strong>hidepid=1</strong>：可以看到 /proc/PID 目錄存在，但不能讀 cmdline、environ、fd 等敏感檔案。<strong>hidepid=2</strong>：完全看不到其他使用者的 /proc/PID。<strong>hidepid=invisible</strong>（Linux 5.8+）：和 2 相同但更精確的 permission 模型。容器安全：Docker/K8s 為每個容器 mount 獨立的 /proc（PID NS 隔離），所以 hidepid 主要影響 host 層面。但在 <code>shareProcessNamespace: true</code> 的 Pod 中，所有容器共享 /proc，此時 hidepid 無效（因為都在同一 NS）。多租戶配置：host 設 hidepid=2 + gid=&lt;docker-group&gt;（讓 container runtime 能管理所有容器），結合 cgroup NS 隔離讓容器只看到自己的 cgroup tree。
 </blockquote></details>
 </div>
 
@@ -8268,7 +8351,7 @@ rr 選擇 "retired conditional branches" 的原因：1) 它在確定性程式碼
 rr chaos mode 不只是隨機排程，它使用多種策略：1) <strong>Priority randomization</strong>：給每個 thread 隨機優先級，讓平常不會先跑的 thread 先跑。2) <strong>Timeslice variation</strong>：每個 thread 的 time quantum 隨機（1-100 events），製造不同的交錯模式。3) <strong>Syscall delay injection</strong>：在某些 syscall 前隨機加延遲，模擬 I/O 慢的情況。4) <strong>Signal delivery timing</strong>：signal 在不同指令處 deliver。比純隨機好的原因：pure random 的覆蓋空間太大（N threads × M instructions = 指數級組合），chaos mode 基於啟發式集中在「最可能觸發 bug 的交錯模式」。例如：刻意在 lock acquisition 前切換 thread、在 shared variable access 附近切換。實測中 chaos mode 比 pure random 觸發 race 的效率高 5-10x。搭配多次 record 跑（<code>for i in $(seq 100); do rr record --chaos ./prog; done</code>）。
 </blockquote></details>
 <details open><summary><strong>Q: rr 能除錯多程序（fork）的場景嗎？如何追蹤一個 fork 後的子程序？daemon 化（double fork）的程式如何處理？</strong></summary><blockquote>
-rr 完整支援 fork：<code>rr record</code> 會追蹤所有子程序（包括 fork、vfork、clone）。trace 中包含所有程序/thread 的完整歷史。replay 時：<code>rr replay -p <pid></code> 可以指定只除錯某個子程序，或 <code>rr replay</code> 預設從主程序開始但可以 <code>info threads</code> 看到所有 fork 的程序。daemon 化（double fork）：rr 會自動追蹤，因為它 ptrace 的是 thread group 所有成員。replay 時可以：1) <code>when</code> 查看 event number 2) <code>run <event></code> 跳到子程序的特定點 3) breakpoint 設在子程序的函式。限制：rr 不支援跨機器的 fork（如 SSH 到另一台機器執行），且 exec 另一個程式時新程式也會被記錄（trace 會很大）。<code>rr ps</code> 列出 trace 中所有程序的 PID/exit status/event range。
+rr 完整支援 fork：<code>rr record</code> 會追蹤所有子程序（包括 fork、vfork、clone）。trace 中包含所有程序/thread 的完整歷史。replay 時：<code>rr replay -p &lt;pid&gt;</code> 可以指定只除錯某個子程序，或 <code>rr replay</code> 預設從主程序開始但可以 <code>info threads</code> 看到所有 fork 的程序。daemon 化（double fork）：rr 會自動追蹤，因為它 ptrace 的是 thread group 所有成員。replay 時可以：1) <code>when</code> 查看 event number 2) <code>run &lt;event&gt;</code> 跳到子程序的特定點 3) breakpoint 設在子程序的函式。限制：rr 不支援跨機器的 fork（如 SSH 到另一台機器執行），且 exec 另一個程式時新程式也會被記錄（trace 會很大）。<code>rr ps</code> 列出 trace 中所有程序的 PID/exit status/event range。
 </blockquote></details>
 <details open><summary><strong>Q: 在 CI/CD 中大規模使用 rr 有什麼挑戰？如何管理 trace storage？如何在 Docker 容器中跑 rr？</strong></summary><blockquote>
 挑戰：1) <strong>Trace 大小</strong>：每次 test run 可能產生 100MB-10GB trace，大量 CI job 需要大量儲存。2) <strong>Docker 中的限制</strong>：rr 需要 <code>perf_event_open</code>（通常被 seccomp 禁止）→ 需要 <code>--cap-add=SYS_PTRACE --security-opt seccomp=unconfined</code>。3) <strong>CPU compatibility</strong>：rr 依賴特定 PMU 事件，VM 中可能不可用（需要 nested virt 或 bare metal）。4) <strong>Single-core 限制</strong>：CI 通常是多核機器但 rr 只用一核，測試變慢。管理策略：1) 只在 test fail 時保留 trace（成功就刪）2) trace 壓縮後上傳 S3（<code>rr pack</code> + gzip ~70% 壓縮率）3) 設定 trace 大小上限 4) 用 GitHub Actions artifact 自動保存。Docker 配置：<code>docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v /sys/kernel/debug:/sys/kernel/debug rr-image</code>。
@@ -14177,30 +14260,22 @@ diff<span class="w"> </span>no_asan.s<span class="w"> </span>with_asan.s
 <strong>A2:</strong> ASan 的盲點：
 
 1. <strong>Intra-object overflow</strong>：同一個 struct 內的欄位越界
-   ```c
-   struct { char buf[8]; int secret; } s;
-   s.buf[8] = 'x';  // 寫到 s.secret，ASan 不報！
-   // 因為 buf 和 secret 在同一個 allocation 中，沒有 redzone
-   ```
+<pre><code class="language-c">struct { char buf[8]; int secret; } s;
+s.buf[8] = 'x';  // 寫到 s.secret，ASan 不報！
+// 因為 buf 和 secret 在同一個 allocation 中，沒有 redzone</code></pre>
 
 2. <strong>剛好跳過 redzone</strong>：越界距離 > redzone 大小（預設 32 bytes）
-   ```c
-   int *p = malloc(4);
-   p[100] = 42;  // 如果跳過了 redzone，可能不報
-   ```
+<pre><code class="language-c">int *p = malloc(4);
+p[100] = 42;  // 如果跳過了 redzone，可能不報</code></pre>
 
 3. <strong>Quarantine 已滿後的 use-after-free</strong>：
-   ```c
-   free(p);
-   // ... 大量其他 malloc/free ...
-   // p 的 quarantine 已過期
-   *p = 42;  // 可能不報
-   ```
+<pre><code class="language-c">free(p);
+// ... 大量其他 malloc/free ...
+// p 的 quarantine 已過期
+*p = 42;  // 可能不報</code></pre>
 
 4. <strong>Wild pointer 剛好指向合法記憶體</strong>：
-   ```c
-   int *p = (int *)0xdeadbeef;  // 如果剛好是某個合法 allocation...
-   ```
+<pre><code class="language-c">int *p = (int *)0xdeadbeef;  // 如果剛好是某個合法 allocation...</code></pre>
 </details>
 
 <details open>
@@ -28071,18 +28146,14 @@ fork() 後：
 <strong>替代方案：</strong>
 
 1. <strong>批次處理</strong>：把 1000 個輸入一次傳給一個 subprocess
-   ```python
-   # 而非 1000 次 grep，用一次 grep -f
-   subprocess.run(["grep", "-f", "patterns.txt", "data.txt"])
-   ```
+<pre><code class="language-python"># 而非 1000 次 grep，用一次 grep -f
+subprocess.run(["grep", "-f", "patterns.txt", "data.txt"])</code></pre>
 
 2. <strong>長期 subprocess + stdin/stdout 通訊</strong>：
-   ```python
-   proc = subprocess.Popen(["worker"], stdin=PIPE, stdout=PIPE)
-   for item in items:
-       proc.stdin.write(item + b'\n')
-       result = proc.stdout.readline()
-   ```
+<pre><code class="language-python">proc = subprocess.Popen(["worker"], stdin=PIPE, stdout=PIPE)
+for item in items:
+    proc.stdin.write(item + b'\n')
+    result = proc.stdout.readline()</code></pre>
 
 3. <strong>用 Python 原生實作</strong>：如果邏輯簡單，直接用 Python 做比 fork+exec 快
 
@@ -28563,27 +28634,21 @@ watch<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span><
 <strong>好處：</strong>
 
 1. <strong>統一 API</strong>：<code>read(fd)</code> / <code>write(fd)</code> / <code>close(fd)</code> 對所有 I/O 都適用
-   ```c
-   // 不管 fd 是 socket、file、還是 pipe，都用同一個 read()
-   char buf[1024];
-   read(fd, buf, sizeof(buf));
-   ```
+<pre><code class="language-c">// 不管 fd 是 socket、file、還是 pipe，都用同一個 read()
+char buf[1024];
+read(fd, buf, sizeof(buf));</code></pre>
 
 2. <strong>I/O 多工</strong>：epoll/select 可以同時監控 socket + file + pipe
-   ```c
-   // 同時等待：網路資料 + 檔案變化 + 子程序輸出
-   epoll_ctl(epfd, EPOLL_CTL_ADD, socket_fd, &ev);
-   epoll_ctl(epfd, EPOLL_CTL_ADD, inotify_fd, &ev);
-   epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_fd, &ev);
-   epoll_wait(epfd, events, MAX_EVENTS, -1);
-   ```
+<pre><code class="language-c">// 同時等待：網路資料 + 檔案變化 + 子程序輸出
+epoll_ctl(epfd, EPOLL_CTL_ADD, socket_fd, &amp;ev);
+epoll_ctl(epfd, EPOLL_CTL_ADD, inotify_fd, &amp;ev);
+epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_fd, &amp;ev);
+epoll_wait(epfd, events, MAX_EVENTS, -1);</code></pre>
 
 3. <strong>重導向</strong>：<code>dup2(socket_fd, STDOUT)</code> 就能把程式的 stdout 導到網路
-   ```bash
-   # 這就是 netcat 的原理：
-   # stdin → socket → 遠端
-   # 遠端 → socket → stdout
-   ```
+<pre><code class="language-bash"># 這就是 netcat 的原理：
+# stdin → socket → 遠端
+# 遠端 → socket → stdout</code></pre>
 
 4. <strong>fork 繼承</strong>：子程序自動繼承父程序的所有 fd（包括 socket）
    - 這是 pre-fork server（如 Gunicorn）的基礎
@@ -29731,10 +29796,10 @@ ls<span class="w"> </span>-la<span class="w"> </span>app_lto<span class="w">  </
 
 <strong>答案</strong>：<code>#include</code> 是純文字替換 — preprocessor 把 header 檔案的全部內容插入到你的 .cpp 裡。
 
-<code><iostream></code> 會遞迴 include 幾十個其他 header（<code><string></code>, <code><locale></code>, <code><streambuf></code>, ...），展開後可能有 <strong>2-5 萬行</strong>程式碼。Compiler 必須 parse 和 type-check 所有這些行。
+<code>&lt;iostream&gt;</code> 會遞迴 include 幾十個其他 header（<code>&lt;string&gt;</code>, <code>&lt;locale&gt;</code>, <code>&lt;streambuf&gt;</code>, ...），展開後可能有 <strong>2-5 萬行</strong>程式碼。Compiler 必須 parse 和 type-check 所有這些行。
 
 這就是為什麼：
-- C++ 編譯比 C 慢很多（C 的 <code><stdio.h></code> 只有幾百行）
+- C++ 編譯比 C 慢很多（C 的 <code>&lt;stdio.h&gt;</code> 只有幾百行）
 - Precompiled headers (PCH) 能大幅加速（只 parse 一次）
 - C++20 modules 是終極解法（不再用 #include）
 

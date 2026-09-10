@@ -21,6 +21,23 @@ strong { color: #1e40af; }
 hr { border: none; border-top: 2px solid #e5e7eb; margin: 40px 0; }
 @media print { body { max-width: 100%; padding: 20px; } h1 { page-break-before: always; } pre { white-space: pre-wrap; } }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.hljs) return;                       // offline: leave code as plain text
+  document.querySelectorAll('pre code').forEach(function (el) {
+    if (el.querySelector('span')) return;         // already tokenised server-side
+    hljs.highlightElement(el);
+  });
+});
+</script>
+<style>/* keep the page's own dark code container; only take hljs token colours */
+pre code.hljs { background: transparent; padding: 0; }
+</style>
 </head>
 <body><h1>📖 GPU Infrastructure 面試完全指南（Enhanced Edition v2）</h1>
 <blockquote>
@@ -1318,13 +1335,13 @@ Stride-32: 32 threads 讀 32 個間隔 128 bytes 的 float = 32 transactions</p>
 </blockquote>
 <p><strong>Follow-up: AoS (Array of Structures) vs SoA (Structure of Arrays) 哪個對 GPU 更好？為什麼？</strong></p>
 <blockquote>
-<p><strong>A:</strong> <strong>SoA 更好</strong>。AoS 中存取同一 field 時 stride = struct size（不 coalesced）。SoA 中同一 field 的資料連續存放（coalesced）。<br />
-```c<br />
-// AoS（壞）: struct { float x, y, z; } particles[N];<br />
-// 存取所有 x: stride = 12 bytes → 不 coalesced</p>
-<p>// SoA（好）: struct { float x[N]; float y[N]; float z[N]; };<br />
-// 存取所有 x: 連續 → coalesced<br />
-```</p>
+<p><strong>A:</strong> <strong>SoA 更好</strong>。AoS 中存取同一 field 時 stride = struct size（不 coalesced）。SoA 中同一 field 的資料連續存放（coalesced）。</p>
+<pre><code class="language-c">// AoS（壞）: struct { float x, y, z; } particles[N];
+// 存取所有 x: stride = 12 bytes → 不 coalesced
+
+// SoA（好）: struct { float x[N]; float y[N]; float z[N]; };
+// 存取所有 x: 連續 → coalesced
+</code></pre>
 </blockquote>
 <hr />
 <p><strong>Q2: Matrix Transpose 為什麼需要 Shared Memory？直接 transpose 的問題是什麼？</strong></p>
@@ -2021,20 +2038,21 @@ gc.collect()
 </blockquote>
 <p><strong>Follow-up: 怎麼 debug PyTorch CUDA OOM？找出哪個 tensor 佔最多 memory？</strong></p>
 <blockquote>
-<p><strong>A:</strong><br />
-```python</p>
-<h1>方法 1: memory summary</h1>
-<p>print(torch.cuda.memory_summary())  # 顯示 allocated/cached/peak</p>
-<h1>方法 2: memory snapshot（PyTorch 2.1+）</h1>
-<p>torch.cuda.memory._record_memory_history()</p>
-<h1>... run code ...</h1>
-<p>torch.cuda.memory._dump_snapshot("snapshot.pickle")</p>
-<h1>用 torch.cuda._memory_viz 視覺化</h1>
-<h1>方法 3: 手動追蹤</h1>
-<p>for obj in gc.get_objects():<br />
-    if torch.is_tensor(obj) and obj.is_cuda:<br />
-        print(obj.shape, obj.element_size() * obj.nelement() / 1e6, "MB")<br />
-```</p>
+<p><strong>A:</strong></p>
+<pre><code class="language-python"># 方法 1: memory summary
+print(torch.cuda.memory_summary())  # 顯示 allocated/cached/peak
+
+# 方法 2: memory snapshot（PyTorch 2.1+）
+torch.cuda.memory._record_memory_history()
+# ... run code ...
+torch.cuda.memory._dump_snapshot("snapshot.pickle")
+# 用 torch.cuda._memory_viz 視覺化
+
+# 方法 3: 手動追蹤
+for obj in gc.get_objects():
+    if torch.is_tensor(obj) and obj.is_cuda:
+        print(obj.shape, obj.element_size() * obj.nelement() / 1e6, "MB")
+</code></pre>
 </blockquote>
 <hr />
 <h2>19.5 Multi-GPU Pitfalls</h2>

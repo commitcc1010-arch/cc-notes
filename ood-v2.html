@@ -29,6 +29,30 @@ blockquote { border-left: 4px solid #3498db; margin: 12px 0; padding: 8px 16px; 
 .pattern-tag { background: #e3f2fd; border: 1px solid #90caf9; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #1565c0; }
 .solid-tag { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #2e7d32; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.hljs) return;                       // offline: leave code as plain text
+  document.querySelectorAll('pre code').forEach(function (el) {
+    if (el.querySelector('span')) return;         // already tokenised server-side
+    hljs.highlightElement(el);
+  });
+});
+</script>
+<style>pre code.hljs { background: transparent; padding: 0; }</style>
+<style>/* used in the body but never styled */
+.beginner { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 15px; margin: 15px 0; border-radius: 0 6px 6px 0; }
+.beginner h4 { margin-top: 0; }
+.toc { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 25px 0; }
+.toc h3 { margin-top: 0; }
+.toc ul { margin: 0; padding-left: 1.2rem; }
+.toc a { text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
 

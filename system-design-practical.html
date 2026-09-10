@@ -46,6 +46,79 @@ hr { border: none; border-top: 1px solid #e0e0e0; margin: 32px 0; }
 .toc-group a:hover { text-decoration: underline; }
 @media print { h1, h2 { page-break-before: always; } }
 </style>
+<style>
+/* Pygments light token colours (code blocks were rendering unstyled) */
+.codehilite { background: transparent; }
+.codehilite .hll { background-color: #ffffcc }
+.codehilite .c { color: #60A0B0; font-style: italic }
+.codehilite .err { border: 1px solid #F00 }
+.codehilite .k { color: #007020; font-weight: bold }
+.codehilite .o { color: #666 }
+.codehilite .ch { color: #60A0B0; font-style: italic }
+.codehilite .cm { color: #60A0B0; font-style: italic }
+.codehilite .cp { color: #007020 }
+.codehilite .cpf { color: #60A0B0; font-style: italic }
+.codehilite .c1 { color: #60A0B0; font-style: italic }
+.codehilite .cs { color: #60A0B0; background-color: #FFF0F0 }
+.codehilite .gd { color: #A00000 }
+.codehilite .ge { font-style: italic }
+.codehilite .ges { font-weight: bold; font-style: italic }
+.codehilite .gr { color: #F00 }
+.codehilite .gh { color: #000080; font-weight: bold }
+.codehilite .gi { color: #00A000 }
+.codehilite .go { color: #888 }
+.codehilite .gp { color: #C65D09; font-weight: bold }
+.codehilite .gs { font-weight: bold }
+.codehilite .gu { color: #800080; font-weight: bold }
+.codehilite .gt { color: #04D }
+.codehilite .kc { color: #007020; font-weight: bold }
+.codehilite .kd { color: #007020; font-weight: bold }
+.codehilite .kn { color: #007020; font-weight: bold }
+.codehilite .kp { color: #007020 }
+.codehilite .kr { color: #007020; font-weight: bold }
+.codehilite .kt { color: #902000 }
+.codehilite .m { color: #40A070 }
+.codehilite .s { color: #4070A0 }
+.codehilite .na { color: #4070A0 }
+.codehilite .nb { color: #007020 }
+.codehilite .nc { color: #0E84B5; font-weight: bold }
+.codehilite .no { color: #60ADD5 }
+.codehilite .nd { color: #555; font-weight: bold }
+.codehilite .ni { color: #D55537; font-weight: bold }
+.codehilite .ne { color: #007020 }
+.codehilite .nf { color: #06287E }
+.codehilite .nl { color: #002070; font-weight: bold }
+.codehilite .nn { color: #0E84B5; font-weight: bold }
+.codehilite .nt { color: #062873; font-weight: bold }
+.codehilite .nv { color: #BB60D5 }
+.codehilite .ow { color: #007020; font-weight: bold }
+.codehilite .w { color: #BBB }
+.codehilite .mb { color: #40A070 }
+.codehilite .mf { color: #40A070 }
+.codehilite .mh { color: #40A070 }
+.codehilite .mi { color: #40A070 }
+.codehilite .mo { color: #40A070 }
+.codehilite .sa { color: #4070A0 }
+.codehilite .sb { color: #4070A0 }
+.codehilite .sc { color: #4070A0 }
+.codehilite .dl { color: #4070A0 }
+.codehilite .sd { color: #4070A0; font-style: italic }
+.codehilite .s2 { color: #4070A0 }
+.codehilite .se { color: #4070A0; font-weight: bold }
+.codehilite .sh { color: #4070A0 }
+.codehilite .si { color: #70A0D0; font-style: italic }
+.codehilite .sx { color: #C65D09 }
+.codehilite .sr { color: #235388 }
+.codehilite .s1 { color: #4070A0 }
+.codehilite .ss { color: #517918 }
+.codehilite .bp { color: #007020 }
+.codehilite .fm { color: #06287E }
+.codehilite .vc { color: #BB60D5 }
+.codehilite .vg { color: #BB60D5 }
+.codehilite .vi { color: #BB60D5 }
+.codehilite .vm { color: #BB60D5 }
+.codehilite .il { color: #40A070 }
+</style>
 </head><body>
 <h1 id="ch-1">《System Design 實戰演練：25+ 跨領域考題深度解析》</h1>
 <div class="toc"><h2 id="toc" style="page-break-before:avoid">📑 目錄（依領域分組）</h2><div class="toc-group"><h3>基礎篇：面試心法與基本功</h3><ul><li><a href="#ch-2">Part 0：面試心法與作答框架</a></li><li><a href="#ch-3">Part 0.5：各公司作答策略（Google / Meta / Amazon）</a></li><li><a href="#ch-4">Part 0.8：從單機到百萬用戶 + Consistent Hashing 深入</a></li></ul></div><div class="toc-group"><h3>Infra / API 核心元件</h3><ul><li><a href="#ch-5">考題 1：設計限流器（Rate Limiter）</a></li><li><a href="#ch-7">考題 3：設計分散式唯一 ID 生成器（Snowflake）</a></li><li><a href="#ch-10">考題 6：設計推播通知系統（Notification System）</a></li><li><a href="#ch-12">考題 8：設計網路爬蟲（Web Crawler）</a></li><li><a href="#ch-18">考題 14：設計分散式訊息佇列（如 Kafka）</a></li><li><a href="#ch-19">考題 15：設計分散式快取（如 Redis）</a></li><li><a href="#ch-25">考題 21：設計分散式排程器 / Cron（Distributed Job Scheduler）</a></li><li><a href="#ch-29">考題 25：設計分散式鎖 / 協調服務（Distributed Lock）</a></li><li><a href="#ch-32">考題 28：設計分散式 Key-Value Store（如 Dynamo / Cassandra）</a></li><li><a href="#ch-36">考題 32：設計分散式 Email 服務（Distributed Email Service）</a></li></ul></div><div class="toc-group"><h3>Web / 應用服務</h3><ul><li><a href="#ch-6">考題 2：設計短網址（URL Shortener）</a></li></ul></div><div class="toc-group"><h3>Social / 社交</h3><ul><li><a href="#ch-8">考題 4：設計 News Feed / Timeline（如 Twitter）</a></li><li><a href="#ch-9">考題 5：設計即時聊天系統（如 WhatsApp / Slack）</a></li></ul></div><div class="toc-group"><h3>Search / 搜尋</h3><ul><li><a href="#ch-11">考題 7：設計 Typeahead / Autocomplete 搜尋建議</a></li><li><a href="#ch-13">考題 9：設計搜尋引擎（Inverted Index）</a></li></ul></div><div class="toc-group"><h3>Geo / 地理空間</h3><ul><li><a href="#ch-14">考題 10：設計附近地點 / Proximity Service（如 Yelp）</a></li><li><a href="#ch-15">考題 11：設計共乘媒合系統（如 Uber / Lyft）</a></li><li><a href="#ch-16">考題 12：設計 Google Maps / 路徑規劃系統</a></li><li><a href="#ch-34">考題 30：設計 Nearby Friends 即時位置分享</a></li></ul></div><div class="toc-group"><h3>Storage / 儲存</h3><ul><li><a href="#ch-22">考題 18：設計物件儲存（如 Amazon S3）</a></li><li><a href="#ch-23">考題 19：設計分散式檔案系統（如 GFS / HDFS）</a></li><li><a href="#ch-33">考題 29：設計 Google Drive / 檔案同步服務</a></li></ul></div><div class="toc-group"><h3>Streaming / 串流</h3><ul><li><a href="#ch-20">考題 16：設計影音串流點播（如 YouTube / Netflix）</a></li><li><a href="#ch-21">考題 17：設計直播系統（如 Twitch）</a></li></ul></div><div class="toc-group"><h3>Payments / Fintech / 金流</h3><ul><li><a href="#ch-17">考題 13：設計支付系統（如 Stripe）</a></li><li><a href="#ch-37">考題 33：設計數位錢包（Digital Wallet）</a></li><li><a href="#ch-38">考題 34：設計證券交易所（Stock Exchange）</a></li></ul></div><div class="toc-group"><h3>Commerce / 電商</h3><ul><li><a href="#ch-30">考題 26：設計電商秒殺 / Flash Sale（庫存扣減防超賣）</a></li><li><a href="#ch-35">考題 31：設計訂房系統（Hotel Reservation System）</a></li></ul></div><div class="toc-group"><h3>Data / 即時資料處理</h3><ul><li><a href="#ch-26">考題 22：設計廣告點擊聚合 / 即時分析（Ad Click Aggregation）</a></li><li><a href="#ch-27">考題 23：設計分散式計數器 / 排行榜（Distributed Counter &amp; Leaderboard）</a></li><li><a href="#ch-31">考題 27：設計監控 / Metrics 系統（Metrics &amp; Monitoring）</a></li></ul></div><div class="toc-group"><h3>ML / 推薦系統</h3><ul><li><a href="#ch-28">考題 24：設計推薦系統（Recommendation System）</a></li></ul></div><div class="toc-group"><h3>Realtime / 協作編輯</h3><ul><li><a href="#ch-24">考題 20：設計協同編輯器（Collaborative Editor，如 Google Docs）</a></li></ul></div><div class="toc-group"><h3>附錄</h3><ul><li><a href="#ch-39">附錄 B：跨技術深度比較與選型手冊</a></li><li><a href="#ch-40">附錄：系統設計面試速查手冊（Cheat Sheet）</a></li></ul></div></div>
@@ -14944,5 +15017,10 @@ Evolve（深挖）........ 12 分（拉開差距的地方）
 </ul>
 </div>
 </div>
-<script>document.querySelectorAll('pre code').forEach(function(b){try{hljs.highlightElement(b);}catch(e){}});</script>
+<script>// Blocks tokenised server-side by Pygments already carry spans; re-highlighting
+// them would discard that (language-accurate) markup, so skip those.
+document.querySelectorAll('pre code').forEach(function(b){
+  if (b.querySelector('span')) return;
+  try{hljs.highlightElement(b);}catch(e){}
+});</script>
 </body></html>
