@@ -1,0 +1,9 @@
+.DS_Store
+
+# Generated per workspace by .superset/setup.sh
+.superset/.port
+.superset/ports.json
+.superset/config.local.json
+
+.env
+.env.*
