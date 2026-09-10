@@ -1,10 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CC Notes</title>
+    <title>CC Notes — 書架</title>
     <style>
+        :root {
+            --bg: #16120e;
+            --bg-glow: #241c15;
+            --ink: #ece4d8;
+            --ink-dim: #a89b8a;
+            --ink-faint: #7d7263;
+            --book: #211b16;
+            --book-hi: #2b231b;
+            --edge: #34291f;
+            --wood-top: #6b4a2c;
+            --wood: #4e341e;
+            --wood-dark: #2f1f12;
+            --accent: #e0a45c;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,123 +27,413 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f0f0f;
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC',
+                'Noto Sans TC', 'Microsoft JhengHei', Roboto, sans-serif;
+            background:
+                radial-gradient(ellipse 90% 55% at 50% -10%, var(--bg-glow), transparent 70%),
+                var(--bg);
+            color: var(--ink);
             min-height: 100vh;
-            padding: 2rem;
+            padding: 3rem 1.5rem 5rem;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1180px;
             margin: 0 auto;
         }
 
+        /* ---------- Header ---------- */
+
+        header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+
         h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
+            font-size: clamp(2rem, 5vw, 2.9rem);
+            letter-spacing: -0.02em;
             color: #fff;
+            margin-bottom: 0.6rem;
+        }
+
+        h1 .glyph {
+            color: var(--accent);
         }
 
         .subtitle {
-            color: #888;
-            margin-bottom: 2.5rem;
-            font-size: 0.95rem;
+            color: var(--ink-dim);
+            font-size: 1rem;
+            max-width: 44rem;
+            margin: 0 auto;
         }
 
-        .card-list {
+        .counts {
+            margin-top: 1.25rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: var(--ink-faint);
+        }
+
+        .counts span {
+            border: 1px solid var(--edge);
+            border-radius: 999px;
+            padding: 0.25rem 0.8rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* ---------- Shelf ---------- */
+
+        .shelf {
+            margin-bottom: 3.25rem;
+        }
+
+        .shelf-label {
+            display: flex;
+            align-items: baseline;
+            gap: 0.7rem;
+            margin-bottom: 1.1rem;
+            padding-left: 0.15rem;
+        }
+
+        .shelf-label h2 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--ink);
+            letter-spacing: 0.01em;
+        }
+
+        .shelf-label .tally {
+            font-size: 0.78rem;
+            color: var(--ink-faint);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .shelf-label .rule {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, var(--edge), transparent);
+        }
+
+        .books {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        /* The wooden plank the books stand on. */
+        .plank {
+            height: 14px;
+            margin-top: 0.9rem;
+            border-radius: 3px;
+            background:
+                linear-gradient(to bottom,
+                    var(--wood-top) 0,
+                    var(--wood) 45%,
+                    var(--wood-dark) 100%);
+            box-shadow:
+                0 1px 0 rgba(255, 214, 160, 0.18) inset,
+                0 10px 18px -8px rgba(0, 0, 0, 0.9),
+                0 2px 0 var(--wood-dark);
+            position: relative;
+        }
+
+        /* Faint woodgrain streaks. */
+        .plank::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 3px;
+            opacity: 0.22;
+            background: repeating-linear-gradient(to right,
+                transparent 0 22px,
+                rgba(0, 0, 0, 0.5) 22px 23px,
+                transparent 23px 61px,
+                rgba(255, 255, 255, 0.14) 61px 62px);
+        }
+
+        /* ---------- Book ---------- */
+
+        .book {
+            position: relative;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-        }
-
-        .card {
-            display: block;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            padding: 1.25rem 1.5rem;
+            background: linear-gradient(160deg, var(--book-hi), var(--book));
+            border: 1px solid var(--edge);
+            border-left: none;
+            border-radius: 4px 7px 7px 4px;
+            padding: 1.15rem 1.3rem 1.2rem 1.5rem;
             text-decoration: none;
             color: inherit;
-            transition: border-color 0.2s, background 0.2s;
+            box-shadow: 0 12px 20px -14px rgba(0, 0, 0, 0.95);
+            transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
         }
 
-        .card:hover {
-            border-color: #4a9eff;
-            background: #1e2a3a;
+        /* Coloured spine down the left edge. */
+        .book::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 7px;
+            border-radius: 4px 0 0 4px;
+            background: linear-gradient(to bottom, var(--spine, var(--accent)), rgba(0, 0, 0, 0.45));
+            box-shadow: 1px 0 0 rgba(0, 0, 0, 0.5);
         }
 
-        .card h2 {
-            font-size: 1.1rem;
+        /* Stacked page edges on the right. */
+        .book::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 6px;
+            bottom: 6px;
+            width: 4px;
+            border-radius: 0 6px 6px 0;
+            opacity: 0.5;
+            background: repeating-linear-gradient(to bottom,
+                rgba(236, 228, 216, 0.22) 0 2px,
+                transparent 2px 4px);
+        }
+
+        .book:hover,
+        .book:focus-visible {
+            transform: translateY(-6px);
+            border-color: #55432f;
+            box-shadow: 0 20px 28px -16px rgba(0, 0, 0, 1);
+            outline: none;
+        }
+
+        .book:focus-visible {
+            border-color: var(--accent);
+        }
+
+        .book-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            margin-bottom: 0.55rem;
+        }
+
+        .book-emoji {
+            font-size: 1.15rem;
+            line-height: 1.35;
+            flex-shrink: 0;
+        }
+
+        .book h3 {
+            font-size: 1rem;
+            font-weight: 650;
             color: #fff;
-            margin-bottom: 0.35rem;
+            letter-spacing: -0.005em;
+            line-height: 1.4;
         }
 
-        .card p {
-            font-size: 0.85rem;
-            color: #888;
+        .book .meta {
+            font-size: 0.73rem;
+            color: var(--spine, var(--accent));
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.55rem;
+            font-variant-numeric: tabular-nums;
+            opacity: 0.95;
+        }
+
+        .book .summary {
+            font-size: 0.855rem;
+            color: var(--ink-dim);
+            line-height: 1.62;
+        }
+
+        footer {
+            margin-top: 3.5rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--ink-faint);
+        }
+
+        @media (max-width: 560px) {
+            body { padding: 2rem 1rem 3.5rem; }
+            .books { grid-template-columns: 1fr; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .book { transition: none; }
+            .book:hover, .book:focus-visible { transform: none; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>CC Notes</h1>
-        <p class="subtitle">Interview preparation notes and study guides</p>
+        <header>
+            <h1><span class="glyph">📚</span> CC Notes</h1>
+            <p class="subtitle">面試準備筆記與技術電子書書架 — 從演算法到 GPU 底層，每本都附章節導覽。</p>
+            <div class="counts">
+                <span>13 本書</span>
+                <span>4 個書架</span>
+                <span>演算法 · System Design · AI/ML · 系統底層</span>
+            </div>
+        </header>
 
-        <div class="card-list">
-            <a class="card" href="gpu-interview-guide-v3-complete.html">
-                <h2>GPU Interview Guide</h2>
-                <p>Comprehensive guide for GPU-related interview topics</p>
-            </a>
-            <a class="card" href="LeetCode%20Mastery_HIGHLIGHTED.html">
-                <h2>LeetCode Mastery</h2>
-                <p>LeetCode problem patterns and solutions</p>
-            </a>
-            <a class="card" href="Leetcode%20Complete%20Book.html">
-                <h2>Leetcode Complete Book</h2>
-                <p>Complete LeetCode problem collection and solutions</p>
-            </a>
-            <a class="card" href="MLE%20interview%20book.html">
-                <h2>MLE Interview Book</h2>
-                <p>Machine Learning Engineer interview preparation</p>
-            </a>
-            <a class="card" href="system-design-book.html">
-                <h2>System Design Book</h2>
-                <p>System design concepts and interview strategies</p>
-            </a>
-            <a class="card" href="concurrency-v2.html">
-                <h2>Concurrency</h2>
-                <p>Concurrency patterns and multithreading concepts</p>
-            </a>
-            <a class="card" href="dp-knapsack-complete-ebook.html">
-                <h2>DP & Knapsack</h2>
-                <p>Dynamic programming and knapsack problem patterns</p>
-            </a>
-            <a class="card" href="ml-engineering-chinese-ebook-v2.html">
-                <h2>ML Engineering (Chinese)</h2>
-                <p>Machine learning engineering guide in Chinese</p>
-            </a>
-            <a class="card" href="ood-v2.html">
-                <h2>Object-Oriented Design</h2>
-                <p>OOD principles and interview questions</p>
-            </a>
-            <a class="card" href="ai-ml-system-design.html">
-                <h2>AI/ML System Design</h2>
-                <p>AI and ML system design concepts and interview preparation</p>
-            </a>
-            <a class="card" href="system-design-practical.html">
-                <h2>System Design 實戰演練</h2>
-                <p>25+ 跨領域考題深度解析</p>
-            </a>
-            <a class="card" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_ML_%E5%B7%A5%E7%A8%8B.html">
-                <h2>深入淺出 ML 工程</h2>
-                <p>機器學習工程實務入門到進階</p>
-            </a>
-            <a class="card" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_Coding_Agent%E8%88%87Harness_Engineering.html">
-                <h2>深入淺出 Coding Agent 與 Harness Engineering</h2>
-                <p>Coding agent 架構與 harness 工程設計</p>
-            </a>
-        </div>
+        <!-- ============ 演算法 & Coding ============ -->
+        <section class="shelf">
+            <div class="shelf-label">
+                <h2>📗 演算法 &amp; Coding</h2>
+                <span class="tally">4 本</span>
+                <span class="rule"></span>
+            </div>
+            <div class="books">
+                <a class="book" style="--spine:#57b894" href="LeetCode%20Mastery_HIGHLIGHTED.html">
+                    <div class="book-head">
+                        <span class="book-emoji">📘</span>
+                        <h3>LeetCode Mastery</h3>
+                    </div>
+                    <div class="meta">34 章 · Google L5+</div>
+                    <p class="summary">Coding pattern 大全。每章固定走「核心觀念 → 辨識信號 → 模板代碼 → 複雜度分析 → 經典題詳解 → Follow-up 問答 → 常見陷阱」，從 Two Pointers、Sliding Window、Binary Search 一路推到進階題型。</p>
+                </a>
+                <a class="book" style="--spine:#4f9dd9" href="dp-knapsack-complete-ebook.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🎒</span>
+                        <h3>動態規劃與背包問題完全攻略</h3>
+                    </div>
+                    <div class="meta">12 章 · DP 專章</div>
+                    <p class="summary">從 DP 思維框架出發，深入 0/1、完全、多重、分組背包的推導與優化（二進制拆分、單調隊列、支配優化），再延伸到 LIS / LCS / 區間 DP，每個模式都配 LeetCode 題目精講。</p>
+                </a>
+                <a class="book" style="--spine:#d98b4f" href="concurrency-v2.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🔀</span>
+                        <h3>Concurrency 面試完全攻略 v2</h3>
+                    </div>
+                    <div class="meta">8 章 · 30+ 題 · Python / Go</div>
+                    <p class="summary">雙語解法對照。從並行基礎與同步原語，到 lock-free / atomic 操作、並行設計模式、經典並行問題、Go 的 goroutine 與 channel 模型，最後收在分散式並行與實戰系統設計。</p>
+                </a>
+                <a class="book" style="--spine:#a67fd9" href="ood-v2.html">
+                    <div class="book-head">
+                        <span class="book-emoji">📗</span>
+                        <h3>OOD 面試完全攻略 v2</h3>
+                    </div>
+                    <div class="meta">15 題 · Class Design</div>
+                    <p class="summary">Parking Lot、Elevator、Vending Machine、Chess、ATM、File System、Splitwise、Rate Limiter 等經典題的 Python 實作，搭配 SOLID 原則、設計模式地圖與面試節奏拆解。</p>
+                </a>
+            </div>
+            <div class="plank"></div>
+        </section>
+
+        <!-- ============ System Design ============ -->
+        <section class="shelf">
+            <div class="shelf-label">
+                <h2>🏗️ System Design</h2>
+                <span class="tally">2 本</span>
+                <span class="rule"></span>
+            </div>
+            <div class="books">
+                <a class="book" style="--spine:#e0a45c" href="system-design-book.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🏛️</span>
+                        <h3>System Design Interview 深度指南 v2</h3>
+                    </div>
+                    <div class="meta">27 章 · Staff-Level Thinking</div>
+                    <p class="summary">先用 7-step 答題框架打底，再逐層鋪開 scalability、可用性與容錯、延遲與 p99 指標、SQL/NoSQL 選型、索引、Sharding、Replication 與一致性，以及 Cache、Load Balancer、Queue、限流、認證授權和可觀測性。</p>
+                </a>
+                <a class="book" style="--spine:#e07a5c" href="system-design-practical.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🧪</span>
+                        <h3>System Design 實戰演練</h3>
+                    </div>
+                    <div class="meta">34 道考題 · 跨領域</div>
+                    <p class="summary">每題走完整 SNAKE 框架並標出核心考點 — 限流器、短網址、Snowflake、News Feed、聊天系統、爬蟲、搜尋引擎、共乘媒合、支付、影音串流、協作編輯、秒殺防超賣等。另含 Google / Meta / Amazon 三家作答策略差異與必背 Latency Numbers。</p>
+                </a>
+            </div>
+            <div class="plank"></div>
+        </section>
+
+        <!-- ============ AI / ML ============ -->
+        <section class="shelf">
+            <div class="shelf-label">
+                <h2>🤖 AI / ML 工程</h2>
+                <span class="tally">5 本</span>
+                <span class="rule"></span>
+            </div>
+            <div class="books">
+                <a class="book" style="--spine:#6ea8fe" href="MLE%20interview%20book.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🧠</span>
+                        <h3>LLM / Agent / MLE 面試完全指南 v4</h3>
+                    </div>
+                    <div class="meta">36 章 · Google L5</div>
+                    <p class="summary">全域覆蓋：Transformer 深度解析、LLM 訓練全流程、RLHF 對齊、PEFT（LoRA / QLoRA）、評估與 benchmark、多模態，接著 vLLM 架構、KV-Cache 管理、量化、batching、分散式推論，最後是 Agent 架構、Function Calling、RAG、MLOps 與推薦排序。</p>
+                </a>
+                <a class="book" style="--spine:#8ad6c0" href="ai-ml-system-design.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🤖</span>
+                        <h3>AI/ML System Design 面試完全攻略</h3>
+                    </div>
+                    <div class="meta">25 章 · 6 大 Part</div>
+                    <p class="summary">MLOps · LLM Ops · AI Infra · Model Inference 四大主軸：end-to-end ML pipeline 與 Feature Store、Model Serving（Triton / TorchServe）與推論優化、LLM 訓練微調與 RAG、生產化 MLOps、GPU 叢集與成本最佳化，最後收在面試實戰。</p>
+                </a>
+                <a class="book" style="--spine:#d9a44f" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_ML_%E5%B7%A5%E7%A8%8B.html">
+                    <div class="book-head">
+                        <span class="book-emoji">⚗️</span>
+                        <h3>深入淺出 ML 工程</h3>
+                    </div>
+                    <div class="meta">32 章 · 附理解確認 Q&amp;A</div>
+                    <p class="summary">大規模訓練工程學，每章以「從零開始理解」起手並附 Q&amp;A 驗收：算力估算與 MFU、雲端選型、GPU / 儲存 / 網路（NVLink 到 InfiniBand）、SLURM 調度、系統性除錯與 ML 測試、後訓練（SFT / RLHF / DPO / GRPO）、推理採樣、Mamba / SSM，直到 CUDA 記憶體階層與 Triton kernel 優化。</p>
+                </a>
+                <a class="book" style="--spine:#c98fd9" href="ml-engineering-chinese-ebook-v2.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🚀</span>
+                        <h3>ML 工程實戰指南 v2</h3>
+                    </div>
+                    <div class="meta">硬體基礎設施篇</div>
+                    <p class="summary">聚焦大規模訓練的硬體地基：AI 算力競賽全貌與 GPU 家族、三大雲 ML 生態比較與 Spot / Preemptible 省錢術，以及運算加速器、ML 訓練儲存系統、分散式訓練網路通訊三章深潛。</p>
+                </a>
+                <a class="book" style="--spine:#7fd99a" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_Coding_Agent%E8%88%87Harness_Engineering.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🛠️</span>
+                        <h3>深入淺出 Coding Agent 與 Harness Engineering</h3>
+                    </div>
+                    <div class="meta">28 章 · Harness 拆解</div>
+                    <p class="summary">用 Model / Harness / Agent 三層心智模型開場，從最小可運作的 agent 骨架逐步剖析 agentic loop（QueryEngine）、中斷處理、迴圈守衛與穩健性、Hooks 事件系統、MCP、Skills 漸進揭露、Slash Commands、Subagents、Coordinator / Swarm、模型路由、串流與快取，到系統提示工程與 SDK。</p>
+                </a>
+            </div>
+            <div class="plank"></div>
+        </section>
+
+        <!-- ============ 系統底層 ============ -->
+        <section class="shelf">
+            <div class="shelf-label">
+                <h2>⚙️ 系統底層 &amp; GPU</h2>
+                <span class="tally">2 本</span>
+                <span class="rule"></span>
+            </div>
+            <div class="books">
+                <a class="book" style="--spine:#76c043" href="gpu-interview-guide-v3-complete.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🎮</span>
+                        <h3>GPU Infrastructure + CUDA 面試完全指南 v3</h3>
+                    </div>
+                    <div class="meta">19 章 · GPU + CUDA</div>
+                    <p class="summary">前半段講 infra：GPU 記憶體階層與 Roofline Model、KV Cache、dynamic batching、LLM serving 的 TTFT 與 token streaming、分散式訓練、GPU 排程、故障處理與成本優化；後五章專攻 CUDA 程式模型、記憶體與效能優化及常見踩雷。</p>
+                </a>
+                <a class="book" style="--spine:#9aa0a6" href="binary_hacks_book.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🔧</span>
+                        <h3>Binary Hacks 白話版</h3>
+                    </div>
+                    <div class="meta">86 個 Hack</div>
+                    <p class="summary">把二進位世界拆開來看：如何閱讀未知的 binary、組合語言入門，再深入 ELF segments、ld-linux.so 與函式庫搜尋、dlopen 動態載入、IFUNC 執行時分派、TLS、core dump、靜態連結與 ASLR，直到 glibc 內部細節。</p>
+                </a>
+            </div>
+            <div class="plank"></div>
+        </section>
+
+        <footer>選一本開始讀 · 所有內容皆為單一 HTML 檔，可離線閱讀</footer>
     </div>
 </body>
 </html>
