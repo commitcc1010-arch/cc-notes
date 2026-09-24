@@ -275,11 +275,31 @@
             <h1><span class="glyph">📚</span> CC Notes</h1>
             <p class="subtitle">面試準備筆記與技術電子書書架 — 從演算法到 GPU 底層，每本都附章節導覽。</p>
             <div class="counts">
-                <span>13 本書</span>
-                <span>4 個書架</span>
-                <span>演算法 · System Design · AI/ML · 系統底層</span>
+                <span>15 本書</span>
+                <span>5 個書架</span>
+                <span>面試總攻略 · 演算法 · System Design · AI/ML · 系統底層</span>
             </div>
         </header>
+
+        <!-- ============ 面試總攻略 ============ -->
+        <section class="shelf">
+            <div class="shelf-label">
+                <h2>🎯 面試總攻略</h2>
+                <span class="tally">1 本</span>
+                <span class="rule"></span>
+            </div>
+            <div class="books">
+                <a class="book" style="--spine:#f2b544" href="high-level-google-interview-book.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🏅</span>
+                        <h3>Google L5 面試總攻略</h3>
+                    </div>
+                    <div class="meta">79 章 · 10 大 Part · 跨全場次</div>
+                    <p class="summary">先講 grader 的隱形評分表與 L4/L5/L6 分水嶺，再依場次拆解：coding 題型與 45 分鐘溝通腳本、System Design 框架加 24 道代表題、ML SD、LLD 與並發、SRE 的 NALSD 與 live outage、行為面試與 Googleyness。收在速查卡總集、12 場 mock interview 與 40 題 worksheet。</p>
+                </a>
+            </div>
+            <div class="plank"></div>
+        </section>
 
         <!-- ============ 演算法 & Coding ============ -->
         <section class="shelf">
@@ -357,10 +377,18 @@
         <section class="shelf">
             <div class="shelf-label">
                 <h2>🤖 AI / ML 工程</h2>
-                <span class="tally">5 本</span>
+                <span class="tally">6 本</span>
                 <span class="rule"></span>
             </div>
             <div class="books">
+                <a class="book" style="--spine:#5ad1c8" href="Deep_Dive_AI_Engineering.html">
+                    <div class="book-head">
+                        <span class="book-emoji">🧩</span>
+                        <h3>深入淺出 AI Engineering</h3>
+                    </div>
+                    <div class="meta">43 章 · 模型內部到 Agent 系統</div>
+                    <p class="summary">以「引擎 / 車體 / 道路」為心智模型，從 token 與 Transformer 內部、sampling 旋鈕，走到 prompt 與 context engineering、RAG 與檢索品質量測、finetune 何時勝過 RAG；再進 agent（tool 設計、MCP、planning/memory、六大失敗模式、multi-agent 的取捨）、eval 工程（error analysis、LLM-as-a-Judge、統計嚴謹性）、harness 五大子系統與 loop / graph engineering，最後是上線後的 drift 監控與推論優化（KV cache、PagedAttention、continuous batching）。</p>
+                </a>
                 <a class="book" style="--spine:#6ea8fe" href="MLE%20interview%20book.html">
                     <div class="book-head">
                         <span class="book-emoji">🧠</span>
