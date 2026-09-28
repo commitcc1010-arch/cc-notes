@@ -168,7 +168,6 @@
             border-left: none;
             border-radius: 4px 7px 7px 4px;
             padding: 1.15rem 1.3rem 1.2rem 1.5rem;
-            text-decoration: none;
             color: inherit;
             box-shadow: 0 12px 20px -14px rgba(0, 0, 0, 0.95);
             transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
@@ -202,15 +201,54 @@
                 transparent 2px 4px);
         }
 
+        .book-open {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            flex: 1;
+        }
+
+        .dl {
+            align-self: flex-start;
+            margin-top: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.73rem;
+            letter-spacing: 0.03em;
+            text-decoration: none;
+            color: var(--ink-dim);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--edge);
+            border-radius: 999px;
+            padding: 0.32rem 0.7rem;
+            transition: color 0.18s, border-color 0.18s, background 0.18s;
+        }
+
+        .dl .sz {
+            color: var(--ink-faint);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .dl:hover,
+        .dl:focus-visible {
+            color: var(--ink);
+            border-color: var(--spine, var(--accent));
+            background: rgba(255, 255, 255, 0.07);
+            outline: none;
+        }
+
+        .dl:hover .sz { color: var(--ink-dim); }
+
         .book:hover,
-        .book:focus-visible {
+        .book:focus-within {
             transform: translateY(-6px);
             border-color: #55432f;
             box-shadow: 0 20px 28px -16px rgba(0, 0, 0, 1);
             outline: none;
         }
 
-        .book:focus-visible {
+        .book:focus-within {
             border-color: var(--accent);
         }
 
@@ -289,14 +327,17 @@
                 <span class="rule"></span>
             </div>
             <div class="books">
-                <a class="book" style="--spine:#f2b544" href="high-level-google-interview-book.html">
-                    <div class="book-head">
+                <article class="book" style="--spine:#f2b544">
+                    <a class="book-open" href="high-level-google-interview-book.html">
+                        <div class="book-head">
                         <span class="book-emoji">🏅</span>
                         <h3>Google L5 面試總攻略</h3>
                     </div>
                     <div class="meta">79 章 · 10 大 Part · 跨全場次</div>
                     <p class="summary">先講 grader 的隱形評分表與 L4/L5/L6 分水嶺，再依場次拆解：coding 題型與 45 分鐘溝通腳本、System Design 框架加 24 道代表題、ML SD、LLD 與並發、SRE 的 NALSD 與 live outage、行為面試與 Googleyness。收在速查卡總集、12 場 mock interview 與 40 題 worksheet。</p>
-                </a>
+                    </a>
+                    <a class="dl" href="epub/high-level-google-interview-book.epub" download aria-label="下載《Google L5 面試總攻略》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">2.4 MB</span></a>
+                </article>
             </div>
             <div class="plank"></div>
         </section>
@@ -309,38 +350,50 @@
                 <span class="rule"></span>
             </div>
             <div class="books">
-                <a class="book" style="--spine:#57b894" href="LeetCode%20Mastery_HIGHLIGHTED.html">
-                    <div class="book-head">
+                <article class="book" style="--spine:#57b894">
+                    <a class="book-open" href="LeetCode%20Mastery_HIGHLIGHTED.html">
+                        <div class="book-head">
                         <span class="book-emoji">📘</span>
                         <h3>LeetCode Mastery</h3>
                     </div>
                     <div class="meta">34 章 · Google L5+</div>
                     <p class="summary">Coding pattern 大全。每章固定走「核心觀念 → 辨識信號 → 模板代碼 → 複雜度分析 → 經典題詳解 → Follow-up 問答 → 常見陷阱」，從 Two Pointers、Sliding Window、Binary Search 一路推到進階題型。</p>
-                </a>
-                <a class="book" style="--spine:#4f9dd9" href="dp-knapsack-complete-ebook.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/leetcode-mastery-highlighted.epub" download aria-label="下載《LeetCode Mastery》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.2 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#4f9dd9">
+                    <a class="book-open" href="dp-knapsack-complete-ebook.html">
+                        <div class="book-head">
                         <span class="book-emoji">🎒</span>
                         <h3>動態規劃與背包問題完全攻略</h3>
                     </div>
                     <div class="meta">12 章 · DP 專章</div>
                     <p class="summary">從 DP 思維框架出發，深入 0/1、完全、多重、分組背包的推導與優化（二進制拆分、單調隊列、支配優化），再延伸到 LIS / LCS / 區間 DP，每個模式都配 LeetCode 題目精講。</p>
-                </a>
-                <a class="book" style="--spine:#d98b4f" href="concurrency-v2.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/dp-knapsack-complete-ebook.epub" download aria-label="下載《動態規劃與背包問題完全攻略》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.2 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#d98b4f">
+                    <a class="book-open" href="concurrency-v2.html">
+                        <div class="book-head">
                         <span class="book-emoji">🔀</span>
                         <h3>Concurrency 面試完全攻略 v2</h3>
                     </div>
                     <div class="meta">8 章 · 30+ 題 · Python / Go</div>
                     <p class="summary">雙語解法對照。從並行基礎與同步原語，到 lock-free / atomic 操作、並行設計模式、經典並行問題、Go 的 goroutine 與 channel 模型，最後收在分散式並行與實戰系統設計。</p>
-                </a>
-                <a class="book" style="--spine:#a67fd9" href="ood-v2.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/concurrency-v2.epub" download aria-label="下載《Concurrency 面試完全攻略 v2》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">68 KB</span></a>
+                </article>
+                <article class="book" style="--spine:#a67fd9">
+                    <a class="book-open" href="ood-v2.html">
+                        <div class="book-head">
                         <span class="book-emoji">📗</span>
                         <h3>OOD 面試完全攻略 v2</h3>
                     </div>
                     <div class="meta">15 題 · Class Design</div>
                     <p class="summary">Parking Lot、Elevator、Vending Machine、Chess、ATM、File System、Splitwise、Rate Limiter 等經典題的 Python 實作，搭配 SOLID 原則、設計模式地圖與面試節奏拆解。</p>
-                </a>
+                    </a>
+                    <a class="dl" href="epub/ood-v2.epub" download aria-label="下載《OOD 面試完全攻略 v2》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.1 MB</span></a>
+                </article>
             </div>
             <div class="plank"></div>
         </section>
@@ -353,22 +406,28 @@
                 <span class="rule"></span>
             </div>
             <div class="books">
-                <a class="book" style="--spine:#e0a45c" href="system-design-book.html">
-                    <div class="book-head">
+                <article class="book" style="--spine:#e0a45c">
+                    <a class="book-open" href="system-design-book.html">
+                        <div class="book-head">
                         <span class="book-emoji">🏛️</span>
                         <h3>System Design Interview 深度指南 v2</h3>
                     </div>
                     <div class="meta">27 章 · Staff-Level Thinking</div>
                     <p class="summary">先用 7-step 答題框架打底，再逐層鋪開 scalability、可用性與容錯、延遲與 p99 指標、SQL/NoSQL 選型、索引、Sharding、Replication 與一致性，以及 Cache、Load Balancer、Queue、限流、認證授權和可觀測性。</p>
-                </a>
-                <a class="book" style="--spine:#e07a5c" href="system-design-practical.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/system-design-book.epub" download aria-label="下載《System Design Interview 深度指南 v2》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.1 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#e07a5c">
+                    <a class="book-open" href="system-design-practical.html">
+                        <div class="book-head">
                         <span class="book-emoji">🧪</span>
                         <h3>System Design 實戰演練</h3>
                     </div>
                     <div class="meta">34 道考題 · 跨領域</div>
                     <p class="summary">每題走完整 SNAKE 框架並標出核心考點 — 限流器、短網址、Snowflake、News Feed、聊天系統、爬蟲、搜尋引擎、共乘媒合、支付、影音串流、協作編輯、秒殺防超賣等。另含 Google / Meta / Amazon 三家作答策略差異與必背 Latency Numbers。</p>
-                </a>
+                    </a>
+                    <a class="dl" href="epub/system-design-practical.epub" download aria-label="下載《System Design 實戰演練》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.4 MB</span></a>
+                </article>
             </div>
             <div class="plank"></div>
         </section>
@@ -381,54 +440,72 @@
                 <span class="rule"></span>
             </div>
             <div class="books">
-                <a class="book" style="--spine:#5ad1c8" href="Deep_Dive_AI_Engineering.html">
-                    <div class="book-head">
+                <article class="book" style="--spine:#5ad1c8">
+                    <a class="book-open" href="Deep_Dive_AI_Engineering.html">
+                        <div class="book-head">
                         <span class="book-emoji">🧩</span>
                         <h3>深入淺出 AI Engineering</h3>
                     </div>
                     <div class="meta">43 章 · 模型內部到 Agent 系統</div>
                     <p class="summary">以「引擎 / 車體 / 道路」為心智模型，從 token 與 Transformer 內部、sampling 旋鈕，走到 prompt 與 context engineering、RAG 與檢索品質量測、finetune 何時勝過 RAG；再進 agent（tool 設計、MCP、planning/memory、六大失敗模式、multi-agent 的取捨）、eval 工程（error analysis、LLM-as-a-Judge、統計嚴謹性）、harness 五大子系統與 loop / graph engineering，最後是上線後的 drift 監控與推論優化（KV cache、PagedAttention、continuous batching）。</p>
-                </a>
-                <a class="book" style="--spine:#6ea8fe" href="MLE%20interview%20book.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/deep-dive-ai-engineering.epub" download aria-label="下載《深入淺出 AI Engineering》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">1.7 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#6ea8fe">
+                    <a class="book-open" href="MLE%20interview%20book.html">
+                        <div class="book-head">
                         <span class="book-emoji">🧠</span>
                         <h3>LLM / Agent / MLE 面試完全指南 v4</h3>
                     </div>
                     <div class="meta">36 章 · Google L5</div>
                     <p class="summary">全域覆蓋：Transformer 深度解析、LLM 訓練全流程、RLHF 對齊、PEFT（LoRA / QLoRA）、評估與 benchmark、多模態，接著 vLLM 架構、KV-Cache 管理、量化、batching、分散式推論，最後是 Agent 架構、Function Calling、RAG、MLOps 與推薦排序。</p>
-                </a>
-                <a class="book" style="--spine:#8ad6c0" href="ai-ml-system-design.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/mle-interview-book.epub" download aria-label="下載《LLM / Agent / MLE 面試完全指南 v4》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.4 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#8ad6c0">
+                    <a class="book-open" href="ai-ml-system-design.html">
+                        <div class="book-head">
                         <span class="book-emoji">🤖</span>
                         <h3>AI/ML System Design 面試完全攻略</h3>
                     </div>
                     <div class="meta">25 章 · 6 大 Part</div>
                     <p class="summary">MLOps · LLM Ops · AI Infra · Model Inference 四大主軸：end-to-end ML pipeline 與 Feature Store、Model Serving（Triton / TorchServe）與推論優化、LLM 訓練微調與 RAG、生產化 MLOps、GPU 叢集與成本最佳化，最後收在面試實戰。</p>
-                </a>
-                <a class="book" style="--spine:#d9a44f" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_ML_%E5%B7%A5%E7%A8%8B.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/ai-ml-system-design.epub" download aria-label="下載《AI/ML System Design 面試完全攻略》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.4 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#d9a44f">
+                    <a class="book-open" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_ML_%E5%B7%A5%E7%A8%8B.html">
+                        <div class="book-head">
                         <span class="book-emoji">⚗️</span>
                         <h3>深入淺出 ML 工程</h3>
                     </div>
                     <div class="meta">32 章 · 附理解確認 Q&amp;A</div>
                     <p class="summary">大規模訓練工程學，每章以「從零開始理解」起手並附 Q&amp;A 驗收：算力估算與 MFU、雲端選型、GPU / 儲存 / 網路（NVLink 到 InfiniBand）、SLURM 調度、系統性除錯與 ML 測試、後訓練（SFT / RLHF / DPO / GRPO）、推理採樣、Mamba / SSM，直到 CUDA 記憶體階層與 Triton kernel 優化。</p>
-                </a>
-                <a class="book" style="--spine:#c98fd9" href="ml-engineering-chinese-ebook-v2.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA-ml-%E5%B7%A5%E7%A8%8B.epub" download aria-label="下載《深入淺出 ML 工程》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.8 MB</span></a>
+                </article>
+                <article class="book" style="--spine:#c98fd9">
+                    <a class="book-open" href="ml-engineering-chinese-ebook-v2.html">
+                        <div class="book-head">
                         <span class="book-emoji">🚀</span>
                         <h3>ML 工程實戰指南 v2</h3>
                     </div>
                     <div class="meta">硬體基礎設施篇</div>
                     <p class="summary">聚焦大規模訓練的硬體地基：AI 算力競賽全貌與 GPU 家族、三大雲 ML 生態比較與 Spot / Preemptible 省錢術，以及運算加速器、ML 訓練儲存系統、分散式訓練網路通訊三章深潛。</p>
-                </a>
-                <a class="book" style="--spine:#7fd99a" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_Coding_Agent%E8%88%87Harness_Engineering.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/ml-engineering-chinese-ebook-v2.epub" download aria-label="下載《ML 工程實戰指南 v2》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">79 KB</span></a>
+                </article>
+                <article class="book" style="--spine:#7fd99a">
+                    <a class="book-open" href="%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA_Coding_Agent%E8%88%87Harness_Engineering.html">
+                        <div class="book-head">
                         <span class="book-emoji">🛠️</span>
                         <h3>深入淺出 Coding Agent 與 Harness Engineering</h3>
                     </div>
                     <div class="meta">28 章 · Harness 拆解</div>
                     <p class="summary">用 Model / Harness / Agent 三層心智模型開場，從最小可運作的 agent 骨架逐步剖析 agentic loop（QueryEngine）、中斷處理、迴圈守衛與穩健性、Hooks 事件系統、MCP、Skills 漸進揭露、Slash Commands、Subagents、Coordinator / Swarm、模型路由、串流與快取，到系統提示工程與 SDK。</p>
-                </a>
+                    </a>
+                    <a class="dl" href="epub/%E6%B7%B1%E5%85%A5%E6%B7%BA%E5%87%BA-coding-agent%E8%88%87harness-engineering.epub" download aria-label="下載《深入淺出 Coding Agent 與 Harness Engineering》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.4 MB</span></a>
+                </article>
             </div>
             <div class="plank"></div>
         </section>
@@ -441,22 +518,28 @@
                 <span class="rule"></span>
             </div>
             <div class="books">
-                <a class="book" style="--spine:#76c043" href="gpu-interview-guide-v3-complete.html">
-                    <div class="book-head">
+                <article class="book" style="--spine:#76c043">
+                    <a class="book-open" href="gpu-interview-guide-v3-complete.html">
+                        <div class="book-head">
                         <span class="book-emoji">🎮</span>
                         <h3>GPU Infrastructure + CUDA 面試完全指南 v3</h3>
                     </div>
                     <div class="meta">19 章 · GPU + CUDA</div>
                     <p class="summary">前半段講 infra：GPU 記憶體階層與 Roofline Model、KV Cache、dynamic batching、LLM serving 的 TTFT 與 token streaming、分散式訓練、GPU 排程、故障處理與成本優化；後五章專攻 CUDA 程式模型、記憶體與效能優化及常見踩雷。</p>
-                </a>
-                <a class="book" style="--spine:#9aa0a6" href="binary_hacks_book.html">
-                    <div class="book-head">
+                    </a>
+                    <a class="dl" href="epub/gpu-interview-guide-v3-complete.epub" download aria-label="下載《GPU Infrastructure + CUDA 面試完全指南 v3》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">65 KB</span></a>
+                </article>
+                <article class="book" style="--spine:#9aa0a6">
+                    <a class="book-open" href="binary_hacks_book.html">
+                        <div class="book-head">
                         <span class="book-emoji">🔧</span>
                         <h3>Binary Hacks 白話版</h3>
                     </div>
                     <div class="meta">86 個 Hack</div>
                     <p class="summary">把二進位世界拆開來看：如何閱讀未知的 binary、組合語言入門，再深入 ELF segments、ld-linux.so 與函式庫搜尋、dlopen 動態載入、IFUNC 執行時分派、TLS、core dump、靜態連結與 ASLR，直到 glibc 內部細節。</p>
-                </a>
+                    </a>
+                    <a class="dl" href="epub/binary-hacks-book.epub" download aria-label="下載《Binary Hacks 白話版》EPUB 電子書"><span aria-hidden="true">⬇</span> EPUB<span class="sz">0.6 MB</span></a>
+                </article>
             </div>
             <div class="plank"></div>
         </section>

@@ -7,3 +7,8 @@
 
 .env
 .env.*
+
+# Build venv for tools/build_epub.py (see tools/README.md). The generated
+# epub/ files themselves are committed so GitHub Pages can serve them.
+.venv-epub/
+__pycache__/
