@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="以程式設計師視角理解電腦系統：資料表示、組合語言、處理器、效能、快取、連結、行程、虛擬記憶體、I/O、網路與並行。">
+<title>CS:APP 系統思維學習手冊 — 從位元到並行伺服器</title>
+<style>
+:root {
+  --bg: #f6f3ed;
+  --paper: #fffdf9;
+  --ink: #25231f;
+  --muted: #665f54;
+  --line: #ddd5c8;
+  --accent: #a3432f;
+  --accent-2: #245a6b;
+  --code: #1f252b;
+  --code-ink: #e7edf2;
+  --tip: #e9f4ef;
+  --warn: #fff2d8;
+  --work: #e9f0f7;
+  --question: #f3eafb;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(163,67,47,.08), transparent 26rem),
+    var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC",
+    "PingFang TC", "Microsoft JhengHei", sans-serif;
+  line-height: 1.78;
+}
+a { color: var(--accent-2); }
+header {
+  padding: 5rem 1.4rem 3.5rem;
+  color: #fff8ef;
+  background: linear-gradient(135deg, #39251f, #183c47 72%, #102b33);
+}
+.hero { max-width: 1080px; margin: 0 auto; }
+.eyebrow { color: #efc7aa; letter-spacing: .12em; font-size: .82rem; font-weight: 700; }
+h1 { margin: .45rem 0 1rem; font-size: clamp(2.25rem, 6vw, 4.5rem); line-height: 1.08; letter-spacing: -.035em; }
+.lead { max-width: 50rem; color: #e3ded5; font-size: 1.08rem; }
+.hero-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-top: 2rem; }
+.stat { padding: .9rem 1rem; border: 1px solid rgba(255,255,255,.18); border-radius: 12px; background: rgba(255,255,255,.06); }
+.stat strong { display: block; font-size: 1.45rem; color: #fff; }
+.layout { max-width: 1240px; margin: 0 auto; padding: 2rem 1.2rem 5rem; display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 2rem; }
+nav {
+  position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow: auto;
+  padding: 1rem; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,253,249,.94);
+  box-shadow: 0 10px 30px rgba(59,45,31,.06);
+}
+nav strong { display: block; margin-bottom: .55rem; }
+nav a { display: block; padding: .28rem .45rem; color: var(--muted); text-decoration: none; border-radius: 6px; font-size: .9rem; }
+nav a:hover, nav a:focus { color: var(--accent); background: #f1ebe2; }
+main { min-width: 0; }
+section {
+  margin: 0 0 2rem; padding: 2rem clamp(1.1rem, 4vw, 2.6rem);
+  border: 1px solid var(--line); border-radius: 16px; background: var(--paper);
+  box-shadow: 0 12px 34px rgba(63,47,30,.055);
+  scroll-margin-top: 1rem;
+}
+h2 { margin: 0 0 1rem; color: #2f2922; font-size: clamp(1.65rem, 3vw, 2.25rem); line-height: 1.3; }
+h3 { margin-top: 1.8rem; color: var(--accent-2); }
+h4 { margin-bottom: .35rem; }
+p, ul, ol { max-width: 76ch; }
+li + li { margin-top: .35rem; }
+.chapter-tag { color: var(--accent); font-size: .8rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.objectives { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin: 1rem 0; }
+.objective { padding: .8rem 1rem; border-radius: 10px; background: #f3eee6; }
+.mental, .tip, .warning, .work, .question, .answer {
+  margin: 1.15rem 0; padding: 1rem 1.15rem; border-left: 5px solid; border-radius: 8px;
+}
+.mental { background: #f3eee6; border-color: var(--accent); }
+.tip { background: var(--tip); border-color: #408665; }
+.warning { background: var(--warn); border-color: #cb8a1e; }
+.work { background: var(--work); border-color: #47769c; }
+.question { background: var(--question); border-color: #8252a3; }
+.answer { background: #eef6e7; border-color: #688b3e; }
+.mental strong:first-child, .tip strong:first-child, .warning strong:first-child,
+.work strong:first-child, .question strong:first-child, .answer strong:first-child { display: block; margin-bottom: .25rem; }
+table { width: 100%; margin: 1rem 0; border-collapse: collapse; font-size: .94rem; }
+th, td { padding: .7rem .8rem; border: 1px solid var(--line); vertical-align: top; text-align: left; }
+th { background: #eee8de; }
+code { padding: .12rem .34rem; border-radius: 4px; background: #eeeae3; font-family: "SFMono-Regular", Consolas, monospace; font-size: .9em; }
+pre {
+  overflow: auto; padding: 1rem 1.1rem; color: var(--code-ink); background: var(--code);
+  border-radius: 10px; line-height: 1.55; tab-size: 4;
+}
+pre code { padding: 0; color: inherit; background: transparent; font-size: .88rem; }
+.diagram { white-space: pre; color: #dceaf0; }
+details { margin: .75rem 0; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+summary { padding: .75rem 1rem; cursor: pointer; color: var(--accent-2); font-weight: 750; }
+details > div { padding: 0 1rem 1rem; }
+.formula { display: inline-block; padding: .15rem .5rem; border-radius: 5px; color: #f8f3e9; background: #3b4a50; font-family: "SFMono-Regular", Consolas, monospace; }
+.checklist li::marker { content: "✓  "; color: #408665; font-weight: 800; }
+.source-list { font-size: .9rem; overflow-wrap: anywhere; }
+.pill { display: inline-block; margin: .15rem .25rem .15rem 0; padding: .2rem .55rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: #fff; font-size: .78rem; }
+.two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.mini-card { padding: 1rem; border: 1px solid var(--line); border-radius: 10px; background: #fbf8f2; }
+.mini-card h4 { margin-top: 0; color: var(--accent-2); }
+.step {
+  position: relative; margin: 1rem 0; padding: 1rem 1rem 1rem 3.4rem;
+  border: 1px solid var(--line); border-radius: 10px; background: #fbf8f2;
+}
+.step::before {
+  content: attr(data-step); position: absolute; left: 1rem; top: 1rem;
+  width: 1.65rem; height: 1.65rem; display: grid; place-items: center;
+  border-radius: 50%; color: #fff; background: var(--accent-2); font-weight: 800;
+}
+.stuck { border-left: 5px solid #bd4e58; background: #fbecef; padding: 1rem 1.15rem; margin: 1rem 0; border-radius: 8px; }
+.checkpoint { border: 2px dashed #7e7568; background: #faf7f1; padding: 1rem 1.15rem; margin: 1rem 0; border-radius: 10px; }
+.term { color: var(--accent); font-weight: 750; }
+.nowrap { white-space: nowrap; }
+.toolbar { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+button {
+  padding: .55rem .85rem; border: 1px solid rgba(255,255,255,.35); border-radius: 8px;
+  color: #fff; background: rgba(255,255,255,.08); cursor: pointer;
+}
+button:hover { background: rgba(255,255,255,.16); }
+.muted { color: var(--muted); }
+footer { padding: 2rem 1rem 4rem; color: var(--muted); text-align: center; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  nav { position: static; max-height: none; columns: 2; }
+  nav strong { column-span: all; }
+  .hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  header { padding-top: 3.2rem; }
+  .hero-grid, .objectives, .two-col { grid-template-columns: 1fr; }
+  nav { columns: 1; }
+  section { padding: 1.35rem 1rem; }
+  th, td { padding: .55rem; }
+}
+@media print {
+  body { background: #fff; font-size: 10.5pt; }
+  header { color: #000; background: #fff; padding: 1rem 0; }
+  .lead, .eyebrow { color: #333; }
+  .layout { display: block; max-width: none; padding: 0; }
+  nav, .toolbar { display: none; }
+  section { break-before: page; border: 0; box-shadow: none; padding: .5rem 0; }
+  details > div { display: block; }
+  a { color: #000; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <div class="eyebrow">COMPUTER SYSTEMS · A PROGRAMMER'S PERSPECTIVE</div>
+    <h1>CS:APP 系統思維學習手冊</h1>
+    <p class="lead">從一個 C 程式如何變成執行中的行程出發，串起位元、指令、處理器、快取、連結、作業系統、虛擬記憶體、I/O、網路與並行。每章都用同一條學習路徑：先建立直覺，再看機制，最後落到工作中的診斷與設計。</p>
+    <div class="hero-grid">
+      <div class="stat"><strong>12</strong>核心章節</div>
+      <div class="stat"><strong>9</strong>實驗與專案路線</div>
+      <div class="stat"><strong>80+</strong>深化練習</div>
+      <div class="stat"><strong>完整</strong>解題思路</div>
+    </div>
+    <div class="toolbar">
+      <button type="button" onclick="window.print()">列印 / 匯出 PDF</button>
+      <button type="button" onclick="document.querySelectorAll('details').forEach(x => x.open = true)">展開所有解答</button>
+      <button type="button" onclick="document.querySelectorAll('details').forEach(x => x.open = false)">收合所有解答</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+<nav aria-label="章節目錄">
+  <strong>章節目錄</strong>
+  <a href="#guide">如何使用本書</a>
+  <a href="#prereq">0. 零基礎先備營</a>
+  <a href="#stuck-map">卡關診斷地圖</a>
+  <a href="#ch1">1. 系統全景</a>
+  <a href="#ch2">2. 資訊表示</a>
+  <a href="#ch3">3. 機器級程式</a>
+  <a href="#ch4">4. 處理器架構</a>
+  <a href="#ch5">5. 程式效能</a>
+  <a href="#ch6">6. 記憶體階層</a>
+  <a href="#ch7">7. 連結與載入</a>
+  <a href="#ch8">8. 例外控制流</a>
+  <a href="#ch9">9. 虛擬記憶體</a>
+  <a href="#ch10">10. 系統級 I/O</a>
+  <a href="#ch11">11. 網路程式設計</a>
+  <a href="#ch12">12. 並行程式設計</a>
+  <a href="#labs">Labs 實作地圖</a>
+  <a href="#work">工作應用手冊</a>
+  <a href="#problems">綜合課後題</a>
+  <a href="#sources">資料來源</a>
+</nav>
+
+<main data-epub-chapters>
+<section id="guide">
+  <span class="chapter-tag">Study Guide</span>
+  <h2>如何使用這本手冊</h2>
+  <p>CS:APP 的重點不是背硬體名詞，而是建立一條能跨層追問題的因果鏈。當程式「慢、錯、掛、吃記憶體、偶爾失敗」時，你要能從原始碼一路問到編譯器、指令、快取、核心與網路。</p>
+  <div class="mental">
+    <strong>全書主線：程式的一生</strong>
+    <span class="formula">原始碼 → 編譯 → 連結 → 載入 → 指令執行 → 記憶體存取 → 系統呼叫 → 網路 / 並行</span>
+  </div>
+  <h3>建議學習順序</h3>
+  <table>
+    <tr><th>階段</th><th>目標</th><th>章節與實作</th><th>完成標準</th></tr>
+    <tr><td>第一輪：建立地圖</td><td>知道各層負責什麼</td><td>1、2、3、6、8、9</td><td>能解釋一次函式呼叫、一次 page fault、一次 cache miss</td></tr>
+    <tr><td>第二輪：能觀察</td><td>學會用工具驗證猜想</td><td>5、7、10、11</td><td>能用 GDB、objdump、readelf、strace、perf 找證據</td></tr>
+    <tr><td>第三輪：能設計</td><td>把機制用在可靠程式</td><td>4、12 與所有 labs</td><td>能寫具邊界處理的 allocator、shell 或 concurrent server</td></tr>
+  </table>
+  <h3>每個概念固定問四件事</h3>
+  <div class="two-col">
+    <div class="mini-card"><h4>1. 它解決什麼問題？</h4><p>先找需求。例如 cache 是為了縮小 CPU 與 DRAM 的速度差，不要從 tag bits 開始背。</p></div>
+    <div class="mini-card"><h4>2. 對外契約是什麼？</h4><p>呼叫者可依賴什麼？哪些細節只是實作？例如 TCP 保證 byte order，不保證 message boundary。</p></div>
+    <div class="mini-card"><h4>3. 狀態放在哪裡？</h4><p>Register、process、kernel、cache、disk 還是 peer？找對 state owner，才能推導 lifetime 與 race。</p></div>
+    <div class="mini-card"><h4>4. 如何觀察與推翻？</h4><p>用 assembly、counter、trace、core dump 或最小實驗驗證，不把示意圖當成真實執行證據。</p></div>
+  </div>
+  <h3>一輪 45 分鐘的學習方式</h3>
+  <div class="step" data-step="1"><strong>10 分鐘：讀直覺與圖。</strong>不查細節，先用自己的話說出 input、state、output。</div>
+  <div class="step" data-step="2"><strong>15 分鐘：手算一個小例子。</strong>位元、地址、stack、cache set、page number 都要親手算。</div>
+  <div class="step" data-step="3"><strong>15 分鐘：用工具看真實結果。</strong>編譯、反組譯、單步、trace 或 profile。</div>
+  <div class="step" data-step="4"><strong>5 分鐘：寫下被推翻的直覺。</strong>真正的學習通常發生在「我原本以為」和證據不同時。</div>
+  <h3>最低工具箱</h3>
+  <pre><code># 建議在 Linux x86-64 環境操作
+cc -Wall -Wextra -Wconversion -g -O0 demo.c -o demo
+cc -O2 -S demo.c                  # 看編譯器產生的 assembly
+objdump -d -Mintel demo           # 反組譯
+readelf -h -S -s -r demo          # ELF header / section / symbol / relocation
+gdb ./demo                        # 單步、暫存器、記憶體、backtrace
+strace -f ./demo                  # 系統呼叫
+perf stat ./demo                  # cycles / instructions / cache / branch
+cc -g -fsanitize=address,undefined demo.c -o demo</code></pre>
+  <div class="warning">
+    <strong>閱讀邊界</strong>
+    本手冊是原創教學摘要與延伸題，不重製原書題目或官方 lab 的祕密答案。真正學會系統，必須自己操作編譯器、debugger 與實驗程式。
+  </div>
+</section>
+
+<section id="prereq">
+  <span class="chapter-tag">Chapter 0</span>
+  <h2>零基礎先備營：先把 C、地址與 Linux 補到能前進</h2>
+  <p>很多人不是卡在 CS:APP，而是卡在書中默認你已經會的 C 與 Unix 基礎。本章把後面反覆使用的概念先建立成可操作模型。</p>
+
+  <h3>0.1 一個 C 程式裡的「名稱、物件、值、地址」</h3>
+  <table>
+    <tr><th>概念</th><th>白話說法</th><th>例子</th><th>常見誤解</th></tr>
+    <tr><td>Identifier</td><td>原始碼中的名稱</td><td><code>count</code></td><td>名稱不一定在機器碼中存在</td></tr>
+    <tr><td>Object</td><td>一段可保存值的 storage</td><td>一個 <code>int</code>、array、struct</td><td>C object 不等於物件導向 object</td></tr>
+    <tr><td>Value</td><td>依型別解讀 bit pattern 後的意義</td><td><code>42</code></td><td>記憶體本身不保存高階型別標籤</td></tr>
+    <tr><td>Address</td><td>物件第一個 byte 的虛擬地址</td><td><code>&amp;count</code></td><td>虛擬地址不等於 DRAM 上的固定位置</td></tr>
+    <tr><td>Pointer</td><td>保存地址的 typed value</td><td><code>int *p</code></td><td>pointer 的型別影響解參考與 pointer arithmetic</td></tr>
+  </table>
+
+  <pre><code>int values[3] = {10, 20, 30};
+int *p = values;          // array expression 多數情境轉成首元素 pointer
+int x = *(p + 1);         // 20；+1 前進 sizeof(int) bytes
+size_t n = sizeof values / sizeof values[0]; // 只有仍看得到 array 型別時成立</code></pre>
+
+  <div class="stuck">
+    <strong>卡關：array 和 pointer 到底是不是同一個？</strong>
+    不是。Array 是固定數量元素組成的 object；pointer 是保存地址的 scalar value。Array expression 在多數運算中會 decay 成首元素 pointer，但 <code>sizeof array</code>、<code>&amp;array</code> 等情境不會。函式參數寫成 <code>int a[]</code> 時實際調整為 <code>int *a</code>，所以函式內無法用 <code>sizeof a</code> 求原陣列長度。
+  </div>
+
+  <h3>0.2 Scope、linkage、storage duration、lifetime 不要混在一起</h3>
+  <table>
+    <tr><th>問題</th><th>概念</th><th>例子</th></tr>
+    <tr><td>這個名稱在原始碼哪裡可見？</td><td>Scope</td><td>block scope、file scope</td></tr>
+    <tr><td>不同宣告是否指向同一 entity？</td><td>Linkage</td><td><code>static</code> file-local、<code>extern</code> external linkage</td></tr>
+    <tr><td>Storage 存在多久？</td><td>Storage duration</td><td>automatic、static、allocated、thread</td></tr>
+    <tr><td>何時允許存取該 object？</td><td>Lifetime</td><td>離開 block 後 local object lifetime 結束</td></tr>
+  </table>
+  <pre><code>int *bad(void) {
+    int local = 42;
+    return &amp;local;        // 錯：return 後 local lifetime 已結束
+}
+
+int *make_value(void) {
+    int *p = malloc(sizeof *p);
+    if (p != NULL) *p = 42;
+    return p;             // caller 取得 ownership，最後必須 free
+}</code></pre>
+
+  <h3>0.3 Declaration、definition 與 header</h3>
+  <p>Declaration 告訴 compiler 名稱的型別；definition 真正提供 function body 或配置 object storage。Header 應放介面宣告、型別、常數與 include guard；通常不要 include <code>.c</code>。一個 external object 可在 header 寫 <code>extern int counter;</code>，再於某個 <code>.c</code> 寫一次 <code>int counter;</code>。</p>
+
+  <h3>0.4 Undefined behavior 為何比「隨機結果」更嚴重</h3>
+  <p>Undefined behavior（UB）代表語言規格不再限制結果。Compiler 可假設合法程式不會發生 UB，再據此刪除分支或重排程式。常見來源：signed overflow、越界、use-after-free、無效 shift、違反 alignment、data race、錯誤 format specifier。</p>
+  <div class="warning">
+    <strong>初學者安全編譯選項</strong>
+    開發期使用 <code>-Wall -Wextra -Wconversion -Wshadow -g</code>，再分別測 <code>-O0</code> 與 <code>-O2</code>；搭配 <code>-fsanitize=address,undefined</code>。Warning 不是全部錯誤，但每一個都應理解後處理。
+  </div>
+
+  <h3>0.5 Linux shell 最低生存技能</h3>
+  <pre><code>pwd                         # 現在在哪個目錄
+ls -la                      # 檔案、權限、隱藏檔
+cc -g main.c -o app         # 編譯
+./app arg1                  # 執行；./ 表示目前目錄
+echo $?                     # 上一個程式的 exit status
+./app &gt;out.txt 2&gt;err.txt    # stdout 與 stderr 分流
+producer | consumer         # pipe：前者 stdout 接後者 stdin
+ps -ef                      # process 清單
+kill -TERM PID              # 發送 signal，不等於強制殺死
+ulimit -a                   # process resource limits</code></pre>
+
+  <h3>0.6 二的冪與 logarithm：後面所有地址題的共同語言</h3>
+  <table>
+    <tr><th>值</th><th>意義</th><th>常見位置</th></tr>
+    <tr><td><code>2^10 = 1024</code></td><td>約 1 Ki</td><td>容量換算</td></tr>
+    <tr><td><code>2^12 = 4096</code></td><td>4 KiB</td><td>常見 page size</td></tr>
+    <tr><td><code>log2(64) = 6</code></td><td>表示 64 種位置需要 6 bits</td><td>cache offset / set index</td></tr>
+    <tr><td><code>x mod 2^k</code></td><td>保留最低 k bits</td><td>截短、對齊、ring buffer</td></tr>
+    <tr><td><code>x &amp; (a-1)</code></td><td>當 a 是 2 的冪時取得餘數</td><td>alignment、hash table</td></tr>
+  </table>
+
+  <h3>0.7 Debugger 的第一條規則：觀察，不猜</h3>
+  <pre><code>gdb ./app
+(gdb) break main
+(gdb) run
+(gdb) next               # 以原始碼行前進，不進函式
+(gdb) step               # 進入函式
+(gdb) print variable
+(gdb) p/x variable       # 十六進位
+(gdb) x/16xb pointer     # 從地址看 16 個 bytes
+(gdb) info registers
+(gdb) bt                 # call stack
+(gdb) disassemble /m</code></pre>
+  <div class="tip">
+    <strong>最小重現法</strong>
+    固定輸入、移除無關程式碼、讓錯誤穩定發生，再找「最後一個仍正確的狀態」與「第一個錯誤狀態」。這比盯著 crash 行更有效，因為 memory corruption 常在很早以前發生。
+  </div>
+
+  <details>
+    <summary>先備題 1：<code>sizeof(pointer)</code> 為何不能得知 allocation 大小？</summary>
+    <div><p>Pointer value 只保存地址，其型別通常不攜帶被指向 allocation 的長度。<code>sizeof p</code> 得到 pointer 本身大小。長度必須由 API 額外傳入、包在 struct 中，或由 allocator 的私有 metadata 管理。</p></div>
+  </details>
+  <details>
+    <summary>先備題 2：<code>free(p)</code> 後把 <code>p = NULL</code> 是否完全解決 use-after-free？</summary>
+    <div><p>只清除這一個 pointer variable。其他 alias 仍可能保存舊地址，而且若程式先透過 alias 使用再清除也沒有幫助。真正策略是清楚 ownership、限制 alias、讓釋放點唯一，必要時用 sanitizer 驗證。</p></div>
+  </details>
+  <details>
+    <summary>先備題 3：為何 <code>char *p + 1</code> 和 <code>int *q + 1</code> 前進距離不同？</summary>
+    <div><p>Pointer arithmetic 以 pointed-to type 的元素為單位。前者加一個 <code>char</code>，通常 1 byte；後者加一個 <code>int</code>，通常 <code>sizeof(int)</code> bytes。這讓 <code>q[i]</code> 能定義成 <code>*(q+i)</code>。</p></div>
+  </details>
+  <details>
+    <summary>先備題 4：exit status、errno、signal 三者差在哪？</summary>
+    <div><p>Exit status 是 process 正常結束時回給 parent 的小整數狀態；<code>errno</code> 是許多 library/system-call wrapper 在失敗後提供的 thread-local 錯誤代碼，只有 API 表示失敗時才讀；signal 是可非同步送達 process/thread 的通知機制。</p></div>
+  </details>
+</section>
+
+<section id="stuck-map">
+  <span class="chapter-tag">Troubleshooting Map</span>
+  <h2>卡關診斷地圖：你真正缺的是哪一塊？</h2>
+  <table>
+    <tr><th>表面症狀</th><th>通常缺少的模型</th><th>回去補什麼</th><th>自我檢查</th></tr>
+    <tr><td>二補數一直靠背公式</td><td>模運算與位權</td><td>0.6、2.2</td><td>能否手算 4-bit 的 -1、-8、7？</td></tr>
+    <tr><td>看 assembly 每行都懂，整體不懂</td><td>資料流與 loop invariant</td><td>3.1–3.4</td><td>能否標出每個 register 的角色？</td></tr>
+    <tr><td>Stack 圖一直畫反</td><td>地址大小與 <code>rsp</code> 更新</td><td>3.3</td><td>能否分清「圖的上下」與「地址高低」？</td></tr>
+    <tr><td>Pipeline 題只會數格子</td><td>結果何時產生、consumer 何時需要</td><td>4.1–4.3</td><td>能否說明 stall 的因果，而非只說規則？</td></tr>
+    <tr><td>Cache 的 s/E/b 容易混</td><td>地址拆解與 line/set 關係</td><td>6.1</td><td>能否由 C、E、B 反推 S 與 bits？</td></tr>
+    <tr><td>Linker error 看不懂</td><td>宣告、定義、symbol、relocation</td><td>0.3、7.1–7.3</td><td>能否指出缺的是 compile-time 還是 link-time 資訊？</td></tr>
+    <tr><td>fork 後輸出次數猜錯</td><td>控制流複製與 stdio buffer</td><td>8.2、10.3</td><td>能否畫出 process tree 與每份 buffer？</td></tr>
+    <tr><td>Signal 程式偶爾掛住</td><td>任意 interleaving 與 signal mask</td><td>8.3</td><td>能否在任兩行間插入 signal 仍證明正確？</td></tr>
+    <tr><td>VM 只記得「假地址」</td><td>page、mapping、permission、backing</td><td>9.1–9.3</td><td>能否解釋 TLB miss 和 page fault 的差別？</td></tr>
+    <tr><td>malloc lab 一直 patch case</td><td>block invariant 與 heap checker</td><td>9.4</td><td>能否先寫 checker 再改 allocator？</td></tr>
+    <tr><td>Socket 程式在 localhost 正常</td><td>partial I/O、framing、timeout</td><td>10.2、11.2–11.3</td><td>能否處理一次只到 1 byte？</td></tr>
+    <tr><td>Concurrent code 靠 sleep 修</td><td>happens-before 與 predicate</td><td>12.2–12.5</td><td>能否寫出受保護 state 的 invariant？</td></tr>
+  </table>
+  <div class="checkpoint">
+    <strong>遇到卡關時的固定流程：</strong>
+    先縮小成一個具體問題 → 畫 state 與 owner → 列出允許的事件順序 → 手算最小例子 → 用工具取得一項證據 → 再回來修模型。不要同時查十篇答案，資訊量會掩蓋真正缺口。
+  </div>
+</section>
+
+<section id="ch1">
+  <span class="chapter-tag">Chapter 1</span>
+  <h2>系統全景：Hello World 背後發生什麼事</h2>
+  <div class="objectives">
+    <div class="objective">分清硬體、作業系統、編譯工具鏈的責任</div>
+    <div class="objective">看懂 source 到 process 的完整生命週期</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    電腦系統是一組抽象層。每一層隱藏細節，同時提供可依賴的契約。高品質工程師知道何時相信抽象，何時往下一層找證據。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>你只需要知道 C 程式可編譯成 executable。這章先建立地圖，不要求理解每個 ELF section、register 或 system call；後面會逐一拆開。
+  </div>
+  <h3>1.1 編譯系統四步驟</h3>
+  <table>
+    <tr><th>階段</th><th>輸入 → 輸出</th><th>主要工作</th><th>常用觀察工具</th></tr>
+    <tr><td>Preprocess</td><td><code>.c → .i</code></td><td>展開 <code>#include</code>、巨集與條件編譯</td><td><code>cc -E</code></td></tr>
+    <tr><td>Compile</td><td><code>.i → .s</code></td><td>語意分析、最佳化、產生 assembly</td><td><code>cc -S</code></td></tr>
+    <tr><td>Assemble</td><td><code>.s → .o</code></td><td>把指令編碼，留下尚未確定地址的 relocation</td><td><code>objdump</code></td></tr>
+    <tr><td>Link</td><td><code>.o + libraries → executable</code></td><td>解析符號、配置地址、套用 relocation</td><td><code>readelf</code>、<code>nm</code></td></tr>
+  </table>
+  <h4>把四步驟親眼看一次</h4>
+  <pre><code>// hello.c
+#include &lt;stdio.h&gt;
+int main(void) {
+    puts("hello");
+    return 0;
+}
+
+$ cc -E hello.c -o hello.i
+$ cc -S hello.i -o hello.s
+$ cc -c hello.s -o hello.o
+$ cc hello.o -o hello
+$ file hello hello.o
+$ nm hello.o
+$ ./hello</code></pre>
+  <p>你會看到 <code>hello.o</code> 還不是可直接執行的完整程式：它引用外部的 <code>puts</code>。最後 link 產生 executable，執行時 dynamic loader 與 C library 再參與。這也是為何「我的原始碼只有五行」不代表 process 只有五行工作。</p>
+  <h3>1.2 執行時的分工</h3>
+  <pre class="diagram"><code>應用程式：演算法、資料結構、商業邏輯
+    ↓ library call / system call
+作業系統：行程、虛擬記憶體、檔案、裝置、網路、保護
+    ↓ ISA（軟硬體契約）
+處理器：取指、解碼、執行、推測、退休
+    ↓ address / data
+記憶體階層：register → L1/L2/L3 → DRAM → SSD / network</code></pre>
+  <p><strong>ISA</strong> 是編譯器與 CPU 之間的契約；<strong>ABI</strong> 再加入 calling convention、資料布局、object format 等二進位相容規則；<strong>API</strong> 則是原始碼層級的介面。</p>
+  <h4>從按下 Enter 到看到 hello</h4>
+  <ol>
+    <li>Shell 解析命令，通常建立 child process。</li>
+    <li>Child 透過 <code>execve</code> 請核心載入 executable。</li>
+    <li>Kernel 檢查格式與權限，建立新的 virtual address space mappings。</li>
+    <li>Dynamic loader 載入 shared libraries 並完成需要的 relocation。</li>
+    <li>Runtime 啟動程式，最終呼叫 <code>main</code>。</li>
+    <li><code>puts</code> 整理輸出，最後以 system call 把 bytes 交給 kernel。</li>
+    <li>Terminal driver 與顯示系統讓字元出現在畫面。</li>
+  </ol>
+  <div class="stuck">
+    <strong>卡關：CPU、OS、library 到底誰在做事？</strong>
+    看 privilege 與 state owner。一般字串處理可在 user mode library 完成；檔案、網路、process、page table 等受保護資源由 kernel 管理；算術與指令執行由 CPU 完成。一次高階 API 呼叫可能跨越多層。
+  </div>
+  <h3>1.3 Amdahl 定律：最佳化前先找占比</h3>
+  <p>若某部分占總時間比例為 <code>α</code>，該部分加速 <code>k</code> 倍，整體加速比是：</p>
+  <p><span class="formula">Speedup = 1 / ((1 - α) + α / k)</span></p>
+  <p>一段只占 5% 的程式，即使變成零成本，整體最多也只快約 1.053 倍。這是「先 profile 再最佳化」的數學理由。</p>
+  <div class="work">
+    <strong>工作應用：跨層事故定位</strong>
+    API p99 變慢時，依序切分 CPU time、blocked time、page faults、storage/network latency。先找時間消失在哪一層，再針對該層取證。
+  </div>
+  <details>
+    <summary>理解題：library call 和 system call 有何不同？</summary>
+    <div><p>Library call 是呼叫使用者空間的函式，例如 <code>strlen</code>；不一定進入核心。System call 是受控地切換到核心，請求作業系統執行特權操作，例如 <code>read</code>。<code>printf</code> 是 library call，但最後通常透過 <code>write</code> system call 輸出；中間可能先經過 stdio buffer。</p></div>
+  </details>
+  <details>
+    <summary>理解題：程式已經 link 完，為何啟動時仍可能出現 shared library error？</summary>
+    <div><p>Link time 可只記錄 executable 需要哪些 shared objects 與 symbols；真正的 library 搜尋與部分 binding 發生在 load/runtime。部署環境可能缺檔案、搜尋路徑不同、ABI 或 symbol version 不相容。</p></div>
+  </details>
+  <details>
+    <summary>工具題：如何確認 hello 實際呼叫了哪些 system calls？</summary>
+    <div><p>在 Linux 使用 <code>strace -f ./hello</code>。先找 <code>execve</code>、library mappings，再找輸出的 <code>write</code>。實際 trace 會比想像長，因為 loader、locale 與 runtime 初始化也需要系統資源。</p></div>
+  </details>
+</section>
+
+<section id="ch2">
+  <span class="chapter-tag">Chapter 2</span>
+  <h2>資訊表示：位元沒有型別，解讀方式才有</h2>
+  <div class="objectives">
+    <div class="objective">掌握補數、溢位、位元運算與型別轉換</div>
+    <div class="objective">理解浮點誤差、舍入與數值穩定性</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    記憶體只保存 bit pattern。同一串位元可以被解讀為整數、浮點數、指標或指令。Bug 常發生在兩種解讀規則的交界。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>先能把一個 byte 看成 8 bits，並知道十六進位一位對應 4 bits。所有公式都先用 4-bit 或 8-bit 小模型手算，再推廣到 32/64-bit。
+  </div>
+  <h3>2.1 二進位、十六進位與 byte order</h3>
+  <p>十六進位每一位剛好對應四個 bit，適合閱讀地址與 bit mask。若整數 <code>0x12345678</code> 從低地址開始存成 <code>78 56 34 12</code>，就是 little-endian；網路協定傳統上使用 big-endian，也稱 network byte order。</p>
+  <table>
+    <tr><th>十進位</th><th>8-bit binary</th><th>Hex</th><th>看法</th></tr>
+    <tr><td>5</td><td><code>0000 0101</code></td><td><code>0x05</code></td><td><code>4 + 1</code></td></tr>
+    <tr><td>42</td><td><code>0010 1010</code></td><td><code>0x2A</code></td><td><code>32 + 8 + 2</code></td></tr>
+    <tr><td>255</td><td><code>1111 1111</code></td><td><code>0xFF</code></td><td>8-bit unsigned 最大值</td></tr>
+  </table>
+  <h4>Endianness 只改 byte 排列，不改 bit 內順序</h4>
+  <p>把整數以 bytes dump 出來時才會觀察到 endianness。字串 <code>"AB"</code> 本來就是先 A 後 B 的 byte sequence，不會因 little-endian 自動倒過來。Protocol field 要逐欄位編碼，不要把整個 struct 直接傳送。</p>
+  <h3>2.2 Unsigned 與 two's complement</h3>
+  <table>
+    <tr><th>w-bit 表示</th><th>範圍</th><th>重點</th></tr>
+    <tr><td>Unsigned</td><td><code>0 … 2^w - 1</code></td><td>算術以 <code>2^w</code> 為模；overflow 定義明確</td></tr>
+    <tr><td>Two's complement signed</td><td><code>-2^(w-1) … 2^(w-1)-1</code></td><td>最小值沒有對應的正值；C 的 signed overflow 是 undefined behavior</td></tr>
+  </table>
+  <p>求負值可視為 <code>~x + 1</code>。符號擴展把最高位複製到新增的高位；零擴展則補 0。截短低 w 位等價於對 <code>2^w</code> 取模，但把結果解讀為 signed 時還需看最高位。</p>
+  <h4>4-bit 手算：先把環想清楚</h4>
+  <pre class="diagram"><code>Unsigned:       0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+bit pattern: 0000 ................................... 1111
+Signed 解讀:    0 1 2 3 4 5 6 7 -8 -7 -6 -5 -4 -3 -2 -1
+
+7 + 3 = 1010
+unsigned 解讀：10
+signed 解讀：-6（signed overflow，C 不允許依賴這個結果）</code></pre>
+  <h3>2.3 C integer promotions 與 conversion 排查法</h3>
+  <ol>
+    <li>先標出每個 operand 的實際型別與寬度。</li>
+    <li>小於 <code>int</code> 的整數型別通常先做 integer promotion。</li>
+    <li>Binary operator 再做 usual arithmetic conversions，讓兩邊有共同型別。</li>
+    <li>運算在共同型別中發生，最後才轉到 assignment target。</li>
+  </ol>
+  <pre><code>int x = -1;
+unsigned int y = 1;
+if (x &lt; y) {
+    /* 常見平台上不會進來：x 先轉成很大的 unsigned */
+}</code></pre>
+  <div class="stuck">
+    <strong>卡關：cast 能不能修 overflow？</strong>
+    要在運算「之前」提升 operand。<code>(long)(a * b)</code> 仍先以原型別相乘，overflow 後才 cast；應寫 <code>(long)a * b</code>。Cast 只改解讀/轉換規則，不會回到過去修復已發生的錯誤。
+  </div>
+  <div class="warning">
+    <strong>最常見的 C 陷阱：signed / unsigned 混算</strong>
+    比較時若 signed 被轉成 unsigned，負數會變成很大的正數。陣列長度、差值和倒序 loop 特別危險。長度用 <code>size_t</code>，差值用 <code>ptrdiff_t</code>，並避免寫 <code>for (size_t i = n - 1; i >= 0; --i)</code>。
+  </div>
+  <pre><code>#include &lt;stdint.h&gt;
+#include &lt;stdbool.h&gt;
+
+bool add_overflow_i32(int32_t a, int32_t b, int32_t *out) {
+    int64_t wide = (int64_t)a + (int64_t)b;
+    if (wide &gt; INT32_MAX || wide &lt; INT32_MIN) return true;
+    *out = (int32_t)wide;
+    return false;
+}</code></pre>
+  <h3>2.4 Bit hacks 要先寫出語意</h3>
+  <ul>
+    <li><code>x &amp; (x - 1)</code> 清掉最低的 1；可用於計算 set bits 或檢查 power of two。</li>
+    <li><code>x &amp; -x</code> 取出最低的 1；成立的前提是 two's complement，並要小心 signed 最小值。</li>
+    <li>設定、清除、切換第 k 位：<code>x | mask</code>、<code>x &amp; ~mask</code>、<code>x ^ mask</code>。</li>
+    <li>右移 signed 負數是否做 arithmetic shift 與語言規格、實作有關；協定解析優先用 unsigned。</li>
+  </ul>
+  <h3>2.5 IEEE 754 浮點心智模型</h3>
+  <p>一般 normalized binary floating point 可寫成 <code>(-1)^s × 1.f × 2^E</code>。指數全 0 表示 zero 或 subnormal；全 1 表示 infinity 或 NaN。浮點數密度隨數值大小改變，因此它提供相對精度，不是固定小數位。</p>
+  <p>以 binary32 為例，1 個 sign bit、8 個 exponent bits、23 個 fraction bits。Normalized number 的真實指數是 <code>E = encoded_exponent - 127</code>，有效數有隱含的 leading 1；subnormal 沒有隱含 1，讓數值能逐步靠近 0，形成 gradual underflow。預設 round-to-nearest, ties-to-even 可降低長期統計偏差。</p>
+  <h4>手拆 <code>0x3FC00000</code></h4>
+  <pre class="diagram"><code>0 | 01111111 | 10000000000000000000000
+s=0
+encoded exponent=127 → E=0
+fraction=.1000... → significand=1.5
+value=(-1)^0 × 1.5 × 2^0 = 1.5</code></pre>
+  <p>要檢查 bit pattern，使用 <code>memcpy</code> 在 <code>float</code> 與 <code>uint32_t</code> 間複製 representation，避免用不相容 pointer 強行解參考造成 aliasing/alignment 問題。</p>
+  <table>
+    <tr><th>現象</th><th>原因</th><th>工程策略</th></tr>
+    <tr><td><code>0.1 + 0.2 != 0.3</code></td><td>多數十進位小數無法有限表示成二進位</td><td>以 absolute + relative tolerance 比較</td></tr>
+    <tr><td>大數加小數，小數消失</td><td>對齊指數時低位被捨去</td><td>改變加總順序、Kahan summation</td></tr>
+    <tr><td>兩個接近的數相減失去精度</td><td>catastrophic cancellation</td><td>改寫公式，避免先產生近似相等的大數</td></tr>
+    <tr><td>NaN 傳播</td><td>無效運算保留「不是數字」狀態</td><td>入口驗證 finite，監控 NaN/Inf</td></tr>
+  </table>
+  <pre><code>#include &lt;math.h&gt;
+#include &lt;stdbool.h&gt;
+
+bool nearly_equal(double a, double b, double abs_tol, double rel_tol) {
+    double diff = fabs(a - b);
+    double scale = fmax(fabs(a), fabs(b));
+    return diff &lt;= fmax(abs_tol, rel_tol * scale);
+}</code></pre>
+  <div class="work">
+    <strong>工作應用：金額、計量與序列化</strong>
+    金額通常以最小貨幣單位的整數或 decimal type 儲存。跨機器資料需要明確定義寬度、signedness、byte order、alignment 與 floating-point 格式，不能直接把 C struct 的記憶體 bytes 當成穩定協定。
+  </div>
+  <details>
+    <summary>深化題：為何 <code>abs(INT_MIN)</code> 可能出問題？</summary>
+    <div><p>w-bit two's complement 的最小值是 <code>-2^(w-1)</code>，最大值只有 <code>2^(w-1)-1</code>，正值範圍少一個。因此最小值沒有可表示的正相反數。安全做法是先提升到更寬的型別，或在取絕對值前特別處理最小值。</p></div>
+  </details>
+  <details>
+    <summary>深化題：如何判斷 unsigned 加法 overflow？</summary>
+    <div><p>令 <code>sum = a + b</code>。Unsigned 算術會對 <code>2^w</code> 取模，因此若發生 wraparound，<code>sum &lt; a</code>（也會小於 b）。C23 或編譯器 builtin 也提供 checked arithmetic；正式程式優先使用標準或 builtin，避免自行遺漏型別細節。</p></div>
+  </details>
+  <details>
+    <summary>深化題：8-bit 的 <code>0xFF</code> sign-extend 到 16-bit 是什麼？</summary>
+    <div><p>若先把它解讀為 signed 8-bit 的 -1，sign extension 複製最高位，得到 <code>0xFFFF</code>，仍表示 -1。若它是 unsigned 8-bit 的 255，zero extension 得到 <code>0x00FF</code>。</p></div>
+  </details>
+  <details>
+    <summary>深化題：為何浮點加法不具 associativity？</summary>
+    <div><p>每一步結果都可能 round。<code>(a+b)+c</code> 與 <code>a+(b+c)</code> 的中間值大小與被捨棄 bits 不同，因此最後 representation 可不同。平行 reduction 改變加總樹，也可能改變低位結果。</p></div>
+  </details>
+</section>
+
+<section id="ch3">
+  <span class="chapter-tag">Chapter 3</span>
+  <h2>機器級程式：讀懂編譯器真正讓 CPU 做的事</h2>
+  <div class="objectives">
+    <div class="objective">能追蹤 register、stack frame、pointer 與 control flow</div>
+    <div class="objective">能從 assembly 定位 crash、overflow 與 ABI 問題</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    Assembly 是資料如何移動、條件如何改變控制流的精確紀錄。閱讀時不要逐行翻譯成中文，先找函式邊界、資料來源、比較條件與迴圈不變量。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>你不需要背 opcode。先記住四件事：資料在哪個 register/memory、這行讀了什麼、寫了什麼、下一條指令由什麼條件決定。
+  </div>
+  <h3>3.1 x86-64 基本模型</h3>
+  <ul>
+    <li>General-purpose registers 保存整數、地址與暫時值；<code>rsp</code> 指向 stack top。</li>
+    <li>System V AMD64 ABI 常用 <code>rdi, rsi, rdx, rcx, r8, r9</code> 傳前六個整數或指標參數，<code>rax</code> 放回傳值。</li>
+    <li>Caller-saved register 可被被呼叫者覆寫；callee-saved register 若使用，callee 必須保存並還原。</li>
+    <li>Condition codes 由算術或比較設定，條件跳躍和 conditional move 讀取它們。</li>
+  </ul>
+  <h4>Intel 與 AT&amp;T syntax 對照</h4>
+  <table>
+    <tr><th></th><th>Intel</th><th>AT&amp;T</th></tr>
+    <tr><td>Operand 順序</td><td><code>dest, src</code></td><td><code>src, dest</code></td></tr>
+    <tr><td>Register</td><td><code>rax</code></td><td><code>%rax</code></td></tr>
+    <tr><td>Immediate</td><td><code>42</code></td><td><code>$42</code></td></tr>
+    <tr><td>Memory</td><td><code>[rbx+rcx*4+8]</code></td><td><code>8(%rbx,%rcx,4)</code></td></tr>
+  </table>
+  <p>同一個 64-bit register 有不同寬度名稱，例如 <code>rax/eax/ax/al</code>。寫入 <code>eax</code> 會把 <code>rax</code> 高 32 bits 清零；寫 <code>ax</code> 或 <code>al</code> 通常只改低位。這是逆向時常見的值來源。</p>
+  <h3>3.2 Addressing mode 就是地址公式</h3>
+  <p><code>base + index × scale + displacement</code> 可一次表達陣列或 struct 成員地址。讀到 <code>[rdi + rsi*4 + 8]</code> 時，先寫成 C 式地址公式，確認每個 register 的角色。</p>
+  <pre><code>// C
+long sum(const int *a, size_t n) {
+    long total = 0;
+    for (size_t i = 0; i &lt; n; ++i) total += a[i];
+    return total;
+}
+
+# 可能的核心機器級意義（非固定輸出）
+# rdi = a, rsi = n, rax = total, rcx = i
+# load a[i] → sign extend → add → i++ → compare → branch</code></pre>
+  <h4>讀 assembly 的五步標註法</h4>
+  <ol>
+    <li>依 ABI 標出 arguments 與 return register。</li>
+    <li>找 backward branch，圈出 loop。</li>
+    <li>找 compare/test，寫出條件的 signedness。</li>
+    <li>把每個 memory operand 改寫成 base + index × size + offset。</li>
+    <li>最後才為 registers 命名，例如 <code>i</code>、<code>total</code>、<code>node</code>。</li>
+  </ol>
+  <h3>3.3 Stack frame 與函式呼叫</h3>
+  <pre class="diagram"><code>較高地址
+┌──────────────────┐
+│ caller 的 frame  │
+├──────────────────┤
+│ return address   │ ← call 指令推入
+├──────────────────┤
+│ saved registers  │
+│ local variables  │
+│ spill slots      │
+└──────────────────┘ ← rsp
+較低地址（stack 通常往下長）</code></pre>
+  <p>最佳化後不一定有 frame pointer，也不一定真的建立 stack frame。變數可能只活在 register，函式可能被 inline，tail call 可能重用現有 frame。因此 debugger 顯示的是編譯結果，不是原始碼的逐行實體化。</p>
+  <h3>3.4 Control flow、switch 與遞迴</h3>
+  <p><code>if/while/for</code> 最後都成為 compare、condition codes 與 branch 的組合。Case 值密集的 <code>switch</code> 可能編譯成 jump table：先做範圍檢查，再用 index 取出 target address 做間接跳轉；稀疏 case 則可能使用比較樹。遞迴沒有特殊魔法，每次呼叫只是建立新的參數、return address 與必要 frame，因此深度也受 stack 空間限制。</p>
+  <h3>3.5 Struct、array 與 alignment</h3>
+  <p>Struct 欄位依宣告順序排列，但編譯器可插入 padding 滿足 alignment；整個 struct 尺寸通常也對齊到最大欄位 alignment。若 layout 影響網路、磁碟或 FFI，使用明確序列化格式與 static assertions。</p>
+  <pre><code>struct Example {
+    char tag;     // offset 0
+                  // 常見情況：padding 1..3
+    int value;    // offset 4
+    short code;   // offset 8
+                  // 尾端 padding，使 sizeof 常為 12
+};</code></pre>
+  <p>重排欄位可能減少 padding，但會改 ABI/layout。不要對已公開或已持久化的 struct 任意重排。</p>
+  <h3>3.6 Buffer overflow、NX、ASLR、canary 與 ROP</h3>
+  <p>Stack buffer overflow 可能覆寫 return address。現代防禦包括不可執行記憶體（NX）、位址隨機化（ASLR）、stack canary、PIE 與 control-flow protection。ROP 不注入新程式碼，而是串接既有 code snippets，因此單靠 NX 不足以阻止控制流劫持。</p>
+  <div class="work">
+    <strong>工作應用：讀 core dump</strong>
+    先看 signal 與 fault address，再用 <code>bt</code> 找 call chain、<code>frame</code> 切換、<code>info registers</code> 看參數與指令位置、<code>x</code> 檢查記憶體。若最佳化使變數消失，對照 <code>disassemble /m</code> 與 ABI 推回值的來源。
+  </div>
+  <div class="stuck">
+    <strong>卡關：Stack 圖上下到底怎麼看？</strong>
+    圖的上方/下方只是畫法，真正資訊是地址數值。x86-64 stack 慣例上往較低地址成長：push 先減少 <code>rsp</code> 再寫值；pop 讀值後增加 <code>rsp</code>。每次都在圖旁標「高地址／低地址」，不要靠視覺記憶。
+  </div>
+  <details>
+    <summary>解題：看到 <code>test rax, rax; je ...</code> 應如何理解？</summary>
+    <div><p><code>test rax, rax</code> 做 AND 但不保存結果，只設定 flags。若 rax 是 0，zero flag 會設起，<code>je</code> 跳轉。這是檢查 pointer 是否為 NULL 或整數是否為 0 的常見模式。</p></div>
+  </details>
+  <details>
+    <summary>解題：為何反組譯中的 local variable 數量可能比原始碼少？</summary>
+    <div><p>編譯器可做 constant propagation、dead-code elimination、register allocation、common-subexpression elimination 與 inlining。原始碼變數是語言抽象，不保證對應到獨立記憶體位置。</p></div>
+  </details>
+  <details>
+    <summary>解題：<code>cmp a,b</code> 後該用 signed 還是 unsigned jump？</summary>
+    <div><p>取決於原始資料語意。Signed 比較使用如 <code>jl/jg</code>，關注 overflow 與 sign flags；unsigned 使用 <code>jb/ja</code>，關注 carry/zero。單看 bit pattern 不足，必須推回型別或使用情境。</p></div>
+  </details>
+  <details>
+    <summary>工具題：如何找出某次 segfault 實際 faulting instruction？</summary>
+    <div><p>在 GDB 執行到 SIGSEGV 後，用 <code>x/i $pc</code> 或 <code>disassemble</code> 看當前指令，<code>info registers</code> 取 addressing operands，再手算 effective address。接著確認該地址是否映射、permission 與 pointer lifetime。</p></div>
+  </details>
+</section>
+
+<section id="ch4">
+  <span class="chapter-tag">Chapter 4</span>
+  <h2>處理器架構：一條指令如何走過 datapath</h2>
+  <div class="objectives">
+    <div class="objective">理解 fetch、decode、execute、memory、write-back</div>
+    <div class="objective">能解釋 pipeline hazard、branch prediction 與 speculation</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    ISA 描述「結果必須像什麼」，microarchitecture 決定「如何快速做到」。Pipeline 讓多條指令重疊，不代表單一指令延遲變短，而是提高 throughput。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>先把 CPU 想成「register state + memory + clock」。Datapath 是資料走的路，control logic 決定 mux 選哪一路與哪些 state 在 clock edge 更新。
+  </div>
+  <h3>4.0 Combinational logic 與 sequential state</h3>
+  <p>Combinational logic 的輸出只由當前輸入決定，例如 ALU、adder、mux；sequential element 保存跨 cycle 的 state，例如 PC、register file、pipeline registers。Clock period 必須容納一個 stage 的最慢 combinational path 加上 register overhead，這條最慢路徑稱 critical path。</p>
+  <h3>4.1 Sequential datapath</h3>
+  <ol>
+    <li><strong>Fetch：</strong>依 PC 讀指令並算 next PC。</li>
+    <li><strong>Decode：</strong>解析 opcode、讀 register operands。</li>
+    <li><strong>Execute：</strong>ALU 算術、地址計算或條件判斷。</li>
+    <li><strong>Memory：</strong>需要時讀寫 data memory。</li>
+    <li><strong>Write-back：</strong>把結果寫回 register file。</li>
+    <li><strong>PC update：</strong>選擇 sequential、branch、call 或 return target。</li>
+  </ol>
+  <h3>4.2 Pipeline hazards</h3>
+  <table>
+    <tr><th>Hazard</th><th>例子</th><th>典型處理</th></tr>
+    <tr><td>Data hazard</td><td>後一條指令立刻使用前一條尚未寫回的結果</td><td>forwarding / bypass；必要時 stall</td></tr>
+    <tr><td>Control hazard</td><td>尚未知道 branch 走向，下一個 PC 不確定</td><td>predict；錯誤時 flush 並重取</td></tr>
+    <tr><td>Structural hazard</td><td>兩階段同時需要同一硬體資源</td><td>增加資源、分時或 stall</td></tr>
+  </table>
+  <h4>Load-use hazard 為何 forwarding 仍救不了</h4>
+  <pre class="diagram"><code>cycle:       1    2    3    4    5    6
+mrmovq       F    D    E    M    W
+addq              F    D    D    E    M    W
+                         ↑ stall 一 cycle
+
+load 的資料到 M 階段末才出現，
+但緊接的 add 原本在下一 cycle 的 E 階段就需要它。</code></pre>
+  <p>思考 hazard 時固定問：「producer 最早何時產生結果？consumer 最晚何時需要？中間是否有 forwarding path？」不要只背 opcode 配對。</p>
+  <p><strong>Latency</strong> 是一個操作從開始到結果可用的時間；<strong>throughput</strong> 是單位時間完成多少操作。現代 out-of-order CPU 會重新安排可執行的微操作，但在 architectural state 上仍呈現符合 ISA 的結果。</p>
+  <h3>4.3 Y86-64 與 HCL 的學習價值</h3>
+  <p>Y86-64 刻意縮小 x86-64 指令集，讓你能完整追蹤每種指令需要哪些 datapath 元件與 control signals。HCL 是描述組合邏輯選擇的教學語言。Architecture Lab 的重點是：新增或修改指令時，列出每一 stage 的輸入、輸出與狀態更新，再處理 forwarding、stall、bubble 與 exception priority。</p>
+  <h3>4.4 Branch prediction 與 speculation</h3>
+  <p>處理器在 branch 結果確定前先猜路徑並執行。猜對可維持 pipeline；猜錯必須丟棄 speculative work。資料分布難預測的 branch 會帶來成本；但是否改成 branchless code 仍需量測，因為 branchless 可能增加指令與資料依賴。</p>
+  <div class="warning">
+    <strong>安全邊界</strong>
+    Architectural state 被回滾，不代表 microarchitectural footprint 完全消失。Speculative execution 可能透過 cache timing 等 side channel 洩漏資訊，這也是 Spectre 類問題的根源。
+  </div>
+  <div class="work">
+    <strong>工作應用：讀 CPU 指標</strong>
+    IPC 低不等於 CPU 不忙。搭配 cycles、instructions、branch-misses、cache-misses、frontend/backend stalls 判讀。先用 profile 找 hot path，再看造成 stall 的依賴、記憶體或分支。
+  </div>
+  <div class="stuck">
+    <strong>卡關：stall 和 bubble 有何不同？</strong>
+    Stall 是某個 pipeline register 保持原值，讓指令暫停；bubble 是把該 stage 的控制訊號改成無副作用的 NOP，讓後方舊指令繼續排空。實作 hazard control 時必須明確指出哪個 register stall、哪個 register bubble。
+  </div>
+  <details>
+    <summary>推理題：pipeline 深度增加一定更快嗎？</summary>
+    <div><p>不一定。較短 stage 可提高 clock frequency，但 pipeline register 有成本，branch misprediction 要丟棄更多 stage，資料依賴也可能增加等待。效能取決於時脈、IPC、功耗與 workload 的綜合結果。</p></div>
+  </details>
+  <details>
+    <summary>推理題：為何 branch prediction 猜錯不能只改 PC？</summary>
+    <div><p>錯路徑指令可能已進入多個 stages。雖然它們通常尚未 retirement，但必須從 pipeline 清除，避免寫 register/memory 或拋出不該發生的 exception；再從正確 target 重新 fetch。</p></div>
+  </details>
+  <details>
+    <summary>推理題：同一 ISA 的兩顆 CPU 為何效能可差很多？</summary>
+    <div><p>它們可有不同 clock、pipeline width/depth、out-of-order window、cache/TLB、branch predictor、execution units 與 memory controller。ISA 只約束 architectural behavior，不規定這些 microarchitectural 資源。</p></div>
+  </details>
+</section>
+
+<section id="ch5">
+  <span class="chapter-tag">Chapter 5</span>
+  <h2>程式效能：從「感覺會快」走向可證明的改善</h2>
+  <div class="objectives">
+    <div class="objective">區分 algorithmic、compiler、CPU、memory 限制</div>
+    <div class="objective">能設計可信的 benchmark 與 profile 流程</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    效能最佳化是實驗科學：先定義指標與 workload，再量 baseline、形成假說、只改一件事、重新量測並檢查 correctness。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>先定義你要改善的是 latency、throughput、CPU cost、memory、energy 還是 tail latency。沒有 metric 的「變快」無法驗證。
+  </div>
+  <h3>5.1 最有價值的改善順序</h3>
+  <ol>
+    <li>改變演算法複雜度或減少不必要工作。</li>
+    <li>改善資料布局與 locality，減少 cache miss、allocation、copy。</li>
+    <li>移除 loop-invariant work、昂貴呼叫與不必要 bounds checks。</li>
+    <li>增加 instruction-level parallelism，減少 dependency chain。</li>
+    <li>最後才考慮 SIMD、prefetch、assembly 等平台特定技巧。</li>
+  </ol>
+  <h3>5.2 Compiler optimization 的邊界</h3>
+  <p>編譯器必須遵守語言語意與可能的 alias。若兩個 pointer 可能指向同一位置，重排 load/store 可能改變結果；這會限制最佳化。<code>restrict</code> 是程式設計師提供的強契約，只有在確實不重疊時才能使用。</p>
+  <pre><code>// 降低 dependency chain：四個 accumulator 提供更多 ILP
+double sum4(const double *a, size_t n) {
+    double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+    size_t i = 0;
+    for (; i + 3 &lt; n; i += 4) {
+        s0 += a[i]; s1 += a[i+1]; s2 += a[i+2]; s3 += a[i+3];
+    }
+    for (; i &lt; n; ++i) s0 += a[i];
+    return (s0 + s1) + (s2 + s3);
+}</code></pre>
+  <p>這個改寫可能改變 floating-point 加總順序，因此低位結果可能不同。最佳化不能只問「快不快」，也要明確定義允許的數值誤差。</p>
+  <h3>5.3 CPE 與效能下限</h3>
+  <p><strong>Cycles per element（CPE）</strong> 適合描述大型 loop 的穩態成本。若 operation latency 形成單一 dependency chain，latency 會限制 CPE；若有多個獨立 operations，execution units 的 throughput 可能成為下限。Loop unrolling 同時可降低 branch/index overhead，並暴露更多獨立工作，但過度展開會增加 code size 與 register pressure。</p>
+  <h3>5.4 Benchmark checklist</h3>
+  <ul class="checklist">
+    <li>使用 release optimization，保留 debug symbols 方便 profile。</li>
+    <li>防止 compiler 把待測工作整段消除，並實際消費結果。</li>
+    <li>區分 warm-up、steady state 與 cold-start；分開報告。</li>
+    <li>固定或記錄 CPU、frequency scaling、資料大小與輸入分布。</li>
+    <li>報 median、p95/p99、變異與樣本數，不只報最佳一次。</li>
+    <li>先驗證輸出一致，再比較 wall time、CPU time 與硬體 counters。</li>
+  </ul>
+  <h3>5.5 從 perf stat 讀出第一個假說</h3>
+  <table>
+    <tr><th>觀察</th><th>可能方向</th><th>仍不能直接下的結論</th></tr>
+    <tr><td>IPC 很低、LLC miss 高</td><td>memory stalls、poor locality</td><td>不代表所有 miss 都在 hot path</td></tr>
+    <tr><td>Branch miss 高</td><td>輸入難預測、分支密集</td><td>不代表 branchless 一定更快</td></tr>
+    <tr><td>Instructions 大增、時間也增</td><td>額外工作或最佳化失效</td><td>不代表每條指令成本相同</td></tr>
+    <tr><td>CPU time 小、wall time 大</td><td>I/O、lock、sleep、scheduler wait</td><td>不代表 CPU 完全無關</td></tr>
+  </table>
+  <h3>5.6 Compiler 沒 vectorize 時如何排查</h3>
+  <ol>
+    <li>看 compiler optimization report，不先猜。</li>
+    <li>確認 loop iteration 是否獨立，有無 data dependence。</li>
+    <li>確認 pointer alias 是否讓 compiler 無法證明安全。</li>
+    <li>確認 trip count、alignment、exception/overflow semantics。</li>
+    <li>比較 scalar 與 vectorized correctness，尤其 floating point。</li>
+  </ol>
+  <div class="stuck">
+    <strong>卡關：Big-O 已經最好，為何還能差十倍？</strong>
+    Big-O 描述輸入趨近無限時的成長階，隱藏常數、資料布局、cache miss、branch、allocation、parallelism 與 I/O。兩個同為 O(n) 的 loop，每元素成本仍可相差很大。
+  </div>
+  <div class="work">
+    <strong>工作應用：一個實際流程</strong>
+    <code>perf stat</code> 看總體症狀，<code>perf record/report</code> 找 hot symbols，<code>perf annotate</code> 對照指令；用 flame graph 看 call stack 占比。若時間主要在 I/O wait，CPU micro-optimization 幾乎不會改善端到端延遲。
+  </div>
+  <details>
+    <summary>計算題：80% 時間在解析，解析快 4 倍，整體快多少？</summary>
+    <div><p><code>1 / (0.2 + 0.8/4) = 2.5</code> 倍。即使解析無限快，整體上限也只有 <code>1/0.2 = 5</code> 倍。</p></div>
+  </details>
+  <details>
+    <summary>設計題：Microbenchmark 比 production 快很多，最先檢查什麼？</summary>
+    <div><p>確認 production 的輸入分布、資料大小、cache 冷熱、並行競爭、NUMA、I/O、GC/allocator、debug/logging 與編譯 flags。Microbenchmark 可能只測 hot cache 與單 thread，沒有真實的 queueing 和 contention。</p></div>
+  </details>
+  <details>
+    <summary>推理題：降低 instruction count 為何可能變慢？</summary>
+    <div><p>新指令可能 latency 更高、形成 serial dependency、造成更多 cache miss 或 branch misprediction。CPU 效能不是單純以指令數決定；需一起看 cycles、IPC 與 stall 原因。</p></div>
+  </details>
+</section>
+
+<section id="ch6">
+  <span class="chapter-tag">Chapter 6</span>
+  <h2>記憶體階層：Locality 決定資料抵達 CPU 的速度</h2>
+  <div class="objectives">
+    <div class="objective">能拆解 cache address、hit、miss 與 eviction</div>
+    <div class="objective">能用 working set 與 locality 解釋程式效能</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    每一層都把下一層當作較慢且較大的 backing store。系統不是讓所有資料都快，而是利用程式的 temporal 與 spatial locality，讓「最近可能還會用的附近資料」留在快層。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>先分清 block、line、set、cache。Memory 以 block 搬移；block 進 cache 後占一條 line；地址的 set index 決定它只能放在哪個 set。
+  </div>
+  <h3>6.1 Cache 組成與地址拆解</h3>
+  <p>若 cache 有 <code>S = 2^s</code> sets、每 set 有 E lines、每 line 有 <code>B = 2^b</code> bytes，容量 <code>C = S × E × B</code>。地址拆成：</p>
+  <pre class="diagram"><code>┌──────────── tag ────────────┬── set index (s) ──┬ block offset (b) ┐
+└──── 用來確認是哪個 block ──┴──── 選哪個 set ────┴── 選 line 內 byte ┘</code></pre>
+  <table>
+    <tr><th>Miss 類型</th><th>原因</th><th>改善方向</th></tr>
+    <tr><td>Compulsory</td><td>第一次存取該 block</td><td>prefetch、順序存取；通常無法完全消除</td></tr>
+    <tr><td>Capacity</td><td>working set 超過 cache 容量</td><td>blocking/tiling、壓縮資料、分批處理</td></tr>
+    <tr><td>Conflict</td><td>多個常用 block 映射到同一 set</td><td>padding、改布局、增加 associativity</td></tr>
+  </table>
+  <p>平均記憶體存取時間可用簡化模型 <span class="formula">AMAT = hit time + miss rate × miss penalty</span> 思考。多層 cache 則逐層展開。這個公式提醒我們：極低 miss rate 乘上極高 penalty 仍可能主導時間。</p>
+  <h4>完整手算：1 KiB、2-way、16-byte line</h4>
+  <ol>
+    <li><code>C=1024, E=2, B=16</code>，所以 <code>S=C/(E×B)=32</code> sets。</li>
+    <li><code>b=log2(16)=4</code> offset bits；<code>s=log2(32)=5</code> set bits。</li>
+    <li>地址 <code>0x1234</code> 的 block number 是 <code>0x1234 &gt;&gt; 4 = 0x123</code>。</li>
+    <li>Set index 是 block number 的低 5 bits：<code>0x123 &amp; 0x1F = 3</code>。</li>
+    <li>剩餘高 bits 是 tag。到 set 3 比對兩條 valid lines 的 tag。</li>
+  </ol>
+  <h3>6.2 儲存技術與機械成本</h3>
+  <p>SRAM 快且昂貴，常做 CPU cache；DRAM 密度較高，需要 refresh，做主記憶體。SSD 沒有 seek arm，但有 page/block、erase、wear leveling 與 write amplification；HDD 的 seek 與 rotational latency 讓隨機 I/O 遠慢於順序 I/O。實際 storage 還受 controller、queue、filesystem 與 page cache 影響。</p>
+  <h3>6.3 為何 row-major 順序重要</h3>
+  <p>C 的二維陣列按 row-major 連續配置。逐 row 掃描會充分使用每條 cache line；逐 column 在大矩陣上可能每次只用一個元素就跳到遠處。Matrix transpose 需要 blocking，讓輸入與輸出的小區塊同時留在 cache。</p>
+  <pre><code>// cache-friendly：內層走連續記憶體
+for (size_t i = 0; i &lt; rows; ++i)
+    for (size_t j = 0; j &lt; cols; ++j)
+        total += matrix[i][j];</code></pre>
+  <h4>Blocking 的推導</h4>
+  <p>Transpose 同時讀 A 的 row、寫 B 的 column。若整張矩陣太大，兩邊 lines 不斷互相驅逐。Blocking 把矩陣切成可容納於 cache 的小 tile，在 tile 內完成更多工作後才移到下一塊。Tile 大小不是永遠 8×8；要依 line size、associativity、element size 與同時活躍資料選擇。</p>
+  <h3>6.4 Write policy 與一致性</h3>
+  <ul>
+    <li><strong>Write-through：</strong>每次寫 cache 同時更新下一層，簡單但流量大。</li>
+    <li><strong>Write-back：</strong>先只改 cache line 並標 dirty，evict 時才寫回。</li>
+    <li><strong>Write-allocate：</strong>write miss 先把 block 載入 cache；常搭配 write-back。</li>
+    <li>多核心還要維持 cache coherence，避免核心對同一地址看到互相矛盾的值。</li>
+  </ul>
+  <h3>6.5 False sharing</h3>
+  <p>兩個 thread 寫不同變數，但變數落在同一 cache line，coherence protocol 仍會讓 line 在核心間來回移動。解法可能是 padding、per-thread counters、批次合併；是否有效要以 counter 與 benchmark 驗證。</p>
+  <div class="work">
+    <strong>工作應用：資料結構比指令更重要</strong>
+    Pointer-heavy tree 容易產生 cache miss；連續 array、structure of arrays、arena allocation 常能提升 locality。資料庫的 B-tree、columnar format 與 vectorized execution 都是記憶體階層思維的延伸。
+  </div>
+  <div class="stuck">
+    <strong>卡關：地址相同 set 就一定 miss 嗎？</strong>
+    不一定。Set-associative cache 的同一 set 有 E 條 lines；只有同時需要的不同 tags 超過 associativity，或 replacement 剛好驅逐目標，才形成 conflict miss。還要考慮存取順序與其他 cache levels。
+  </div>
+  <details>
+    <summary>計算題：32 KiB、8-way、64-byte line 的 cache 有幾個 sets？</summary>
+    <div><p><code>S = C / (E × B) = 32768 / (8 × 64) = 64</code> sets，因此 set index 需要 <code>log2(64) = 6</code> bits，block offset 需要 6 bits。</p></div>
+  </details>
+  <details>
+    <summary>推理題：為何「cache miss rate 較低」不保證程式較快？</summary>
+    <div><p>它可能執行更多指令、增加分支、產生較長 dependency chain，或 miss 雖少但更昂貴。應看總 cycles、instructions、miss 數量與 miss penalty，而非單一比例。</p></div>
+  </details>
+  <details>
+    <summary>計算題：AMAT 中 miss rate 從 5% 降到 4%，有多大影響？</summary>
+    <div><p>若 hit time 1 cycle、miss penalty 100 cycles，原 AMAT 是 <code>1 + .05×100 = 6</code> cycles，新 AMAT 是 5 cycles，改善約 16.7%。看似只少 1 percentage point，因 penalty 很大而有顯著影響。</p></div>
+  </details>
+  <details>
+    <summary>推理題：Sequential access 為何仍可能 memory-bound？</summary>
+    <div><p>Spatial locality 可降低 miss 數與提高 prefetch 效果，但若資料量遠大於 cache且每 byte 只做很少運算，總需求仍可能碰到 memory bandwidth 上限。這時需提高 arithmetic intensity、減少 bytes 或壓縮表示。</p></div>
+  </details>
+</section>
+
+<section id="ch7">
+  <span class="chapter-tag">Chapter 7</span>
+  <h2>連結與載入：名稱如何變成可執行地址</h2>
+  <div class="objectives">
+    <div class="objective">理解 symbol resolution、relocation 與 ELF</div>
+    <div class="objective">能診斷 undefined symbol、duplicate symbol 與 library 問題</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    編譯單元各自產生「局部知道、全域未知」的 object file。Linker 把符號引用接到定義，替程式配置最終位置，再修補所有依賴地址的欄位。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>先分清 compile error 與 link error。Compiler 一次主要看一個 translation unit；linker 才同時看多個 object files 與 libraries，處理跨檔名稱。
+  </div>
+  <h3>7.1 ELF 的兩種視角</h3>
+  <table>
+    <tr><th>Link view：Sections</th><th>Load view：Segments</th></tr>
+    <tr><td><code>.text</code>、<code>.rodata</code>、<code>.data</code>、<code>.bss</code>、symbol table、relocations</td><td>由 program headers 描述要映射進 process 的區域與 R/W/X 權限</td></tr>
+    <tr><td>給 compiler、assembler、linker、debugger 使用</td><td>給 loader 使用；多個 sections 可合併成一個 segment</td></tr>
+  </table>
+  <h4>Object file 裡為何會有「尚未決定的洞」</h4>
+  <p>編譯 <code>main.c</code> 時，compiler 知道要呼叫 <code>helper</code>，但不知道 helper 最終放在 executable 的哪個地址。Assembler 先放 placeholder，並建立 relocation entry，記錄「這個位置要依 helper 的最終 symbol value 修補」。Linker 配置完所有 sections 後才能計算。</p>
+  <pre><code>$ cc -c main.c -o main.o
+$ readelf -s main.o       # 哪些 symbols 已定義、哪些仍 undefined
+$ readelf -r main.o       # 哪些位置需要 relocation
+$ objdump -dr main.o      # instruction 與 relocation 對照</code></pre>
+  <h3>7.2 Symbol resolution</h3>
+  <p>Global symbol、external symbol 與 local symbol 的 linkage 不同。Static library 是一組 object files 的 archive；傳統 linker 通常由左到右掃描，所以 library 順序可能影響是否拉入需要的 object。</p>
+  <pre><code># 常見診斷
+nm -C app.o
+readelf -Ws app.o
+readelf -r app.o
+readelf -lW app
+ldd app
+LD_DEBUG=libs,bindings ./app</code></pre>
+  <h4>Linker 錯誤分類</h4>
+  <table>
+    <tr><th>訊息</th><th>意思</th><th>排查順序</th></tr>
+    <tr><td>undefined reference</td><td>有引用但找不到可用定義</td><td>是否編進 object？library 順序？symbol spelling/visibility？ABI？</td></tr>
+    <tr><td>multiple definition</td><td>出現不允許共存的多個定義</td><td>header 是否放了 definition？同一 object 是否重複 link？</td></tr>
+    <tr><td>relocation truncated</td><td>指定 relocation 形式放不下目標距離或值</td><td>code model、PIC、section layout、過大 binary</td></tr>
+    <tr><td>DSO missing / version not found</td><td>shared object 或 symbol version 不符</td><td>NEEDED、RUNPATH、runtime image、loader cache</td></tr>
+  </table>
+  <div class="stuck">
+    <strong>卡關：為何 <code>cc -lfoo main.o</code> 失敗，<code>cc main.o -lfoo</code> 成功？</strong>
+    傳統 static archive 搜尋是由左到右：看到 archive 時，只拉入當下 unresolved symbols 需要的 members。若 <code>main.o</code> 尚未出現，linker 不知道要從 libfoo 拉什麼。循環依賴可用重排、合併設計，或 linker group 選項處理。
+  </div>
+  <h3>7.3 Static 與 dynamic linking</h3>
+  <table>
+    <tr><th></th><th>Static</th><th>Dynamic</th></tr>
+    <tr><td>部署</td><td>依賴較少，檔案較大</td><td>需要相容的 shared libraries / loader</td></tr>
+    <tr><td>更新</td><td>要重新連結與部署</td><td>library 可獨立更新，但有 ABI 風險</td></tr>
+    <tr><td>記憶體</td><td>跨 process 較難共享相同 library code</td><td>共享唯讀 pages，常配合 PIC、GOT、PLT</td></tr>
+  </table>
+  <p><strong>PIC</strong> 讓程式碼可被載入不同地址；GOT 儲存需要間接尋址的全域地址，PLT 支援外部函式呼叫與 lazy binding。PIE 把類似能力用在 executable，配合 ASLR。</p>
+  <h3>7.4 Symbol interposition</h3>
+  <p>Link time、load time 或 runtime 的 symbol interposition 可替換函式定義，例如包裝 <code>malloc</code> 量測 allocation。它對 observability 很有用，也可能因 compiler builtins、inlining、symbol visibility、static linking 或 loader 規則而失效。正式工具需清楚標示適用範圍，避免把「沒觀察到」誤當成「沒發生」。</p>
+  <div class="work">
+    <strong>工作應用：容器中「本機可跑、上線不能跑」</strong>
+    比較 ELF interpreter、architecture、required shared objects、symbol versions 與 runtime search path。不要只看檔案是否存在；還要看 loader 能否找到、ABI 是否相容、權限與 CPU feature 是否符合。
+  </div>
+  <details>
+    <summary>解題：<code>.bss</code> 為何能代表大量零值卻不讓檔案變大？</summary>
+    <div><p>Object file 記錄這段在記憶體需要多大與應初始化為零，不必真的保存同樣數量的 zero bytes。Loader 建立映射時提供 zero-filled memory。</p></div>
+  </details>
+  <details>
+    <summary>解題：Header 中直接寫 <code>int global = 0;</code> 為何容易 multiple definition？</summary>
+    <div><p>每個 include 該 header 的 translation unit 都得到一份 external definition，link 時相撞。一般做法是 header 放 <code>extern int global;</code>，某一個 <code>.c</code> 放唯一 definition；或若真要每檔私有，使用 <code>static</code> 並理解每份是不同 object。</p></div>
+  </details>
+  <details>
+    <summary>工具題：如何確認 executable 的 entry point 與 loadable segments？</summary>
+    <div><p>用 <code>readelf -h app</code> 看 entry point、object type 與 machine；用 <code>readelf -lW app</code> 看 program headers、LOAD segments、R/W/X permissions 與 interpreter。</p></div>
+  </details>
+</section>
+
+<section id="ch8">
+  <span class="chapter-tag">Chapter 8</span>
+  <h2>例外控制流：Process、signal 與 shell 的共同基礎</h2>
+  <div class="objectives">
+    <div class="objective">分清 exception、interrupt、trap、fault 與 abort</div>
+    <div class="objective">掌握 fork/exec/wait、signal race 與 job control</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    正常控制流由程式指令決定；exceptional control flow 讓硬體、核心或其他行程打斷它。Process 是「執行中的程式」加上一個私有虛擬地址空間與邏輯控制流。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>Program 是磁碟上的 bytes；process 是正在執行的實例。多個 processes 可執行同一 program，卻有不同 PID、register state、virtual memory 與 resources。
+  </div>
+  <h3>8.0 Process state 與 context switch</h3>
+  <p>Process 可處於 running、runnable、blocked/sleeping、stopped、terminated 等狀態。等待 I/O 的 process 不是一直消耗 CPU；scheduler 可切到其他 runnable task。Context switch 需要保存/恢復 register state，並可能影響 cache/TLB，因此不是零成本。</p>
+  <pre class="diagram"><code>running ──等待 I/O / sleep──> blocked
+   ↑                            │
+   │ scheduler 選中             │ event 完成
+   │                            ↓
+runnable &lt;──── time slice / preempt
+
+stopped：被 job-control signal 暫停
+zombie：已終止，只等 parent 讀取 status</code></pre>
+  <h3>8.1 四類 exception</h3>
+  <table>
+    <tr><th>類型</th><th>同步性</th><th>例子</th><th>處理後</th></tr>
+    <tr><td>Interrupt</td><td>非同步</td><td>timer、I/O device</td><td>通常回到下一條指令</td></tr>
+    <tr><td>Trap</td><td>同步且刻意</td><td>system call、breakpoint</td><td>回到下一條指令</td></tr>
+    <tr><td>Fault</td><td>同步且可能可恢復</td><td>page fault</td><td>重試當前指令或終止</td></tr>
+    <tr><td>Abort</td><td>嚴重錯誤</td><td>硬體檢查失敗</td><td>不返回</td></tr>
+  </table>
+  <h3>8.2 fork、exec、wait 的精確關係</h3>
+  <ul>
+    <li><code>fork</code> 建立 child。父子有各自虛擬地址空間，初始內容看似相同，通常透過 copy-on-write 實作。</li>
+    <li><code>execve</code> 不建立新 process；它用新程式替換目前 process image，PID 可維持。</li>
+    <li><code>waitpid</code> 回收 child termination status。已終止但未回收的 child 是 zombie。</li>
+    <li>Orphan 會由系統指定的 reaper 收養；zombie 與 orphan 是不同概念。</li>
+  </ul>
+  <pre><code>pid_t pid = fork();
+if (pid == -1) {
+    perror("fork");
+    exit(EXIT_FAILURE);
+}
+if (pid == 0) {
+    execlp("ls", "ls", "-l", (char *)NULL);
+    _exit(127);                    // exec 失敗才會到這裡
+}
+int status;
+while (waitpid(pid, &amp;status, 0) == -1 &amp;&amp; errno == EINTR) {}</code></pre>
+  <h4>Fork 題目不要心算，畫 process tree</h4>
+  <p>每次成功 <code>fork</code> 都讓「執行到該行的每個 process」多出一個 child，父子都從 fork 後一行繼續，但回傳值不同。若有條件分支，先標哪些 processes 會走到下一個 fork。輸出數還要額外考慮 stdio buffering 與是否 flush。</p>
+  <pre><code>printf("A");       // 若未 flush，A 可能仍在 user-space buffer
+fork();
+printf("B\n");     // 父子各有一份複製的 buffer，可能都輸出 AB</code></pre>
+  <h3>8.3 Signal 是通知，不是可靠 queue</h3>
+  <p>同類型 standard signal 通常不會無限排隊。Handler 可在主程式任意安全點插入，因此共享狀態與 I/O 都要非常保守。Handler 內只呼叫 async-signal-safe functions；常見模式是設置 <code>volatile sig_atomic_t</code> flag，或寫入 self-pipe/eventfd，讓正常 event loop 處理。</p>
+  <div class="warning">
+    <strong>經典 race：先檢查條件，再睡眠</strong>
+    若 signal 在條件檢查後、<code>pause</code> 前抵達，程式可能永遠睡著。使用 signal mask 配合 <code>sigsuspend</code>，原子地解除遮罩並等待。
+  </div>
+  <h4>避免 lost wakeup 的標準時序</h4>
+  <ol>
+    <li>先 block 目標 signal，避免它在檢查前後任意插入。</li>
+    <li>建立 child / 更新共享的 signal-visible state。</li>
+    <li>在 loop 中檢查 predicate，例如尚有 foreground job。</li>
+    <li>用 <code>sigsuspend</code> 暫時套用解除該 signal 的 mask 並原子等待。</li>
+    <li>醒來後恢復原 mask，再次檢查 predicate。</li>
+  </ol>
+  <div class="stuck">
+    <strong>卡關：Signal handler 是另一個 thread 嗎？</strong>
+    一般不是。它是在某個 thread 的正常控制流中插入 handler，使用該 thread 的 context/stack（除非設 alternative signal stack）。正因為可打斷任意函式，handler 才不能安全呼叫大多數 library functions。
+  </div>
+  <h3>8.4 Job control</h3>
+  <p>Shell 用 process group 表示 job；terminal 有一個 foreground process group。Ctrl-C 與 Ctrl-Z 由 terminal driver 發送給 foreground group。Shell 本身要避免被送出的 signal 終止，並用 <code>setpgid</code>、<code>tcsetpgrp</code>、<code>waitpid</code> 管理前景與背景工作。</p>
+  <h3>8.5 Nonlocal jump</h3>
+  <p><code>setjmp/longjmp</code> 可保存並恢復控制環境，讓執行跳過一般 call/return 路徑。它可實作受限的錯誤逃生機制，但會繞過中間 stack frames 的正常 cleanup，也讓 local variable 規則變複雜。在 C++ 等有 destructors 的語言中不可拿它替代 exceptions。</p>
+  <div class="work">
+    <strong>工作應用：Graceful shutdown</strong>
+    收到 SIGTERM 後停止接新工作、通知 workers、等待有期限的 drain、flush 可安全落盤的狀態，最後退出。不要在 handler 直接做 logging、malloc、鎖或複雜 cleanup。
+  </div>
+  <details>
+    <summary>推理題：為何 fork 後父子都能看到先前開啟的 file descriptor？</summary>
+    <div><p>兩邊各有 descriptor table entry，但它們指向同一個 kernel open file description，因此共享 file offset 與某些 status flags。若父子同時讀同一 regular file，誰先推進 offset 會影響另一方看到的位置。</p></div>
+  </details>
+  <details>
+    <summary>推理題：<code>execve</code> 成功後為何不會返回？</summary>
+    <div><p>成功時目前 process image 已被新程式替換，舊程式的 instruction、stack 與 call frame 不再存在，所以沒有原呼叫點可返回。只有失敗才回 -1 並設定 errno。</p></div>
+  </details>
+  <details>
+    <summary>推理題：為何 shell 通常要在 fork 後、exec 前設定 redirection？</summary>
+    <div><p>Child 可用 <code>dup2</code> 把自己的 stdin/stdout 指向檔案或 pipe，再 exec 新程式；exec 後新程式自然繼承這些 descriptors。Parent shell 的 descriptors 不被永久改變。</p></div>
+  </details>
+</section>
+
+<section id="ch9">
+  <span class="chapter-tag">Chapter 9</span>
+  <h2>虛擬記憶體：地址轉譯、保護與動態配置</h2>
+  <div class="objectives">
+    <div class="objective">理解 page table、TLB、page fault 與 mmap</div>
+    <div class="objective">能設計 allocator 並診斷 memory bug</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    虛擬記憶體同時扮演三個角色：把 DRAM 當作 disk-backed cache、給每個 process 一致的地址空間、以 page permission 提供隔離與共享。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>Virtual address 是 process/CPU 指令使用的地址；physical address 是記憶體系統使用的地址。Mapping 以 page 為單位，不要求虛擬與實體連續。
+  </div>
+  <h3>9.1 地址轉譯</h3>
+  <pre class="diagram"><code>Virtual address = Virtual Page Number | Page Offset
+                         │
+                         ├─ TLB hit → Physical Page Number
+                         └─ TLB miss → page-table walk
+
+Physical address = Physical Page Number | 同一個 Page Offset</code></pre>
+  <p>Page offset 不需轉譯。多級 page table 讓未使用的大範圍地址不必配置完整表格；代價是 TLB miss 時可能要做多次 memory access。Huge pages 減少 TLB pressure，但增加內部碎片、配置與回收成本。</p>
+  <h4>TLB miss、page fault、segfault 三者分開</h4>
+  <table>
+    <tr><th>事件</th><th>缺了什麼</th><th>典型結果</th></tr>
+    <tr><td>TLB miss</td><td>快取中沒有 translation</td><td>硬體或核心走 page table；找到後繼續</td></tr>
+    <tr><td>Page fault</td><td>Page table 表示目前不可直接完成存取</td><td>核心載入、COW、擴展 stack，或判定非法</td></tr>
+    <tr><td>SIGSEGV</td><td>核心無法合法修復該 memory access</td><td>向 process 發 signal；預設終止並可能 core dump</td></tr>
+  </table>
+  <div class="stuck">
+    <strong>卡關：Page table 在 disk 上嗎？</strong>
+    活躍 page tables 是核心管理的 memory data structures；被換出的通常是 process 的 data pages，而不是每次 translation 都去 disk 查表。Page-table pages 自身也消耗 physical memory。
+  </div>
+  <h3>9.2 Page fault 不一定是錯誤</h3>
+  <ul>
+    <li>Demand paging 第一次使用合法 page 時會 fault，再由核心配置或載入。</li>
+    <li>Copy-on-write 在首次寫入共享 page 時 fault，再建立私有副本。</li>
+    <li>Memory-mapped file 可在存取時才載入對應檔案區塊。</li>
+    <li>存取未映射地址或違反 R/W/X permission，fault 無法修復，process 通常收到 SIGSEGV。</li>
+  </ul>
+  <h4><code>mmap</code> 把檔案與地址空間接起來</h4>
+  <p>File-backed mapping 讓讀寫虛擬地址對應到檔案區域，並可與 page cache 整合。<code>MAP_SHARED</code> 的修改可反映到 underlying object；<code>MAP_PRIVATE</code> 使用 copy-on-write。Mapping 長度、offset alignment、truncate、同步與 lifetime 都需按 OS 契約處理。</p>
+  <h3>9.3 Process address space</h3>
+  <p>常見區域包括 code、read-only data、initialized data、BSS、heap、memory-mapped region、shared libraries、user stack 與 kernel-only mappings。具體地址與方向受 OS、ABI、ASLR 影響，不要依賴教科書示意圖中的固定位置。</p>
+  <h3>9.4 Allocator 的核心資料結構</h3>
+  <p>Allocator 管理 heap blocks，通常在 payload 旁保存 size 與 allocation bit，並維護 implicit 或 explicit free list。</p>
+  <table>
+    <tr><th>決策</th><th>選項</th><th>取捨</th></tr>
+    <tr><td>Placement</td><td>first fit / next fit / best fit / segregated lists</td><td>搜尋速度與 fragmentation</td></tr>
+    <tr><td>Split</td><td>大 free block 是否切分</td><td>避免浪費，但殘餘 block 必須可用</td></tr>
+    <tr><td>Coalesce</td><td>立即或延後合併相鄰 free blocks</td><td>搜尋成本、thrashing 與外部碎片</td></tr>
+    <tr><td>Metadata</td><td>header、footer、prev/next pointers</td><td>空間 overhead 與 O(1) 操作能力</td></tr>
+  </table>
+  <h4>一次 malloc/free 的逐步推演</h4>
+  <ol>
+    <li>把 request 加上 metadata，向 alignment 需求上調。</li>
+    <li>在合適 size class/free list 找 candidate。</li>
+    <li>若 block 大到能留下合法 free block，split；否則整塊配置。</li>
+    <li>更新 header、free-list links 與鄰接資訊，再回傳 payload pointer。</li>
+    <li><code>free</code> 時由 payload 找回 block metadata，標 free，與相鄰 free blocks coalesce，再插回 list。</li>
+  </ol>
+  <pre class="diagram"><code>block:
+┌ header: size | flags ┐
+├ payload / free links ┤
+│                      │
+└ optional footer      ┘
+
+payload pointer 指向 header 之後；
+使用者不可讀寫 metadata，也不可 free 中間地址。</code></pre>
+  <p><strong>Internal fragmentation</strong> 是 allocated block 內部沒被使用的空間；<strong>external fragmentation</strong> 是 free space 總量夠，但分散到無法滿足大請求。</p>
+  <h3>9.5 Memory correctness 工具分工</h3>
+  <ul>
+    <li><strong>ASan：</strong>heap/stack/global out-of-bounds、use-after-free 等。</li>
+    <li><strong>UBSan：</strong>signed overflow、misaligned access、invalid shift 等 undefined behavior。</li>
+    <li><strong>LeakSanitizer / Valgrind：</strong>leak 與部分 invalid memory use；成本與覆蓋不同。</li>
+    <li><strong>Heap profiler：</strong>回答「誰配置、仍存活多少、何時成長」，與 correctness detector 不同。</li>
+  </ul>
+  <table>
+    <tr><th>Bug</th><th>典型症狀</th><th>根因</th></tr>
+    <tr><td>Use-after-free</td><td>偶發 crash、資料突然變化</td><td>ownership/lifetime 錯誤；allocation 被重用</td></tr>
+    <tr><td>Double free</td><td>allocator abort、free list corruption</td><td>兩個 owner 或 cleanup 路徑重複</td></tr>
+    <tr><td>Buffer overflow</td><td>鄰近欄位或 metadata 被破壞</td><td>長度、index、terminator 計算錯</td></tr>
+    <tr><td>Leak</td><td>live allocations 隨 workload 成長</td><td>失去最後 reference 或 cache 無界</td></tr>
+    <tr><td>Uninitialized read</td><td>release/debug、機器間結果不同</td><td>讀到 indeterminate value 或 padding</td></tr>
+  </table>
+  <h3>9.6 Garbage collection 的系統觀</h3>
+  <p>Tracing collector 從 roots（register、stack、globals 等）出發找 reachable objects，未被找到者可回收。Conservative GC 把看似 pointer 的 bit pattern 也當 reference，可能保留其實已死亡的物件。Reference counting 回收及時、實作直覺，但需處理 cycle，且每次 reference update 都有成本。即使語言有 GC，仍可能因 cache、listener、global reference 造成邏輯 memory leak。</p>
+  <div class="work">
+    <strong>工作應用：RSS 高不等於 leak</strong>
+    先區分 virtual size、resident pages、anonymous/file-backed、allocator retained memory、page cache 與真正 unreachable allocations。觀察趨勢、allocation stack、GC/allocator 行為與 workload phase。
+  </div>
+  <details>
+    <summary>計算題：4 KiB page 的 offset 需要幾 bits？</summary>
+    <div><p><code>4 KiB = 4096 = 2^12</code> bytes，因此 offset 是 12 bits。若 virtual address 是 48 bits，virtual page number 是其餘 36 bits，但實際 page-table 切分由架構定義。</p></div>
+  </details>
+  <details>
+    <summary>設計題：free 時如何 O(1) 合併前後 blocks？</summary>
+    <div><p>使用 boundary tags：header 記 size/allocated，free block 的 footer 重複 size，便可由目前 block 找前一個 footer與下一個 header。現代 allocator 常用「前一塊是否已配置」bit，讓 allocated blocks 不必保留 footer，以降低 overhead。</p></div>
+  </details>
+  <details>
+    <summary>推理題：兩個 processes 的同一 virtual address 內容一定相同嗎？</summary>
+    <div><p>不一定。各 process 有自己的 page-table mappings，同一 virtual address 可映射到不同 physical pages。只有明確共享的 mapping、共享 library code 或 fork 後尚未 COW 的 pages 才可能指向同一 physical backing。</p></div>
+  </details>
+  <details>
+    <summary>設計題：Allocator 為何要設定 minimum block size？</summary>
+    <div><p>Free block 必須至少容納 metadata，例如 header、footer、free-list prev/next pointers，並滿足 alignment。Split 若留下更小碎片，該空間永遠無法管理，反而破壞 heap traversal。</p></div>
+  </details>
+</section>
+
+<section id="ch10">
+  <span class="chapter-tag">Chapter 10</span>
+  <h2>系統級 I/O：File descriptor、short count 與一致介面</h2>
+  <div class="objectives">
+    <div class="objective">掌握 open/read/write/close 與 kernel object 關係</div>
+    <div class="objective">正確處理 partial I/O、EINTR、buffering 與 metadata</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    Unix 把 regular file、pipe、terminal、socket 等資源統一成 byte stream 與 file descriptor。介面很小，但 correctness 隱藏在 short count、blocking、共享 offset 與生命週期。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>File descriptor 只是 process table 中的小整數索引，不是檔案內容，也不是全系統唯一 ID。真正狀態在 kernel objects 中。
+  </div>
+  <h3>10.1 三層核心資料結構</h3>
+  <pre class="diagram"><code>process descriptor table
+  fd 3 ──┐
+  fd 4 ──┼──> open file description（offset, status flags）
+         └──> inode / vnode（檔案 metadata 與資料位置）</code></pre>
+  <p><code>dup</code> 或 <code>fork</code> 可讓多個 fd entries 指到同一 open file description。<code>close</code> 只移除一個 reference；最後一個 reference 消失時 kernel object 才真正釋放。</p>
+  <h4><code>dup2</code> 如何實作 shell redirection</h4>
+  <pre><code>int fd = open("out.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+if (fd == -1) /* handle error */;
+if (dup2(fd, STDOUT_FILENO) == -1) /* handle error */;
+close(fd);                   // stdout 仍保有對 open file description 的 reference
+execlp("ls", "ls", "-l", (char *)NULL);</code></pre>
+  <p>新程式完全不必知道 redirection；它照常寫 fd 1。這展示了 Unix composition：Shell 改環境，application 遵守標準 descriptor 契約。</p>
+  <h3>10.2 Robust I/O loop</h3>
+  <pre><code>int write_all(int fd, const void *buf, size_t count) {
+    const char *p = buf;
+    size_t left = count;
+    while (left &gt; 0) {
+        ssize_t n = write(fd, p, left);
+        if (n &gt; 0) { p += n; left -= (size_t)n; continue; }
+        if (n == -1 &amp;&amp; errno == EINTR) continue;
+        return -1;
+    }
+    return 0;
+}</code></pre>
+  <p><code>read</code> 回傳 0 通常表示 EOF；正值可能少於要求 bytes，不能假設一次拿滿。Nonblocking fd 沒資料時可能回 <code>EAGAIN/EWOULDBLOCK</code>。Socket 寫入還要處理 peer close 與 SIGPIPE。</p>
+  <h4>EOF 是「所有 writer references 都關閉」</h4>
+  <p>Pipe reader 要收到 EOF，必須沒有任何 process 還持有 write end。Fork 後若 parent/child 忘了 close 不使用的 pipe ends，reader 可能永遠等不到 EOF。設計 pipeline 時，在每個 process 逐一列出要保留與立即關閉的 descriptors。</p>
+  <h3>10.3 stdio 與 descriptor I/O 不可隨意混用</h3>
+  <p><code>FILE*</code> 有 user-space buffer，descriptor 有 kernel offset。混用時若沒有遵守同步規則，buffer 與 offset 可能不一致。<code>fork</code> 前未 flush 的 stdio buffer 也可能被父子各自 flush，造成重複輸出。</p>
+  <h3>10.4 Metadata、atomicity 與 durability</h3>
+  <ul>
+    <li><code>rename</code> 在同一 filesystem 內通常提供原子名稱替換，常用於安全更新檔案。</li>
+    <li>成功 <code>write</code> 不等於資料已到持久媒體；需要依 durability 要求使用 <code>fsync/fdatasync</code>，並考慮 directory metadata。</li>
+    <li><code>O_APPEND</code> 讓每次 write 的 offset 設定與寫入具原子語意，但一個 logical record 若拆成多次 write 仍可能交錯。</li>
+  </ul>
+  <h3>10.5 Buffered robust I/O</h3>
+  <p>對 line-oriented protocol，可在 user space 維護一個 read buffer，底層以大區塊 <code>read</code>，上層提供 read-line/read-N 介面。這能減少 system calls，但每個 connection 必須有獨立狀態，並限制最大行長；EOF 前的最後一行即使沒有 newline，也要依 API 契約正確回傳。</p>
+  <div class="work">
+    <strong>工作應用：安全寫設定檔</strong>
+    在同 directory 建 temp file，寫完整內容，依需求 fsync temp，設定權限，rename 覆蓋目標，再依崩潰一致性需求 fsync directory。任何步驟失敗都保留舊版本。
+  </div>
+  <div class="stuck">
+    <strong>卡關：close 成功是否代表資料安全落盤？</strong>
+    不代表。它釋放 descriptor reference，錯誤回報與 durability 語意依 filesystem/OS 而異。若業務要求崩潰後仍存在，必須明確使用 sync API 並測試 power-loss/crash consistency。
+  </div>
+  <details>
+    <summary>推理題：為何 <code>read(fd, buf, 4096)</code> 回 100 不代表 EOF？</summary>
+    <div><p>Pipe、terminal、socket、某些檔案系統或被 signal 打斷的情境都可能產生 short read。只有回 0 才表示當下的 stream EOF；協定層仍需知道要讀固定長度、delimiter 還是到 connection close。</p></div>
+  </details>
+  <details>
+    <summary>推理題：父子各自 close 同一個 inherited fd，會互相讓對方立即失效嗎？</summary>
+    <div><p>不會。Fork 後各有 descriptor table entry，close 只移除呼叫 process 的 reference。另一方仍可用自己的 fd，直到它也 close 或被 exec 的 close-on-exec 規則關閉。</p></div>
+  </details>
+  <details>
+    <summary>設計題：讀固定 32-byte header 的函式何時才算成功？</summary>
+    <div><p>應 loop 到累積 32 bytes；遇 EINTR 繼續；在拿滿前遇 EOF 應回報 truncated input，而非正常完整 header；其他 error 保留原因。若有 deadline/nonblocking，還要把「暫時沒資料」與永久失敗分開。</p></div>
+  </details>
+</section>
+
+<section id="ch11">
+  <span class="chapter-tag">Chapter 11</span>
+  <h2>網路程式設計：把 byte stream 變成可靠協定</h2>
+  <div class="objectives">
+    <div class="objective">理解 socket、DNS、TCP 連線與 client/server 流程</div>
+    <div class="objective">能設計 framing、timeout、backpressure 與 failure handling</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    TCP 提供可靠、有序的 byte stream，不保留 application message 邊界。你的協定必須自己定義一則訊息在哪裡結束、大小是否合法、超時後怎麼辦。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>Network stack 有多層 header，但 application 首先只需掌握 endpoint（IP + port）、connected byte stream、framing 與 failure。不要一開始陷入背 OSI 七層。
+  </div>
+  <h3>11.1 Client / server socket lifecycle</h3>
+  <table>
+    <tr><th>Server</th><th>Client</th></tr>
+    <tr><td><code>socket → setsockopt → bind → listen → accept</code></td><td><code>socket → connect</code></td></tr>
+    <tr><td>對 connected socket 做 read/write；listening socket 繼續 accept</td><td>對 connected socket 做 read/write</td></tr>
+    <tr><td>close connected socket 與 listening socket</td><td>close 或 shutdown</td></tr>
+  </table>
+  <p><code>getaddrinfo</code> 把 hostname/service 轉為可嘗試的地址，應遍歷結果而非假設 IPv4。Host byte order 與 network byte order 透過 <code>htons/htonl</code> 等轉換。</p>
+  <p>DNS lookup 可能回多個 IPv4/IPv6 地址，也可能慢或失敗。Production client 通常需要解析 timeout、cache TTL、失敗重試與多地址連線策略。不要把 hostname 當成永久不變的單一 IP。</p>
+  <h4>TCP 連線與關閉的最低模型</h4>
+  <pre class="diagram"><code>Client                         Server
+  SYN ------------------------->
+      <------------------ SYN + ACK
+  ACK ------------------------->
+          connected byte stream
+  FIN ------------------------->
+      <----------------------- ACK
+      <----------------------- FIN
+  ACK ------------------------->
+
+FIN 表示「我不再傳送」；一個方向關閉後，另一方向仍可繼續。
+RST 表示連線被立即重設，未讀資料與錯誤處理要特別留意。</code></pre>
+  <p>真實 TCP 還有 retransmission、flow control、congestion control、TIME_WAIT 等。Application 不應以一次 packet 對應一個 message，也不應以 localhost 的低延遲推論 production 行為。</p>
+  <h3>11.2 Framing 方法</h3>
+  <table>
+    <tr><th>方法</th><th>優點</th><th>風險與限制</th></tr>
+    <tr><td>固定長度</td><td>解析簡單</td><td>彈性差、可能浪費</td></tr>
+    <tr><td>Delimiter</td><td>適合文字協定</td><td>escaping、行長上限、慢速傳送攻擊</td></tr>
+    <tr><td>Length prefix</td><td>支援 binary 與任意 payload</td><td>先驗證長度上限與 overflow，再配置 memory</td></tr>
+    <tr><td>Connection close</td><td>最簡單</td><td>一條連線通常只能承載一個 response body</td></tr>
+  </table>
+  <h4>Length-prefix parser 狀態機</h4>
+  <pre class="diagram"><code>READ_HEADER
+  ├─ 尚未 4 bytes：繼續讀
+  ├─ EOF：若 0 bytes 是乾淨結束；否則 truncated
+  └─ 滿 4 bytes：decode + validate length
+         ↓
+READ_BODY
+  ├─ 尚未 length bytes：繼續讀
+  ├─ timeout / EOF：incomplete message
+  └─ 完整：交給 handler，再回 READ_HEADER</code></pre>
+  <h3>11.3 必須設計的 failure semantics</h3>
+  <ul>
+    <li><strong>Timeout：</strong>connect、read、write、request deadline 分開定義；不是一個萬用數字。</li>
+    <li><strong>Retry：</strong>只在錯誤可重試且操作具有 idempotency 或 request ID 去重時執行。</li>
+    <li><strong>Backpressure：</strong>限制 connection、in-flight request、queue bytes，避免慢 downstream 讓記憶體無限成長。</li>
+    <li><strong>Partial failure：</strong>連線斷掉時，client 未必知道 server 是否已完成操作。</li>
+    <li><strong>Input validation：</strong>限制 header、body、nesting、數量與解碼時間，避免資源耗盡。</li>
+  </ul>
+  <h3>11.4 HTTP 的系統觀</h3>
+  <p>HTTP 建立在 transport 之上。實務上要理解 connection reuse、head-of-line blocking、proxy/load balancer、TLS handshake、request body streaming 與 cancellation。Application timeout 應傳遞成 downstream deadline，避免 caller 已放棄但後端仍持續工作。</p>
+  <div class="work">
+    <strong>工作應用：debug 一個 timeout</strong>
+    先分 DNS、connect、TLS、server queue、application、downstream、response transfer。抓 client/server timestamps 與 correlation ID；用 packet capture 或 socket metrics 驗證 retransmission、zero window、reset，而不是把所有 timeout 當成「網路不穩」。
+  </div>
+  <div class="stuck">
+    <strong>卡關：TCP reliable，為何 application 還要 checksum、request ID 或 retry？</strong>
+    TCP 的可靠性只涵蓋單一連線內 bytes 的傳送與排序。它不保證對方 application 完成處理、不保證跨重連的 exactly-once，也不防 application/storage corruption。更高層需求要由協定另外實作。
+  </div>
+  <details>
+    <summary>設計題：4-byte length prefix 的 parser 要檢查什麼？</summary>
+    <div><p>必須讀滿 4 bytes、按指定 byte order 解碼、確認不超過 protocol max、確認轉成 <code>size_t</code> 不 overflow、避免 <code>length + header</code> overflow、設定 deadline，並以 loop 讀滿 payload。若 buffer 可被 attacker 控制，還要限制同時在途的總 bytes。</p></div>
+  </details>
+  <details>
+    <summary>推理題：Server 的 <code>accept</code> 回傳新 fd 後，原 listening fd 還有什麼用？</summary>
+    <div><p>Listening fd 繼續接收後續 connections；新 connected fd 只代表這一個 client-server flow。若誤把 listening fd 關掉，既有 connected sockets 可繼續，但無法再接受新連線。</p></div>
+  </details>
+  <details>
+    <summary>設計題：Retry 何時會造成 duplicate operation？</summary>
+    <div><p>Server 可能已完成操作但 response 在網路中遺失，client timeout 後重送。對非 idempotent 操作，使用 idempotency key 與 server-side result/dedup store，或提供可查詢操作狀態的 protocol。</p></div>
+  </details>
+</section>
+
+<section id="ch12">
+  <span class="chapter-tag">Chapter 12</span>
+  <h2>並行程式設計：Correctness 先於 Throughput</h2>
+  <div class="objectives">
+    <div class="objective">比較 process、thread、event-driven 模型</div>
+    <div class="objective">掌握 race、deadlock、condition variable 與 thread safety</div>
+  </div>
+  <div class="mental">
+    <strong>核心直覺</strong>
+    Concurrency 讓多個 logical flows 的步驟交錯；parallelism 讓它們同時執行。正確性不能建立在「這次剛好先跑誰」上，而要建立在明確的 synchronization 與 ownership。
+  </div>
+  <div class="checkpoint">
+    <strong>讀前確認：</strong>寫並行程式前先寫 sequential invariant。例如 queue 必須滿足 <code>0 ≤ count ≤ capacity</code>；同步原語的工作是讓任意 interleaving 都維持 invariant。
+  </div>
+  <h3>12.0 Vocabulary：先把四個詞分開</h3>
+  <table>
+    <tr><th>詞</th><th>問題</th><th>例子</th></tr>
+    <tr><td>Atomicity</td><td>一組操作是否不可被觀察到中間狀態？</td><td>balance check + deduction</td></tr>
+    <tr><td>Visibility</td><td>一個 thread 的寫入何時被另一個看到？</td><td>flag 與 payload publication</td></tr>
+    <tr><td>Ordering</td><td>compiler/CPU 可否重排？</td><td>先初始化 object，再發布 pointer</td></tr>
+    <tr><td>Progress</td><td>系統是否最終前進？</td><td>deadlock、starvation、livelock</td></tr>
+  </table>
+  <h3>12.1 三種 server 模型</h3>
+  <table>
+    <tr><th>模型</th><th>優點</th><th>代價</th><th>適合</th></tr>
+    <tr><td>Process-per-connection</td><td>隔離好、模型直覺</td><td>建立與 IPC 較重</td><td>低到中並行、需要隔離</td></tr>
+    <tr><td>Thread pool</td><td>共享資料方便、blocking code 易寫</td><td>race、lock、stack、context switch</td><td>中等並行、blocking libraries</td></tr>
+    <tr><td>Event loop</td><td>少量 threads 管理大量 I/O</td><td>狀態機複雜，不能阻塞 loop</td><td>高連線數、I/O-bound</td></tr>
+  </table>
+  <h3>12.2 Race condition 與 atomicity</h3>
+  <p><code>counter++</code> 通常是 load、add、store，不是不可分割操作。Mutex 提供 mutual exclusion，還建立跨 thread 的 memory ordering。Atomic type 適合小型、明確的 state transition；多欄位 invariant 通常仍需要 lock 或不可變快照。</p>
+  <h4>兩個 increments 如何遺失一次更新</h4>
+  <pre class="diagram"><code>初始 counter = 0
+Thread A: load 0
+Thread B: load 0
+Thread A: add → 1
+Thread B: add → 1
+Thread A: store 1
+Thread B: store 1
+最後是 1，不是 2</code></pre>
+  <p>Race condition 是結果依賴 timing；data race 在 C/C++ 等語言有更精確定義：不同 threads 對同一 memory location 的衝突存取缺少適當同步，其中至少一個是 write。Data race 可導致 undefined behavior。</p>
+  <h3>12.3 Condition variable 正確模式</h3>
+  <pre><code>pthread_mutex_lock(&amp;mutex);
+while (!predicate()) {                 // 必須是 while
+    pthread_cond_wait(&amp;condition, &amp;mutex);
+}
+consume_state();
+pthread_mutex_unlock(&amp;mutex);</code></pre>
+  <p><code>wait</code> 會原子地釋放 mutex 並睡眠，醒來後重新取得。使用 while 是因為 spurious wakeup、其他 thread 可能先消費條件，且 signal 代表「狀態可能改變」，不是把資源直接交給某個 waiter。</p>
+  <h4>Bounded queue 的 state 與 predicates</h4>
+  <pre><code>// 同一 mutex 保護 buffer、head、tail、count
+not_empty predicate: count &gt; 0
+not_full  predicate: count &lt; capacity
+
+producer:
+  lock
+  while (!not_full) wait(not_full_cv)
+  insert item; count++
+  signal(not_empty_cv)
+  unlock
+
+consumer:
+  lock
+  while (!not_empty) wait(not_empty_cv)
+  remove item; count--
+  signal(not_full_cv)
+  unlock</code></pre>
+  <p>Predicate 由共享 state 定義，不存在於 condition variable 裡。修改 predicate state 與 signal 的時序需配合 mutex，避免 waiter 錯過狀態。</p>
+  <h3>12.4 Deadlock、livelock、starvation</h3>
+  <p>Deadlock 的四個必要條件是 mutual exclusion、hold-and-wait、no preemption、circular wait。實務常以全域 lock ordering 打破 circular wait，也可減少巢狀鎖、縮短 critical section、使用 try-lock/timeout 與 runtime detection。</p>
+  <p>Livelock 是 threads 一直反應卻沒有進展；starvation 是某個工作長期拿不到資源。Fair queue、bounded retry with jitter、aging 能改善，但公平通常會付出 throughput 成本。</p>
+  <h3>12.5 Semaphore 與經典同步問題</h3>
+  <p>Counting semaphore 表示可用資源數；<code>wait/P</code> 取得一個，沒有資源時阻塞，<code>post/V</code> 歸還。Bounded buffer 可用 slots、items 兩個 semaphores 加一個 mutex。Readers-writers 問題展示 throughput 與公平的取捨：偏好 reader 可能餓死 writer，偏好 writer 也可能讓 reader 長期等待。</p>
+  <h3>12.6 Thread safety 四層問題</h3>
+  <ul>
+    <li><strong>Shared mutable state：</strong>明確 owner，或用 lock/atomic 保護。</li>
+    <li><strong>Reentrancy：</strong>函式不依賴跨呼叫共享的可變狀態，signal handler 尤其嚴格。</li>
+    <li><strong>Lifetime：</strong>避免 thread 還在使用物件時另一方 free。</li>
+    <li><strong>Cancellation：</strong>被取消時 lock、resource、partial update 怎麼恢復。</li>
+  </ul>
+  <h3>12.7 Lock granularity 與可擴展性</h3>
+  <p>一把大鎖容易證明 correctness，但 contention 高；細鎖可增加 parallelism，卻增加 lock ordering、lifetime 與組合操作難度。先用清楚的大鎖做對並量測，再依 profile 拆分。Sharding、per-thread state、immutable data、message passing 常比堆疊更多鎖更容易維護。</p>
+  <div class="stuck">
+    <strong>卡關：Atomic 是否等於 thread-safe？</strong>
+    單一 atomic operation 不會自動保護跨多個變數或 read-modify-check sequence 的 invariant。例如 atomic balance 的「讀餘額足夠再扣款」仍需 CAS loop 或更高層同步；否則兩個操作可都先看到足夠餘額。
+  </div>
+  <div class="work">
+    <strong>工作應用：Thread pool 的完整容量模型</strong>
+    除了 worker count，還要定義 bounded queue、enqueue timeout、拒絕策略、per-request deadline、shutdown drain、panic/exception 隔離與 metrics。Unbounded queue 只是把 overload 轉成高 latency 和 OOM。
+  </div>
+  <details>
+    <summary>推理題：增加 threads 為何可能變慢？</summary>
+    <div><p>可能增加 context switch、lock contention、cache/TLB miss、memory bandwidth pressure 與 queueing。CPU-bound workload 的有效 parallelism 受 cores 與 serial fraction 限制；I/O-bound 才可能從更多 in-flight work 受益。</p></div>
+  </details>
+  <details>
+    <summary>設計題：銀行轉帳要鎖兩個帳戶，如何避免 deadlock？</summary>
+    <div><p>為每個帳戶定義穩定排序鍵，例如 account ID。任何轉帳都先鎖較小 ID，再鎖較大 ID，所有路徑遵守同一順序。若同帳戶轉帳只取一次鎖。還需在 critical section 內同時驗證餘額與更新兩邊，維持 invariant。</p></div>
+  </details>
+  <details>
+    <summary>推理題：為何用 <code>volatile</code> 不能取代 mutex？</summary>
+    <div><p>在 C 中，volatile 主要要求對該 object 的存取不要被一般方式省略，適合某些 memory-mapped I/O 或 signal 情境；它不提供跨 thread atomicity，也不建立完整的 synchronization/happens-before。使用 language atomics 或 mutex。</p></div>
+  </details>
+  <details>
+    <summary>設計題：如何測出低機率 race，而不是加入 sleep 碰運氣？</summary>
+    <div><p>使用 ThreadSanitizer、壓力測試、隨機排程/注入 yield、縮小 critical sequence、增加重複次數，並檢查 invariant。建立 barrier 讓 threads 同時到達敏感位置，比固定 sleep 更可重現。</p></div>
+  </details>
+</section>
+
+<section id="labs">
+  <span class="chapter-tag">Practice</span>
+  <h2>CS:APP Labs 實作地圖</h2>
+  <p>官方 labs 的價值在於把抽象概念變成可觀察行為。以下提供學習目標、前置能力與驗證方式，不提供可直接繳交的完整答案。</p>
+  <table>
+    <tr><th>Lab</th><th>核心能力</th><th>你應該自己回答</th><th>工作連結</th></tr>
+    <tr><td>Data Lab</td><td>bit operations、two's complement、floating point</td><td>限制運算子後，如何從 bit-level invariant 推公式？</td><td>encoding、flags、overflow-safe code</td></tr>
+    <tr><td>Bomb Lab</td><td>GDB、assembly、control flow、data structure</td><td>每個 input 如何流過 registers、stack 與 branches？</td><td>binary debugging、core dump</td></tr>
+    <tr><td>Attack Lab</td><td>stack discipline、code injection、ROP、防禦</td><td>return address 在哪裡？NX/ASLR 改變了什麼？</td><td>memory safety、exploit mitigation</td></tr>
+    <tr><td>Architecture Lab</td><td>Y86-64、pipeline、hazards、CPE</td><td>每個 stall/bubble 的因果是什麼？</td><td>CPU counters、low-level optimization</td></tr>
+    <tr><td>Cache Lab</td><td>cache simulator、LRU、matrix blocking</td><td>每個 miss 是 compulsory/conflict/capacity 哪一類？</td><td>data layout、analytics、HPC</td></tr>
+    <tr><td>Shell Lab</td><td>process group、signal、race、job control</td><td>signal 在任兩行間抵達是否仍正確？</td><td>supervisor、worker lifecycle、CLI</td></tr>
+    <tr><td>Malloc Lab</td><td>allocator、alignment、free list、coalescing</td><td>heap checker 能驗證哪些 invariant？</td><td>memory footprint、runtime internals</td></tr>
+    <tr><td>Proxy Lab</td><td>socket、HTTP、concurrency、cache</td><td>如何處理 partial I/O、header、eviction 與 races？</td><td>gateway、reverse proxy、service mesh</td></tr>
+    <tr><td>Performance Lab</td><td>measurement、loop transformation、locality</td><td>改善來自少指令、少 miss 還是更多 ILP？</td><td>profile-guided optimization</td></tr>
+  </table>
+  <h3>每個 lab 的四層驗證</h3>
+  <ol>
+    <li><strong>Functional：</strong>正常案例輸出正確。</li>
+    <li><strong>Boundary：</strong>0、1、最大值、空集合、重複與錯誤輸入。</li>
+    <li><strong>Invariant：</strong>每步內部結構都合法，例如 free list 雙向連結與 block alignment。</li>
+    <li><strong>Adversarial：</strong>隨機順序、signal timing、slow peer、allocation churn、衝突地址。</li>
+  </ol>
+  <div class="tip">
+    <strong>Lab notebook 模板</strong>
+    每次只記五件事：假說、觀察命令、原始輸出、推論、下一個最小實驗。不要只記「改了什麼」，要記「什麼證據推翻或支持哪個模型」。
+  </div>
+</section>
+
+<section id="work">
+  <span class="chapter-tag">Playbook</span>
+  <h2>把系統知識用在工作上</h2>
+  <div class="two-col">
+    <div class="mini-card">
+      <h4>程式 crash</h4>
+      <ol>
+        <li>保存 executable、debug symbols、core、版本與環境。</li>
+        <li>確認 signal、fault address、top frame。</li>
+        <li>用 ASan/UBSan 重現；檢查 lifetime、bounds、alignment。</li>
+        <li>若是 data race，使用 TSan 或縮小並行交錯。</li>
+      </ol>
+    </div>
+    <div class="mini-card">
+      <h4>CPU 飆高</h4>
+      <ol>
+        <li>確認是 user、system、steal 或 iowait。</li>
+        <li>取得 profile 與 call graph。</li>
+        <li>看 instructions、IPC、branch/cache misses。</li>
+        <li>先減少工作量，再改善 locality/ILP。</li>
+      </ol>
+    </div>
+    <div class="mini-card">
+      <h4>記憶體持續成長</h4>
+      <ol>
+        <li>分辨 RSS、virtual、file-backed、anonymous。</li>
+        <li>取得 allocation profile 與 retained stacks。</li>
+        <li>檢查 leak、cache policy、fragmentation、queue。</li>
+        <li>以固定 workload 比較成長斜率。</li>
+      </ol>
+    </div>
+    <div class="mini-card">
+      <h4>服務偶發 timeout</h4>
+      <ol>
+        <li>用 deadline 將端到端時間切段。</li>
+        <li>檢查 queue depth、thread pool、connection pool。</li>
+        <li>對照 network retransmit、GC/page fault、downstream。</li>
+        <li>確認 retry 是否放大負載。</li>
+      </ol>
+    </div>
+    <div class="mini-card">
+      <h4>只在 release 壞掉</h4>
+      <ol>
+        <li>懷疑 undefined behavior、race、uninitialized data。</li>
+        <li>保留 <code>-O2 -g</code>，開 sanitizers。</li>
+        <li>比較 assembly，避免依賴 timing 或 stack layout。</li>
+        <li>修語意根因，不用 sleep 或關最佳化掩蓋。</li>
+      </ol>
+    </div>
+    <div class="mini-card">
+      <h4>部署後 library error</h4>
+      <ol>
+        <li>確認 architecture 與 ELF interpreter。</li>
+        <li>列出 NEEDED、RPATH/RUNPATH、symbol version。</li>
+        <li>比較 build/runtime image 與 ABI。</li>
+        <li>在同環境重現 loader 搜尋過程。</li>
+      </ol>
+    </div>
+  </div>
+  <h3>跨層問題樹</h3>
+  <pre class="diagram"><code>症狀
+├─ correctness：值錯、crash、race、protocol violation
+│  ├─ representation / overflow / UB
+│  ├─ lifetime / virtual memory / allocator
+│  └─ synchronization / signal timing
+├─ latency：CPU、queue、I/O、page fault、network
+│  ├─ algorithm / instruction / branch
+│  ├─ cache / TLB / memory bandwidth
+│  └─ syscall / storage / downstream
+└─ deployability：linker、loader、ABI、permissions、resource limits</code></pre>
+  <div class="tip">
+    <strong>最重要的工作習慣</strong>
+    任何系統結論都附上一個可重現證據：命令、counter、trace、packet、core frame 或最小程式。系統思維的成熟度，體現在你能否排除其他合理解釋。
+  </div>
+</section>
+
+<section id="problems">
+  <span class="chapter-tag">Deep Practice</span>
+  <h2>綜合課後問題與完整解答</h2>
+  <p>以下題目刻意跨章。先寫出自己的模型、假設與驗證方法，再展開解答。</p>
+
+  <h3>逐章快速自測 24 題</h3>
+  <table>
+    <tr><th>題目</th><th>精要答案</th></tr>
+    <tr><td>1. ISA 與 microarchitecture 差在哪？</td><td>ISA 是軟體可見契約；microarchitecture 是實作該契約的 pipeline、cache、execution units 等設計。</td></tr>
+    <tr><td>2. 為何 profile 要看占比？</td><td>Amdahl 定律限制局部改善對整體的最大收益。</td></tr>
+    <tr><td>3. Sign extension 為何複製最高位？</td><td>Two's complement 的位權規則要求新增高位維持原值。</td></tr>
+    <tr><td>4. NaN 為何不等於自己？</td><td>IEEE 754 比較規則讓 NaN 的 ordered comparisons 為 false，用來傳播未定義數值狀態。</td></tr>
+    <tr><td>5. <code>lea</code> 一定在取地址嗎？</td><td>不一定；它也常被編譯器用來做不改 flags 的加法與 scaled arithmetic。</td></tr>
+    <tr><td>6. Callee-saved register 的責任是什麼？</td><td>Callee 若使用，必須讓 caller 看見的值在返回時保持不變。</td></tr>
+    <tr><td>7. Forwarding 為何不能解決所有 data hazard？</td><td>Load 的資料可能到 memory stage 結尾才可用，緊接的 consumer 仍需 stall。</td></tr>
+    <tr><td>8. Misprediction 的主要成本是什麼？</td><td>丟棄錯路徑工作、恢復正確 state 並重新填充 pipeline。</td></tr>
+    <tr><td>9. Loop unrolling 的兩個主要收益？</td><td>降低 loop control overhead，並暴露更多獨立操作供 pipeline 平行執行。</td></tr>
+    <tr><td>10. <code>restrict</code> 用錯會怎樣？</td><td>違反 no-alias 契約會造成 undefined behavior，編譯器可產生看似意外的結果。</td></tr>
+    <tr><td>11. Direct-mapped cache 的 E 是多少？</td><td>E = 1；每個 set 只有一條 line。</td></tr>
+    <tr><td>12. Spatial locality 為何對 linked list 較差？</td><td>節點可能分散配置，相鄰 traversal 不一定落在相鄰 cache lines。</td></tr>
+    <tr><td>13. Relocation entry 解決什麼？</td><td>記錄哪個位置引用哪個 symbol，以及 linker 要用何種規則修補。</td></tr>
+    <tr><td>14. Section 與 segment 的差別？</td><td>Section 偏向連結視角；segment 描述 loader 要映射的範圍與權限。</td></tr>
+    <tr><td>15. Zombie 還會執行嗎？</td><td>不會；只保留 termination status 等資訊，等待 parent 回收。</td></tr>
+    <tr><td>16. Blocked signal 消失了嗎？</td><td>沒有；它可成為 pending，但 standard signal 同類型通常只記一個 pending 狀態。</td></tr>
+    <tr><td>17. TLB 保存什麼？</td><td>近期 virtual page 到 physical page 的轉譯與 permission 資訊。</td></tr>
+    <tr><td>18. <code>malloc(0)</code> 能否解參考？</td><td>不能；回傳可能是 NULL 或可供 free 的 unique pointer，但沒有可用 payload。</td></tr>
+    <tr><td>19. <code>dup2</code> 常用在哪？</td><td>Shell redirection，把 stdin/stdout/stderr descriptor 指向 pipe 或檔案。</td></tr>
+    <tr><td>20. EINTR 後一律重試安全嗎？</td><td>要看 API 與是否已產生部分副作用；read/write loop 還需先處理正的 short count。</td></tr>
+    <tr><td>21. TCP 是否保證一次 send 對應一次 recv？</td><td>不保證；TCP 只有 ordered byte stream，message framing 由 application 定義。</td></tr>
+    <tr><td>22. Listening socket 與 connected socket 差在哪？</td><td>前者接收新連線；accept 回傳的後者承載特定 peer 的資料。</td></tr>
+    <tr><td>23. Mutex 除了互斥還提供什麼？</td><td>建立 memory ordering / happens-before，使受保護資料的寫入對下一個持鎖者可見。</td></tr>
+    <tr><td>24. 為何 condition wait 必須在 while 中？</td><td>處理 spurious wakeup，以及醒來後條件已被其他 thread 改變的情況。</td></tr>
+  </table>
+
+  <details>
+    <summary>題 1：一個 C global 變數從原始碼到執行時會經過哪些階段？</summary>
+    <div>
+      <p><strong>解答：</strong>Compiler 依 linkage 與初始化產生 symbol，放入適合的 section；未初始化或零初始化常進 BSS，非零初始化常進 data。Assembler 產生 object 與必要 relocation。Linker 解析同名定義、配置 section 地址並修補引用。Loader 依 program headers 建立 mappings；dynamic symbol 可能再由 dynamic loader 處理。執行時 CPU 用虛擬地址存取，經 TLB/page table 轉成 physical address，資料最後由 cache/DRAM 提供。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 2：程式把 <code>int length</code> 與封包中的 unsigned 32-bit 長度相加後 malloc，可能有哪些漏洞？</summary>
+    <div>
+      <p><strong>解答：</strong>需考慮 byte order、signed/unsigned conversion、加法 overflow、轉成 <code>size_t</code> 的寬度、上限驗證、零長度語意與 allocation failure。安全順序是先用固定寬度 unsigned 解碼，驗證 protocol maximum，再用 checked addition 算 header + payload，確認不超過 <code>SIZE_MAX</code>，最後配置。不能先加再檢查，因為值可能已 wrap。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 3：某 loop 改成 branchless 後 branch-miss 大降，但時間不變，如何解釋？</summary>
+    <div>
+      <p><strong>解答：</strong>可能新增更多 instructions、形成 dependency chain、增加 loads、限制 vectorization，或原本 branch prediction 已足夠好。也可能瓶頸在 memory bandwidth。比較 cycles、instructions、IPC、cache miss 與輸入分布；確認 benchmark 沒被其他階段主導。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 4：<code>fork</code> 後 child 修改大型陣列，RSS 為何突然增加？</summary>
+    <div>
+      <p><strong>解答：</strong>Fork 後 pages 初始以 copy-on-write 共享。Child 寫入每個 page 時觸發 protection fault，核心建立私有 physical page 並複製內容，因此 touched pages 的 resident memory 增加。只讀不會產生同等複製；觀察 minor faults 可驗證。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 5：為何在 signal handler 中呼叫 <code>printf</code> 可能 deadlock？</summary>
+    <div>
+      <p><strong>解答：</strong>Main flow 可能在執行 stdio 並持有內部 lock 時被 signal 打斷，handler 再進入 <code>printf</code> 嘗試取得同一 lock。stdio 不是 async-signal-safe。Handler 應只做安全操作，例如設定 flag 或向 pipe 寫固定資料。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 6：兩個 process 使用同一個 inherited fd 寫 log，會發生什麼？</summary>
+    <div>
+      <p><strong>解答：</strong>它們的 fd entries 指向共享 open file description，因此共享 offset。單次 write 的交錯語意取決於檔案類型與 flags；若一則 log 拆成多次 write，內容可能交錯。stdio buffer 在 fork 前若未 flush，還可能重複。常見設計是單一 logging process/thread、每筆一次 bounded write，或使用具 record semantics 的 IPC。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 7：Cache simulator 的 LRU 應在何時更新？</summary>
+    <div>
+      <p><strong>解答：</strong>每次 hit 與 miss 後填入 line 都算一次 access，該 line 成為 most recently used。Eviction 選 valid lines 中最久未使用者。Modify operation 常代表 load 後 store，因此是兩次 access：第一次可能 miss/eviction，第二次必定 hit（在單執行緒模型且中間無其他 access）。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 8：Allocator 的 heap checker 至少應驗證哪些 invariant？</summary>
+    <div>
+      <p><strong>解答：</strong>每個 block 對齊；size 合法且不越過 heap；header/footer 一致（若有 footer）；相鄰 free blocks 已依策略 coalesce；free list pointers 位於 heap 且前後一致；free list 不重複、不含 allocated block；線性掃描發現的 free blocks 與 free list 集合一致；prologue/epilogue 合法。Checker 不應使用被測 allocator 自己的 malloc。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 9：Thread pool queue 為何不能無上限？</summary>
+    <div>
+      <p><strong>解答：</strong>當到達率長期高於服務率，queue 會持續成長。每個 request 消耗 memory，等待時間也增長；client timeout 後 server 仍做已無價值的工作，最後可能 OOM。Bounded queue 使 overload 早期可見，搭配拒絕、shed load、deadline 與 backpressure 維持系統可恢復性。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 10：TCP client send 成功後斷線，能否確定 server 已完成資料庫寫入？</summary>
+    <div>
+      <p><strong>解答：</strong>不能。Send/write 成功通常只表示資料已被本機 kernel 接受；即使 peer 收到，也不代表 application 已處理，更不代表 transaction commit。需要 application response 定義完成點；若 response 遺失，client 仍處於 ambiguous outcome。以 idempotency key、operation status query 或 exactly-once-like dedup protocol 處理重試。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 11：ASan 沒報錯是否代表沒有 memory bug？</summary>
+    <div>
+      <p><strong>解答：</strong>不代表。它只檢查被 instrumented 且實際執行到的路徑，對某些 intra-object overflow、自訂 allocator、未 instrumented library、data race 或邏輯 lifetime 問題可能無能為力。搭配高覆蓋測試、UBSan/TSan、static analysis、fuzzing 與 invariant checks。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>題 12：設計一個調查 p99 latency regression 的最小實驗計畫。</summary>
+    <div>
+      <ol>
+        <li>固定版本、機器與 request distribution，確認 regression 可重現。</li>
+        <li>把 p50/p95/p99 與 throughput、error rate 一起看，排除負載差異。</li>
+        <li>以 tracing 分解 queue、CPU、lock、syscall、downstream 時間。</li>
+        <li>對 slow samples 取得 profile/counters，而非只看平均 profile。</li>
+        <li>比較 commits 或 feature flags，一次隔離一個變因。</li>
+        <li>提出可被推翻的假說，例如 LLC misses 增加；用 perf counter 驗證。</li>
+        <li>修正後做 correctness、steady-state、overload 與 rollback 驗證。</li>
+      </ol>
+    </div>
+  </details>
+</section>
+
+<section id="sources">
+  <span class="chapter-tag">References</span>
+  <h2>研究來源與延伸閱讀</h2>
+  <p>內容以官方與規格文件校準技術事實，並參考社群筆記整理初學者反覆卡住的地方。社群內容用來發現問題，不作為唯一技術依據。</p>
+  <h3>官方教材與規格</h3>
+  <ul class="source-list">
+    <li>CS:APP 3e 官方網站與 Labs：<a href="https://www.csapp.cs.cmu.edu/3e/labs.html">csapp.cs.cmu.edu/3e/labs.html</a></li>
+    <li>CS:APP Web Asides：<a href="https://www.csapp.cs.cmu.edu/3e/waside.html">csapp.cs.cmu.edu/3e/waside.html</a></li>
+    <li>CS:APP 3e 官方勘誤：<a href="https://www.csapp.cs.cmu.edu/3e/errata.html">csapp.cs.cmu.edu/3e/errata.html</a></li>
+    <li>CMU 15-213 課程投影片與 recitations：<a href="https://www.cs.cmu.edu/afs/cs/academic/class/15213-s10/www/lectures/">cs.cmu.edu 15-213 lectures</a></li>
+    <li>Stanford CS107 C pointers guide：<a href="https://web.stanford.edu/class/archive/cs/cs107/cs107.1234/resources/pointer_pitfalls.html">CS107 Guide to C Pointers</a></li>
+    <li>System V x86-64 psABI：<a href="https://gitlab.com/x86-psABIs/x86-64-ABI">x86-psABIs/x86-64-ABI</a></li>
+    <li>Intel 64 and IA-32 Manuals：<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel Software Developer Manuals</a></li>
+    <li>Linux man-pages：<a href="https://man7.org/linux/man-pages/">man7.org/linux/man-pages</a></li>
+    <li>GNU GDB Manual：<a href="https://sourceware.org/gdb/current/onlinedocs/gdb.html/">sourceware.org GDB manual</a></li>
+    <li>Clang AddressSanitizer / UndefinedBehaviorSanitizer：<a href="https://clang.llvm.org/docs/AddressSanitizer.html">ASan</a>、<a href="https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html">UBSan</a></li>
+  </ul>
+  <h3>社群筆記 survey</h3>
+  <ul class="source-list">
+    <li><a href="https://github.com/AkiyamaKunka/csapp-notes">AkiyamaKunka / csapp-notes</a>：特別補強 cache mapping、locality 與 virtual memory 的串接。</li>
+    <li><a href="https://github.com/happysnaker/CSAPPLabsAndNotes">happysnaker / CSAPPLabsAndNotes</a>：整理 Data、Bomb、Shell、Malloc、Proxy labs 的學習斷點。</li>
+    <li><a href="https://github.com/Exely/CSAPP-Labs">Exely / CSAPP-Labs</a>：呈現從 assembly、pipeline、cache 到 attack mitigation 的實驗脈絡。</li>
+    <li><a href="https://github.com/yewentao256/CSAPP_15213">yewentao256 / CSAPP_15213</a>：結合 CMU lectures、recitations 與完整 lab 路線。</li>
+    <li><a href="https://github.com/kcxain/CSAPP-Lab">kcxain / CSAPP-Lab</a>：補充各 lab 的教學目的與 64-bit 環境注意事項。</li>
+    <li><a href="https://github.com/BanaHaker/CSAPP-Notes">BanaHaker / CSAPP-Notes</a>：以 Linux 系統程式設計脈絡整理各章與 labs。</li>
+  </ul>
+  <div class="warning">
+    <strong>版本提醒</strong>
+    指令、ABI、作業系統與工具行為會隨平台改變。遇到平台相關結論時，以你的 target architecture、compiler、libc、kernel 與正式規格為準。
+  </div>
+</section>
+</main>
+</div>
+
+<footer>
+  CS:APP 系統思維學習手冊 · 單一 HTML、可離線閱讀 · 最後整理：2026-09
+</footer>
+</body>
+</html>
