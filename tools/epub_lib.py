@@ -250,7 +250,11 @@ def parse(html):
 
 
 def chapter_container(body):
-    """Descend through single-wrapper divs so chapters are direct children."""
+    """Find the container whose direct children represent book chapters."""
+    for candidate in body.iter():
+        if candidate.get("data-epub-chapters") is not None:
+            return candidate
+
     node = body
     while True:
         els = node.elements()
