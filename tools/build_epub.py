@@ -130,6 +130,36 @@ def highlight_tree(body):
     return done, guessed
 
 
+def expand_details(body):
+    """Flatten interactive details into always-visible EPUB content.
+
+    EPUB readers vary widely in their support for <details>. Converting the
+    element to a normal <div> is stronger than merely adding ``open``: the
+    explanation remains visible even in readers that ignore disclosure
+    widgets entirely.
+    """
+    expanded = 0
+
+    def add_class(node, name):
+        classes = node.cls()
+        if name not in classes:
+            classes.append(name)
+        node.attrs = [(k, v) for k, v in node.attrs if k != "class"]
+        node.attrs.append(("class", " ".join(classes)))
+
+    for node in [n for n in body.iter() if n.tag == "details"]:
+        node.tag = "div"
+        node.attrs = [(k, v) for k, v in node.attrs if k != "open"]
+        add_class(node, "epub-expanded")
+        for child in node.elements():
+            if child.tag == "summary":
+                child.tag = "div"
+                add_class(child, "callout-title")
+                add_class(child, "epub-summary")
+        expanded += 1
+    return expanded
+
+
 # ------------------------------------------------------------------------ CSS
 
 def pygments_css():
@@ -164,8 +194,9 @@ pre code { white-space: inherit; }
       font-family: monospace; font-size: 0.78em; }
 h1 { page-break-before: always; break-before: page; }
 h1, h2, h3, h4 { page-break-after: avoid; break-after: avoid; }
-details { display: block; }
-details > summary { font-weight: bold; }
+.epub-expanded { display: block !important; }
+.epub-expanded > * { display: block !important; }
+.epub-summary { margin-bottom: 0.7em; font-weight: bold; }
 /* Anything sticky/fixed breaks paginated readers. */
 * { position: static !important; }
 """
@@ -259,11 +290,20 @@ def build(src):
     title = doc_title or os.path.splitext(name)[0]
     title = re.sub(r"^[\W_]+", "", title).strip() or os.path.splitext(name)[0]
 
+    n_expanded = expand_details(body)
     n_hl, n_guess = highlight_tree(body)
 
     container = E.chapter_container(body)
     level = pick_level(body)
-    groups = E.split_sections(container, level)
+    marked_chapters = [
+        n for n in body.iter()
+        if n.tag == "article" and "chapter" in n.cls()
+    ]
+    groups = (
+        [[chapter] for chapter in marked_chapters]
+        if len(marked_chapters) >= 2
+        else E.split_sections(container, level)
+    )
 
     # Map every id to the file it will live in, then fix cross-file anchors.
     id_home = {}
@@ -366,7 +406,8 @@ def build(src):
     size = os.path.getsize(out_path)
     print(f"  ✔ {name[:42]:44} -> {slug}.epub  "
           f"{len(chapters):>3} 章  h{level}  上色 {n_hl:>3}(推測 {n_guess})  "
-          f"錨點 {n_anchor:>4} 移除 {n_dropped:>3}  {size/1048576:.1f}MB")
+          f"展開 {n_expanded:>3}  錨點 {n_anchor:>4} 移除 {n_dropped:>3}  "
+          f"{size/1048576:.1f}MB")
     return slug, title, len(chapters), size
 
 

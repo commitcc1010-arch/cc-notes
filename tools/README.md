@@ -6,11 +6,22 @@
 ## 加了新書之後
 
 ```bash
-python3 -m venv .venv-epub && ./.venv-epub/bin/pip install pygments   # 只需第一次
+python3 -m venv .venv-epub && ./.venv-epub/bin/pip install pygments markdown   # 只需第一次
 ./.venv-epub/bin/python tools/build_epub.py                            # 全部重建
 ./.venv-epub/bin/python tools/build_epub.py 新書.html                   # 只建一本
 ./.venv-epub/bin/python tools/check_epub.py                            # 結構自我檢查
 ```
+
+`Coding Interview Patterns/` 是多份 Obsidian Markdown 組成的來源書。先合併成 HTML：
+
+```bash
+python3 tools/enrich_coding_interview_patterns.py
+./.venv-epub/bin/python tools/build_coding_interview_patterns.py
+./.venv-epub/bin/python tools/build_epub.py coding-interview-patterns-160.html
+```
+
+第一個指令會為 160 題重建可重複產生的視覺學習層與 640 組 Follow-up；
+區塊有 marker，因此可安全重跑，不會重複插入。
 
 然後在 `index.html` 對應的卡片裡加一個下載按鈕（照現有 `<a class="dl">` 的格式，
 `href` 指向 `epub/<slug>.epub`，並把檔案大小寫進 `<span class="sz">`）。
