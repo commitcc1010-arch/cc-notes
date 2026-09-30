@@ -23,6 +23,37 @@ python3 tools/enrich_coding_interview_patterns.py
 第一個指令會為 160 題重建可重複產生的視覺學習層與 640 組 Follow-up；
 區塊有 marker，因此可安全重跑，不會重複插入。
 
+`NGINX Source Code Journey/` 的內容由固定版本源碼課程資料產生。重建 Markdown、HTML
+與 EPUB：
+
+```bash
+./.venv-epub/bin/python tools/build_nginx_source_journey.py
+./.venv-epub/bin/python tools/build_epub.py nginx-source-code-journey.html
+./.venv-epub/bin/python tools/check_epub.py epub/nginx-source-code-journey.epub
+```
+
+技術基準固定為 NGINX `release-1.31.5`；生成器會產出 1 篇零背景導讀、
+48 個主章節、288 組 Follow-up Q&A、9 份附錄，以及可在 EPUB 中完整展開的
+閱讀版本。每章的 beginner guide 由
+`tools/nginx_source_journey_beginner_guides.py` 提供，包括全書定位、component
+contract、完整 flow、source-reading 注意點與 implementation patterns。
+`tools/nginx_source_journey_examples.py` 另外提供 48 組可執行 Python 概念模型、
+Python 與 NGINX C 的逐項映射、source microscope，以及 48 個直接內嵌書中的官方
+C 源碼視窗。讀者可以先跑懂簡化模型，再在同一頁對照真實 object、callback、
+return code 與生命週期，不必先跳出書外。
+
+`tools/nginx_source_journey_foundations.py` 提供 114 個零背景術語定義，依各章
+需求在正文首次設計討論前放入至少 4 張「白話定義／具體例子／在 NGINX 中」
+先備概念卡，目前合計 213 張；附錄 H 也會自動產生完整術語表。第 12 章另有
+blocking server、select/poll、epoll interest set、keep-alive、WebSocket 與
+能力邊界的完整 primer。每章的 Design Decision 區塊則明列外部壓力、use case、
+NGINX 的選擇、state owner 與代價。
+
+建立真實源碼視窗時，生成器依序讀取 `NGINX_SOURCE_ROOT` 指定的 checkout、
+`/tmp/nginx-source-1.31.5.*` 的本機 checkout，最後才從固定 tag 的官方 raw
+source 讀取。產出的 Markdown、HTML 與 EPUB 都已包含摘錄，不依賴讀者的網路或
+本機 source tree。
+
 然後在 `index.html` 對應的卡片裡加一個下載按鈕（照現有 `<a class="dl">` 的格式，
 `href` 指向 `epub/<slug>.epub`，並把檔案大小寫進 `<span class="sz">`）。
 
@@ -37,7 +68,7 @@ brew install epubcheck
 for f in epub/*.epub; do epubcheck "$f"; done
 ```
 
-目前 17 本全部 **0 error、0 warning**。
+正式書架的 EPUB 清單與數量以 `index.html` 為準。
 
 ## 轉換時保留了什麼
 
