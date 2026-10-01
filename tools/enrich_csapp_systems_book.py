@@ -18,6 +18,7 @@ from csapp_supplement_appendices import (
     METHOD,
     WORK,
 )
+from csapp_freshman_foundations import BRIDGES, FOUNDATION_TERMS, PRIMER_BODY
 from csapp_practical_examples import EXAMPLES
 from csapp_supplement_model import SOURCES, Supplement
 from csapp_supplement_part01 import SUPPLEMENTS as PART01
@@ -29,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BOOK = ROOT / "CSAPP_系統思維學習手冊.html"
 SUPPLEMENTS: list[Supplement] = PART01 + PART02 + PART03
 EXAMPLES_BY_ID = {item.section_id: item for item in EXAMPLES}
+BRIDGES_BY_ID = {item.section_id: item for item in BRIDGES}
 
 BLOCK_RE = re.compile(
     r"(?:[ \t]*\n)*<!-- CSAPP-ENRICHMENT START [^>]+ -->.*?"
@@ -70,11 +72,60 @@ def render_terms(item: Supplement) -> str:
         cards.append(
             '<article class="deep-term">'
             f"<h4>{html.escape(term.name)}</h4>"
-            f"<p>{html.escape(term.plain)}</p>"
-            f'<p class="term-example"><strong>例：</strong>{html.escape(term.example)}</p>'
+            f"<p>{inline(term.plain)}</p>"
+            f'<p class="term-example"><strong>例：</strong>{inline(term.example)}</p>'
             "</article>"
         )
     return '<div class="deep-term-grid">' + "".join(cards) + "</div>"
+
+
+def render_foundation_terms() -> str:
+    cards = []
+    for term in FOUNDATION_TERMS:
+        cards.append(
+            f'<article class="foundation-term" id="term-{html.escape(term.key, quote=True)}">'
+            f"<h4>{html.escape(term.name)}</h4>"
+            f"<p>{inline(term.plain)}</p>"
+            f'<p class="foundation-example"><strong>具體例子：</strong>{inline(term.example)}</p>'
+            f'<p class="foundation-boundary"><strong>不要混淆：</strong>{inline(term.boundary)}</p>'
+            "</article>"
+        )
+    return '<div class="foundation-grid">' + "".join(cards) + "</div>"
+
+
+def render_freshman_primer() -> str:
+    dictionary = (
+        '<h3 id="primer-glossary">11. 零背景核心詞典：定義、例子與不要混淆的邊界</h3>'
+        '<p>第一次遇到術語時，不要只背一句定義。每張卡都回答「它是什麼」、'
+        '「具體長什麼樣」與「最容易和什麼混淆」。後文忘記時可直接跳回這裡。</p>'
+        + render_foundation_terms()
+    )
+    return PRIMER_BODY.replace(
+        "  <h3>Primer 理解確認</h3>",
+        f"  {dictionary}\n\n  <h3>Primer 理解確認</h3>",
+        1,
+    )
+
+
+def render_freshman_bridge(section_id: str) -> str:
+    bridge = BRIDGES_BY_ID[section_id]
+    checkpoints = "".join(
+        f"<li>{html.escape(value)}</li>" for value in bridge.checkpoints
+    )
+    return (
+        '<aside class="freshman-bridge">'
+        '<div class="freshman-bridge-title"><span>DSA → SYSTEMS BRIDGE</span>'
+        f"<strong>第 {bridge.number} 章從你已經會的地方開始</strong></div>"
+        '<div class="freshman-bridge-grid">'
+        f'<article><h4>你已經知道</h4><p>{inline(bridge.known)}</p></article>'
+        f'<article><h4>本章新增哪一層</h4><p>{inline(bridge.new_layer)}</p></article>'
+        f'<article><h4>先用這個類比</h4><p>{inline(bridge.analogy)}</p></article>'
+        "</div>"
+        '<div class="freshman-checkpoints"><strong>進入細節前的三個定位點</strong>'
+        f"<ul>{checkpoints}</ul></div>"
+        '<a class="primer-return" href="#freshman-primer">術語卡住？回到零背景 Systems Primer</a>'
+        "</aside>"
+    )
 
 
 def render_practical(section_id: str) -> str:
@@ -130,6 +181,7 @@ def render_prelude(item: Supplement) -> str:
         '<div class="deepening-banner"><span>CORE COMPLETION LAYER</span>'
         f"<strong>第 {item.number} 章深化導覽</strong>"
         f"<p>{html.escape(item.question)}</p></div>"
+        f"{render_freshman_bridge(item.section_id)}"
         '<div class="chapter-contract">'
         f'<article><span>輸入與壓力</span><p>{html.escape(input_)}</p></article>'
         f'<article><span>內部責任</span><p>{html.escape(process)}</p></article>'
@@ -203,6 +255,8 @@ def inject_section(source: str, section_id: str, prelude: str, ending: str) -> s
 
 def glossary() -> str:
     entries: dict[str, str] = {}
+    for term in FOUNDATION_TERMS:
+        entries.setdefault(term.name, term.plain)
     for item in SUPPLEMENTS:
         for term in item.terms:
             entries.setdefault(term.name, term.plain)
@@ -243,6 +297,63 @@ CSS = r"""
 }
 .deepening-banner strong { display:block; font-size:1.18rem; }
 .deepening-banner p { margin:.35rem 0 0; color:#d9f0e9; }
+.freshman-lead {
+  max-width:74ch; font-size:1.03rem; color:#344d47;
+}
+.freshman-promise {
+  display:grid; gap:.35rem; margin:1rem 0 1.35rem; padding:1rem 1.1rem;
+  border:1px solid #8bb9aa; border-left:6px solid #23745f; border-radius:10px;
+  background:#eaf6f1;
+}
+.freshman-promise strong { color:#174f43; }
+.freshman-contrast {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; margin:1rem 0;
+}
+.freshman-contrast article {
+  padding:.8rem; border:1px solid #cbd9d5; border-radius:10px; background:#f9fcfb;
+}
+.freshman-contrast h4 { margin:0 0 .35rem; color:#176b57; }
+.freshman-contrast p { margin:0; }
+.foundation-grid {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin:1rem 0 1.4rem;
+}
+.foundation-term {
+  scroll-margin-top:1rem; padding:.9rem; border:1px solid #b9cec7;
+  border-top:4px solid #2f8d74; border-radius:10px; background:#fff;
+}
+.foundation-term h4 { margin:0 0 .45rem; color:#174f43; }
+.foundation-term p { margin:.35rem 0; font-size:.89rem; }
+.foundation-example, .foundation-boundary {
+  padding-top:.4rem; border-top:1px dashed #d5e0dc;
+}
+.foundation-example { color:#425953; }
+.foundation-boundary { color:#70433a; }
+.freshman-bridge {
+  margin:1rem 0 1.25rem; padding:.9rem; border:1px solid #a9c9bf;
+  border-radius:12px; background:#fff;
+}
+.freshman-bridge-title span {
+  display:block; color:#176b57; font:750 .68rem/1.2 ui-monospace,monospace;
+  letter-spacing:.12em; margin-bottom:.25rem;
+}
+.freshman-bridge-title strong { color:#263f39; font-size:1.04rem; }
+.freshman-bridge-grid {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.6rem; margin:.75rem 0;
+}
+.freshman-bridge-grid article {
+  padding:.7rem; border:1px solid #d5e2de; border-radius:8px; background:#f8fbfa;
+}
+.freshman-bridge-grid h4 { margin:0 0 .3rem; color:#176b57; }
+.freshman-bridge-grid p { margin:0; font-size:.86rem; }
+.freshman-checkpoints {
+  padding:.65rem .75rem; border-radius:8px; background:#eef6f3; font-size:.88rem;
+}
+.freshman-checkpoints ul {
+  display:flex; flex-wrap:wrap; gap:.35rem 1.2rem; margin:.35rem 0 0; padding-left:1.2rem;
+}
+.primer-return {
+  display:inline-block; margin-top:.65rem; font-size:.82rem; font-weight:700;
+}
 .chapter-contract {
   display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem; margin:1rem 0 1.35rem;
 }
@@ -351,7 +462,8 @@ nav a.search-hidden { display:none; }
 .highlight pre { margin:0; }
 @media (max-width: 800px) {
   .chapter-contract, .deep-term-grid, .formula-grid, .glossary-grid,
-  .practical-context, .example-steps, .transfer-grid { grid-template-columns:1fr; }
+  .practical-context, .example-steps, .transfer-grid, .freshman-contrast,
+  .foundation-grid, .freshman-bridge-grid { grid-template-columns:1fr; }
   .application-list { columns:1; }
   .deepening-layer { padding:.85rem; }
   .deepening-banner { margin:-.85rem -.85rem 1rem; }
@@ -359,7 +471,7 @@ nav a.search-hidden { display:none; }
 @media print {
   .book-progress, .nav-search, .nav-search-count { display:none; }
   .deepening-layer { box-shadow:none; break-inside:auto; }
-  .deep-qa > div { display:block; }
+  .deep-qa > div, .freshman-qa > div { display:block; }
 }
 /* CSAPP ENRICHMENT CSS END */
 """
@@ -416,6 +528,10 @@ def validate() -> None:
     ]
     assert [item.number for item in EXAMPLES] == list(range(13))
     assert set(EXAMPLES_BY_ID) == {item.section_id for item in SUPPLEMENTS}
+    assert [item.number for item in BRIDGES] == list(range(13))
+    assert set(BRIDGES_BY_ID) == {item.section_id for item in SUPPLEMENTS}
+    assert len(FOUNDATION_TERMS) >= 32
+    assert len({item.key for item in FOUNDATION_TERMS}) == len(FOUNDATION_TERMS)
 
 
 def build() -> None:
@@ -425,6 +541,13 @@ def build() -> None:
     source = CSS_RE.sub("\n", source)
 
     source = source.replace("</style>", CSS + "\n</style>", 1)
+
+    primer = marker("freshman-primer", render_freshman_primer())
+    source = source.replace(
+        '<section id="guide">',
+        primer + '\n<section id="guide">',
+        1,
+    )
 
     guide_block = marker("guide", md(GUIDE))
     source = inject_section(source, "guide", guide_block, "")
@@ -457,7 +580,22 @@ def build() -> None:
         '<a href="#glossary">附錄 D：核心術語</a>',
     )
     source = source.replace('<a href="#sources">資料來源</a>', nav + '\n<a href="#sources">資料來源</a>', 1)
+    source = source.replace(
+        '<a href="#guide">如何使用本書</a>',
+        marker(
+            "nav-primer",
+            '<a href="#freshman-primer">先修：零背景 Systems Primer</a>',
+        )
+        + '\n<a href="#guide">如何使用本書</a>',
+        1,
+    )
 
+    source = re.sub(
+        r'<div class="stat"><strong>\d+</strong>(?:實驗與專案路線|零背景術語卡)</div>',
+        f'<div class="stat"><strong>{len(FOUNDATION_TERMS)}</strong>零背景術語卡</div>',
+        source,
+        count=1,
+    )
     source = source.replace(
         '<div class="stat"><strong>80+</strong>深化練習</div>',
         '<div class="stat"><strong>150+</strong>章內問答</div>',
@@ -468,7 +606,11 @@ def build() -> None:
     )
     source = source.replace(
         "每章都用同一條學習路徑：先建立直覺，再看機制，最後落到工作中的診斷與設計。",
+        "只假設讀者學過基礎資料結構與演算法；先用零背景 Primer 建立 CPU、記憶體、作業系統、system call、build 與除錯世界，再逐章沿完整流程拆機制、做可執行實驗，最後落到工作診斷、設計取捨與詳細問答。",
+    )
+    source = source.replace(
         "每章先補齊脈絡與先備概念，再沿完整流程拆機制、做可執行實驗，最後落到工作診斷、設計取捨與詳細問答。",
+        "只假設讀者學過基礎資料結構與演算法；先用零背景 Primer 建立 CPU、記憶體、作業系統、system call、build 與除錯世界，再逐章沿完整流程拆機制、做可執行實驗，最後落到工作診斷、設計取捨與詳細問答。",
     )
     source = re.sub(
         r"CS:APP 系統思維學習手冊 · 單一 HTML、可離線閱讀 · 最後整理：\d{4}-\d{2}",

@@ -72,13 +72,19 @@ PYTHONPATH=tools ./.venv-epub/bin/python tools/check_csapp_systems_book.py
 epubcheck epub/csapp-系統思維學習手冊.epub
 ```
 
-Enrichment markers 讓腳本可安全重跑而不重複插入。目前成品含 Chapter 0–12
-共 13 個引導章、13 個實際執行驗證的 Python 概念模型、66 張先備卡、158 組
-折疊問答、30 張架構／流程圖，以及完整 coverage、Labs、跨層診斷、公式工具、
-研究方法與術語附錄。每個 Python 模型後都提供逐步 C／CPU／OS 映射、至少三個
-實際應用與三個跨領域同型設計。品質閘門會逐章檢查可見正文深度、至少 7 組
-新增詳細問答、Python 執行結果、圖解、先備卡、內部連結與離線資產；EPUB 會
-將全部 158 組答案轉為常駐展開內容。
+Enrichment markers 讓腳本可安全重跑而不重複插入。目前成品先提供一章只假設
+資料結構與演算法背景的 Freshman Systems Primer，從 bit/byte、CPU、記憶體、
+OS/kernel、system call，一路解釋到 executable/process、object format、
+GDB/watchpoint、stack corruption 與 ASan。全書含 49 張零背景定義卡，Chapter
+0–12 每章另有一條 DSA → Systems 橋梁；加上原有章內先備卡共 115 張。
+
+其餘成品包括 13 個引導章、13 個實際執行驗證的 Python 概念模型、168 組折疊
+問答、35 張架構／流程圖，以及完整 coverage、Labs、跨層診斷、公式工具、研究
+方法與術語附錄。每個 Python 模型後都提供逐步 C／CPU／OS 映射、至少三個實際
+應用與三個跨領域同型設計。品質閘門除了原有深度、問答、Python、圖解、連結與
+離線資產檢查，現在也會強制驗證 Primer 位於所有章節之前、49 張基礎卡與 10 組
+Primer 問答齊全、關鍵術語有具名解釋，且 13 章皆有背景橋梁；EPUB 會將全部
+168 組答案轉為常駐展開內容。
 
 `tools/nginx_source_journey_foundations.py` 提供 114 個零背景術語定義，依各章
 需求在正文首次設計討論前放入至少 4 張「白話定義／具體例子／在 NGINX 中」

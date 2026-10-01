@@ -9,6 +9,7 @@ from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 
+from csapp_freshman_foundations import BRIDGES, FOUNDATION_TERMS
 from csapp_practical_examples import EXAMPLES
 from csapp_supplement_part01 import SUPPLEMENTS as PART01
 from csapp_supplement_part02 import SUPPLEMENTS as PART02
@@ -63,6 +64,9 @@ class Parser(HTMLParser):
                     "practical": 0,
                     "python_examples": 0,
                     "transfers": 0,
+                    "foundation_terms": 0,
+                    "freshman_bridges": 0,
+                    "freshman_qas": 0,
                 }
                 self.section_stack.append(data)
                 self.sections[attrs["id"]] = data
@@ -72,6 +76,8 @@ class Parser(HTMLParser):
                 self.section["details"] += 1
                 if "deep-qa" in classes:
                     self.section["deep_qas"] += 1
+                if "freshman-qa" in classes:
+                    self.section["freshman_qas"] += 1
                 detail = {"section": self.section["id"], "text": []}
                 self.details_stack.append(detail)
                 self.details.append(detail)
@@ -87,6 +93,10 @@ class Parser(HTMLParser):
                 self.section["python_examples"] += 1
             if "transfer-card" in classes:
                 self.section["transfers"] += 1
+            if "foundation-term" in classes:
+                self.section["foundation_terms"] += 1
+            if "freshman-bridge" in classes:
+                self.section["freshman_bridges"] += 1
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "details" and self.details_stack:
@@ -159,8 +169,13 @@ def main() -> int:
             problems.append(
                 f"chapter {item.number} has only {section['transfers']} transfer patterns"
             )
+        if section["freshman_bridges"] != 1:
+            problems.append(
+                f"chapter {item.number} has {section['freshman_bridges']} DSA-to-systems bridges"
+            )
 
     for required in (
+        "freshman-primer",
         "guide",
         "labs",
         "work",
@@ -172,6 +187,62 @@ def main() -> int:
     ):
         if required not in parser.sections:
             problems.append(f"missing book section #{required}")
+
+    primer = parser.sections.get("freshman-primer")
+    if primer is not None:
+        primer_text = " ".join("".join(primer["text"]).split())
+        if len(primer_text) < 8_000:
+            problems.append(
+                f"freshman primer visible text too short: {len(primer_text)} chars"
+            )
+        if primer["foundation_terms"] != len(FOUNDATION_TERMS):
+            problems.append(
+                "freshman primer has "
+                f"{primer['foundation_terms']}/{len(FOUNDATION_TERMS)} foundation terms"
+            )
+        if primer["freshman_qas"] < 10:
+            problems.append(
+                f"freshman primer has only {primer['freshman_qas']} detailed Q&A"
+            )
+
+    primer_position = source.find('id="freshman-primer"')
+    guide_position = source.find('id="guide"')
+    prereq_position = source.find('id="prereq"')
+    if not (0 <= primer_position < guide_position < prereq_position):
+        problems.append("freshman primer must appear before guide and Chapter 0")
+
+    required_anchors = {
+        "primer-system-call",
+        "primer-build",
+        "primer-stack",
+        "primer-gdb",
+        "primer-asan",
+        "primer-corruption-walkthrough",
+        "term-system-call",
+        "term-gdb",
+        "term-object-format",
+        "term-stack-corruption",
+        "term-asan",
+        "term-watchpoint",
+    }
+    missing_anchors = sorted(required_anchors - ids)
+    if missing_anchors:
+        problems.append(
+            "missing freshman explanations: " + ", ".join(missing_anchors)
+        )
+
+    required_primer_phrases = (
+        "System call是application請kernel代辦工作的正式介面",
+        "GNU Debugger",
+        "Executable and Linkable Format",
+        "第一個壞寫入",
+        "Breakpoint監看執行位置；watchpoint監看資料位置",
+        "Object file不是C語言的object",
+    )
+    normalized_source = re.sub(r"\s+", "", source)
+    for phrase in required_primer_phrases:
+        if re.sub(r"\s+", "", phrase) not in normalized_source:
+            problems.append(f"freshman primer missing required explanation: {phrase}")
 
     short_answers = []
     for detail in parser.details:
@@ -221,6 +292,8 @@ def main() -> int:
     notes.extend(
         [
             f"{len(SUPPLEMENTS)} guided chapters",
+            f"{len(BRIDGES)}/{len(SUPPLEMENTS)} DSA-to-systems chapter bridges",
+            f"{len(FOUNDATION_TERMS)} zero-background foundation cards",
             f"{runnable}/{len(EXAMPLES)} runnable Python examples",
             f"{sum(s['deep_qas'] for s in parser.sections.values())} deep Q&A",
             f"{len(parser.details)} total folded answers",
@@ -242,7 +315,10 @@ def main() -> int:
         print(f"FAIL: {len(problems)} problems")
         return 1
     print("-" * 64)
-    print("PASS: coverage, continuity, diagrams, Q&A, links, and offline assets")
+    print(
+        "PASS: freshman foundations, coverage, continuity, diagrams, Q&A, "
+        "links, and offline assets"
+    )
     return 0
 
 
