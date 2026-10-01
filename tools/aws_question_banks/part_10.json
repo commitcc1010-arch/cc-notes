@@ -1,0 +1,3699 @@
+{
+  "part": 10,
+  "author_agent": "P10-A",
+  "chapters": [
+    {
+      "chapter": 97,
+      "questions": [
+        {
+          "id": "ch097-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "CloudFront cache key 與個人化資料隔離",
+          "prompt": "全球電商把 `/catalog/*`、`/cart/*` 與 `/checkout/*` 都放在同一個 CloudFront behavior，TTL 為 10 分鐘。上線後，少數登入使用者看到別人的購物車摘要。靜態商品圖片仍希望維持高 cache hit ratio。哪個修改最符合安全與效能需求？",
+          "choices": [
+            "保留單一長 TTL，付款成功後再對整個 distribution 執行 invalidation",
+            "拆分 behaviors：安全快取靜態 catalog；個人化或交易回應停用快取或只納入真正決定內容的身分輸入",
+            "只把 Authorization header 轉送到 origin，但不把任何會改變回應的身分資訊放入 cache key",
+            "保留單一 behavior，但把所有 viewer headers、cookies 與 query strings 全部加入 cache key"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Invalidation 不是使用者隔離機制，且長 TTL 期間仍可能把已快取的個人化內容交給其他 viewer。",
+            "正確。CloudFront 只應共用可安全共享的回應；不同 path 使用不同 cache policy，才能同時保留靜態內容命中率與交易資料隔離。",
+            "錯誤。只轉送而未納入 cache key，可能讓 origin 產生不同內容，CloudFront 卻仍以相同 key 共用先前的回應。",
+            "不建議。全部納入會降低誤共用風險，卻讓 cache key 幾乎每次都不同；應只加入真正改變回應的值，並分離交易路徑。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-3.4",
+            "SAA-4.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "cf-cache"
+          ],
+          "inspiration_ids": [
+            "jayendra-global"
+          ]
+        },
+        {
+          "id": "ch097-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "CloudFront OAC 與私有 S3 origin",
+          "prompt": "商品圖由 S3 提供並經 CloudFront 發送。安全稽核發現，知道 S3 URL 的人可以繞過 WAF 與 CloudFront 直接讀取物件。團隊要封閉這條旁路，同時保留 CloudFront 存取。應採用哪個方案？",
+          "choices": [
+            "維持 public-read，但將物件 key 改成難以猜測的 UUID",
+            "改用 S3 website endpoint，然後在 CloudFront 上啟用 Origin Access Control",
+            "使用 S3 REST origin 與 CloudFront Origin Access Control，啟用 Block Public Access，並以 bucket policy 僅授權指定 distribution",
+            "只在 CloudFront 加入 AWS WAF，S3 bucket policy 不需更動"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。不可猜測名稱不是授權控制；物件仍為 public-read，取得 URL 的人依然可以繞過 edge controls。",
+            "錯誤。OAC 用於受支援的 S3 bucket origin；S3 website endpoint 以自訂 origin 運作，不能用此模式建立相同的私有邊界。",
+            "正確。OAC 讓 CloudFront 以簽署的 origin request 取得私有物件；bucket policy 與 Block Public Access 共同阻止直接公開讀取。",
+            "錯誤。WAF 只處理經過 CloudFront 的請求；若 S3 仍公開，直接 origin request 不會經過該 Web ACL。"
+          ],
+          "task_keys": [
+            "SAA-1.2"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "cf-oac"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch097-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "WAF rate control 與交易授權責任邊界",
+          "prompt": "促銷期間，攻擊者從大量共享 NAT 位址送出 checkout requests。團隊已用 AWS WAF rate-based rule 降低濫用，但有人主張「通過 WAF 的請求可直接扣款」。哪個設計最正確？",
+          "choices": [
+            "以 IAM identity policy 取代所有公開 HTTP bot 與 rate controls",
+            "封鎖所有流量較高的來源 IP，無須考慮行動網路或企業 NAT 的共用位址",
+            "將 rate limit 設得極低，通過 WAF 即視為已驗證客戶與合法訂單",
+            "WAF 負責 edge 流量與常見攻擊控制；應用仍須驗證登入者、價格、庫存、訂單狀態與付款授權"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。IAM 適合 AWS principal 與 API 授權，但不能直接取代面向匿名 Internet viewer 的 WAF bot/rate protection。",
+            "錯誤。共用 NAT 可能代表許多正常使用者；rate key 與 scope-down 條件應依實際攻擊模式設計，不能把來源 IP 當交易身分。",
+            "錯誤。Rate rule 是流量控制，不知道客戶是否有權購買，也不知道價格與庫存是否仍有效。",
+            "正確。WAF 與業務授權位於不同信任層；只有受信任的應用與資料層能決定某筆交易是否可提交。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "waf-rate"
+          ],
+          "inspiration_ids": [
+            "jayendra-global"
+          ]
+        },
+        {
+          "id": "ch097-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "付款操作的持久化冪等設計",
+          "prompt": "行動 App 呼叫付款 API 後逾時，使用者立刻重試。第一次請求其實已成功扣款，但 response 在網路中遺失。系統必須避免第二次扣款，且相同重試要得到可重現的結果。哪個方法最好？",
+          "choices": [
+            "將 client timeout 調長到五分鐘，使 client 不會重試",
+            "把付款放入 FIFO queue，並把 queue 的短期去重視為永久付款帳本",
+            "在 Lambda global variable 暫存最近一分鐘的 request ID",
+            "以客戶與付款操作範圍的 idempotency key 原子保存請求摘要、狀態與結果；相同參數重試回傳原結果"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。較長 timeout 只能降低部分重試，無法消除網路中斷、client crash 或 intermediary retry。",
+            "錯誤。Queue 可改善排序與短期重複處理，但付款的最終冪等性仍需由交易狀態與持久化 operation identity 保證。",
+            "錯誤。執行環境可被回收或平行擴展，記憶體狀態不是跨 instance、跨時間的可靠去重資料。",
+            "正確。持久化且原子的 operation record 能區分同一操作的安全重試，也能拒絕同一 key 被不同參數重用。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "wa-idempotency"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch097-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "SQS backpressure 與 Lambda concurrency 上限",
+          "prompt": "促銷流量會在三分鐘內由 1 萬 RPS 升到 10 萬 RPS。訂單可先進 SQS，但付款 API 經壓測只能承受約每秒 2,000 筆；每批處理時間、batch size 與 retry 都會改變實際吞吐。哪個修改最能保護下游？",
+          "choices": [
+            "保留無上限 event source，改由付款 API throttle；Lambda retry 會自動形成穩定 backpressure",
+            "只設定 function provisioned concurrency 為 2,000，將 concurrent executions 直接視為每秒 2,000 筆",
+            "先以 batch size、平均/尾端處理時間與重試率估算安全 concurrency；再用 SQS event-source maximum concurrency 與 function reserved concurrency設上限，並監控 queue age",
+            "只把 SQS message retention 增加到 14 天，讓服務自行把每秒呼叫數限制在 2,000"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。把 throttle 當控制器會產生大量失敗與 retry；應在呼叫下游之前限制消費速率並觀測 backlog。",
+            "錯誤。Provisioned concurrency 預先準備執行環境，並不等於 event-source 最大併發；concurrency 與每秒處理量也不是一比一。",
+            "正確。Concurrency 不是 RPS；安全上限需由 batch size、服務時間、retry 與下游 latency 推導，再用 event-source maximum concurrency 和 reserved concurrency形成可驗證 ceiling。",
+            "錯誤。Retention 只延長訊息可等待的時間，不控制同時執行數，也不會依付款服務容量自動調節 consumer。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-3.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "sqs-delivery",
+            "sqs-dlq",
+            "lambda-concurrency",
+            "lambda-sqs-max-concurrency"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch097-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "可選依賴的 graceful degradation",
+          "prompt": "推薦服務偶爾需要 8 秒回應，但 catalog SLA 是 500 ms，checkout 不依賴推薦結果。產品經理接受推薦區塊暫時顯示熱門商品。應如何設計？",
+          "choices": [
+            "把第一位使用者的推薦結果以不含身分的 cache key 全球快取",
+            "為推薦呼叫設定短 timeout/circuit breaker，失敗時回傳確定性的熱門商品 fallback，並分開量測降級率",
+            "推薦結果過舊時，讓整個 checkout 回傳 503 以避免不一致",
+            "對推薦服務無限重試，直到取得個人化結果才回傳 catalog"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。個人化資料不能用共享 key 跨使用者重用；這既有資料洩漏風險，也不是可靠的降級策略。",
+            "正確。明確的 dependency budget 與 fallback 能保留核心功能，且獨立指標可揭露服務正在降級而非掩蓋問題。",
+            "錯誤。題目已說 checkout 不依賴推薦；把可選功能升級成硬依賴會擴大故障半徑。",
+            "錯誤。無界重試會消耗 request deadline 與資源，讓非關鍵依賴拖垮主要使用者旅程。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "wa-graceful-degradation"
+          ],
+          "inspiration_ids": [
+            "jayendra-global"
+          ]
+        },
+        {
+          "id": "ch097-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "庫存 single-writer 與受控 promotion",
+          "prompt": "稀缺商品不可 oversell。兩個 Region 都需要低延遲讀取，但業務尚未定義 concurrent write 的衝突解決規則。哪個資料寫入策略最安全？",
+          "choices": [
+            "維持單一 authoritative writer；跨 Region 複寫讀取，故障時先 fence 舊 writer 再受控 promote secondary",
+            "兩個 Region 同時接受庫存扣減，衝突一律以最後時間戳為準",
+            "交易前讀取離使用者最近的 replica；只要讀取成功就允許扣庫存",
+            "由 Route 53 health check 自動保證任何時刻只有一個 database writer"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Single-writer 把庫存順序集中在一個 authority；promotion 必須包含寫入 fencing、lag 驗證與應用交易測試。",
+            "錯誤。Last-write-wins 可能遺失已承諾的扣庫存；沒有業務衝突語意時不能假設 active-active 可安全合併。",
+            "錯誤。Replica 可能有 replication lag，稀缺庫存決策不能把可能陳舊的讀取當作可提交的權威狀態。",
+            "錯誤。DNS health 只影響名稱解析，不會變更資料庫角色，也不會終止既有連線或鎖住舊 writer。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-3.3",
+            "SAP-1.3",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "aurora-global",
+            "aurora-dr"
+          ],
+          "inspiration_ids": [
+            "jayendra-global"
+          ]
+        },
+        {
+          "id": "ch097-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Aurora Global Database planned switchover 與 unplanned failover 的選擇",
+          "prompt": "主要 Region 仍健康，但公司要為預定維護把 Aurora Global Database writer 移到 secondary Region，並希望避免不必要的資料遺失。Runbook 應選哪種操作？",
+          "choices": [
+            "先把 Route 53 TTL 設為零，DNS 會自行將 Aurora secondary 變成 writer 並保證既有連線切換",
+            "在兩個 Regions 同時開放寫入，維護後再以 timestamp 合併，便不需要角色切換",
+            "使用 managed switchover，先確認 secondary 狀態與 replication lag，讓 Aurora 協調角色切換；應用再重新解析 endpoint、重連並執行交易驗證",
+            "宣告 unplanned failover，因 failover 與 switchover 的資料保護與前置條件完全相同"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。DNS 不會修改 Aurora cluster role，TTL 也不會終止既有資料庫連線；database operation 必須先完成。",
+            "錯誤。Aurora Global Database 並非任意雙寫衝突合併系統；未定義交易語意時開放兩個 authority 會造成分叉。",
+            "正確。健康環境的預定移轉應使用 switchover，先檢查複寫狀態並讓服務協調角色；應用仍須處理 endpoint/連線更新和業務驗證。",
+            "錯誤。Failover 用於非預期中斷，可能接受較高資料損失風險；健康 primary 的計畫維護不應把它當成相同操作。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-1.3",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "aurora-dr",
+            "aurora-global"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch097-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "以成功 checkout 為單位的成本最佳化",
+          "prompt": "財務團隊要求降低每筆成功訂單的成本，但不可改變付款正確性與 30 分鐘跨 Region RTO。下列哪些兩項措施最符合要求？（選兩項）",
+          "choices": [
+            "移除 secondary Region 的資料與 capacity，等災難發生再重建",
+            "將 checkout response 快取十分鐘，以最大化所有 path 的 cache hit ratio",
+            "依實測 arrival/service rate 調整 queue batch、consumer concurrency 與 database capacity，同時保留 RTO 所需的 standby",
+            "把可安全共享的 catalog 與圖片放到 CloudFront，並量測 origin offload 與每筆成功訂單的傳輸成本",
+            "只追蹤 EC2 CPU 利用率，因 queue、database 與 data transfer 不影響單位經濟"
+          ],
+          "answers": [
+            2,
+            3
+          ],
+          "explanations": [
+            "錯誤。這會破壞既定 RTO；若要降低 DR 成本，必須先重新協商 recovery objective 或證明較小 standby 仍可在時間內擴容。",
+            "錯誤。交易回應具有身分與狀態，不能為了命中率而跨請求共用；此措施可能引入資料洩漏與錯誤交易。",
+            "正確。從完整資料路徑找成本，並以 bounded concurrency 和 right-sizing 消除浪費，才能在不犧牲正確性與復原目標下優化。",
+            "正確。靜態 browse content 適合 edge cache，能減少重複 origin work；以成功 checkout 正規化才不會用錯誤流量掩飾成本。",
+            "錯誤。Serverless request、queue operation、database I/O、edge 與跨 Region 傳輸都可能是主要成本，不能只看一種 compute metric。"
+          ],
+          "task_keys": [
+            "SAA-4.2",
+            "SAA-4.3",
+            "SAA-4.4",
+            "SAP-2.6"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "cf-cache",
+            "lambda-concurrency",
+            "dr-strategy"
+          ],
+          "inspiration_ids": [
+            "jayendra-global",
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch097-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "促銷上線的必要可靠性控制組合",
+          "prompt": "下一次促銷必須同時承受十倍 burst，並保證 ambiguous retry 不會重複扣款。下列哪些兩個能力是不可互相取代的必要條件？（選兩項）",
+          "choices": [
+            "讓 Lambda 無上限 scale out，使所有請求盡快直接打到下游",
+            "使用 durable queue 吸收非同步工作，並以 concurrency ceiling 保護付款與庫存 dependency",
+            "建立持久化 payment idempotency ledger，以 operation key 原子記錄並重放既有結果",
+            "只使用 CloudFront 與 WAF，因減少 origin 流量即可保證付款不重複",
+            "只使用 SQS standard queue，因 managed queue 會把所有 message 精確交付一次"
+          ],
+          "answers": [
+            1,
+            2
+          ],
+          "explanations": [
+            "錯誤。無界 autoscaling 會放大對有限下游的並行壓力，可能更快造成 throttling、逾時與 retry storm。",
+            "正確。Queue 與 bounded consumers 解耦流量尖峰及安全 service rate，避免過載把整個交易系統拖垮。",
+            "正確。只有持久化且原子的付款 operation state 能在第一次成功但回應遺失時安全回傳同一結果。",
+            "錯誤。Edge controls 可減少濫用與可快取流量，但不能替付款建立交易 identity，也無法限制合法 burst 對下游的壓力。",
+            "錯誤。SQS standard 採 at-least-once delivery，consumer 必須能處理重複；queue 也不能替代付款帳本。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-2.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "wa-idempotency",
+            "sqs-delivery",
+            "lambda-concurrency"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 98,
+      "questions": [
+        {
+          "id": "ch098-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "受信任 tenant context 的建立與傳遞",
+          "prompt": "多租戶 SaaS 的 request body 包含 `tenantId`。滲透測試者只改這個欄位，就讀到另一租戶的 invoice。API 使用 JWT，團隊希望保留 pooled Lambda。應如何修正？",
+          "choices": [
+            "把 tenantId 改成 UUID，因較難猜測即可提供授權",
+            "用 API key 取代 JWT，並把 API key 當作完整使用者與資料授權",
+            "繼續相信 body，但在 CloudWatch Logs 記錄每次 tenantId",
+            "在 API 邊界驗證 token issuer/audience，從受驗證 claims/authorizer context 取得 tenant，服務端再以該身分限制資源"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。不可猜測識別碼只能增加枚舉成本；client 仍可提交其他值，服務端沒有建立可信的 tenant-resource 關係。",
+            "錯誤。API key 主要用於識別 consumer 與 usage plan，不是 user authentication，也不自動限制其可讀取的 tenant data。",
+            "錯誤。Logging 有助偵測，不能防止跨租戶存取；不可信 body 不能成為授權輸入。",
+            "正確。Tenant identity 必須由已驗證的身分衍生，經 trusted context 傳遞，且每個資料操作仍需執行 tenant-aware authorization。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAA-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "api-authorizer",
+            "saas-isolation"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch098-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Pooled DynamoDB 的 tenant-scoped session、key 與 Scan 邊界",
+          "prompt": "多租戶 Lambda 共用 DynamoDB table 與 execution role。呼叫端 JWT 已可驗證 tenantId，但目前 partition key 只有 invoiceId，role 可對整表 Query/Scan。哪個改造才能形成完整、可驗證的租戶隔離？",
+          "choices": [
+            "讓共用 execution role 的 policy 列出所有租戶前綴，再相信 application 傳入的 tenantId 不會被錯用",
+            "只把 tenantId 加入 FilterExpression；資料被 DynamoDB 讀出後再由 Lambda 丟棄其他租戶項目",
+            "將可信 tenantId 納入 partition-key 前綴；每次請求建立 tenant-scoped session/principal tag，把 `dynamodb:LeadingKeys` 綁到該值，並禁止或另行隔離 Scan 等無法維持 key scope 的路徑",
+            "保留整表權限，但以 DynamoDB server-side encryption 和 CloudTrail 偵測跨租戶讀取"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。單一靜態 role 若同時獲准所有租戶前綴，IAM 無法判斷本次 request 的租戶；application bug 或注入仍可越界。",
+            "錯誤。FilterExpression 在讀取後才過濾，不是授權；已讀取容量與資料接觸面仍跨越租戶邊界。",
+            "正確。可信 caller context 必須進入每次請求的授權邊界；session/principal tag、LeadingKeys 與 tenant-first key design共同限縮存取，Scan 則需停用或走獨立受控流程。",
+            "錯誤。加密與稽核很重要，但不會把同一張 table 的 items 自動切成 tenant authorization boundaries。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-1.3",
+            "SAA-3.3"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "dynamodb-fgac",
+            "saas-isolation",
+            "iam-session-tags"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch098-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Pool、silo 與 bridge tenancy model",
+          "prompt": "SaaS 有 4,000 個標準租戶，希望共享成本；另有 20 個金融租戶要求獨立資料資源、獨立 AWS account 與各自的 customer-managed KMS key。哪個模型最符合需求？",
+          "choices": [
+            "只把金融租戶資料移到另一張 table，但繼續讓 pooled runtime role 任意 decrypt 其 keys",
+            "使用 bridge model：標準租戶 pooled；金融租戶 siloed，並以 tenant placement metadata 與一致授權層路由",
+            "所有租戶都使用同一 table 與同一 KMS key alias，因 alias 名稱可以提供密碼學隔離",
+            "為 4,020 個租戶全部人工複製完整 stack，不需要 tier 或生命週期標準"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Storage 分開但 decrypt principal 仍共用且過寬，關鍵的 cryptographic/access boundary 尚未成立。",
+            "正確。Bridge model 讓不同 tier 採不同部署隔離強度，同時保留共同 control plane、tenant-aware identity 與可稽核 placement。",
+            "錯誤。Alias 是 key 的友善名稱，不會讓同一 key 對不同租戶產生隔離；共享 table 也不符合獨立 account/data boundary。",
+            "錯誤。全面 silo 可能做到隔離，但違反大多數租戶希望共享成本的條件，且人工 provisioning 難以治理。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-1.4",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "saas-isolation",
+            "kms-key-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch098-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "API Gateway usage plan 的 best-effort 邊界",
+          "prompt": "產品合約規定每個租戶每月消費不得超過固定金額，超過前必須硬性拒絕。團隊已設定 API Gateway usage plan quota，並打算拿 API key 當唯一授權。哪個評估正確？",
+          "choices": [
+            "API key 等同已驗證使用者，知道 key 即可讀取該租戶所有資料",
+            "Usage plan 可做 best-effort traffic shaping；仍需身分授權，以及原子計量/配額狀態來實施硬性商業上限",
+            "只要 gateway 有 throttle，下游 Lambda 與 database 就永遠不需要 capacity/concurrency 限制",
+            "Usage plan 是嚴格財務計量，因此不需要 application metering 或下游 admission control"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。API key 不應取代 authentication/authorization；它本身不表示使用者能對哪些 tenant resources 執行哪些 actions。",
+            "正確。Gateway quota 適合 consumer shaping；硬上限需要可信 tenant identity、持久化計量與 race-safe admission decision。",
+            "錯誤。Gateway 與 downstream limits 是不同層；burst、retry 與其他 invocation path 仍可能耗盡 Lambda concurrency 或 database capacity。",
+            "錯誤。AWS 明確說明 usage-plan throttle 與 quota 為 best effort；不能把它當作不可超越的帳務控制。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-3.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "api-usage-plans"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch098-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Serverless SaaS noisy-neighbor 隔離",
+          "prompt": "一個 enterprise tenant 匯入大量資料，Lambda concurrency 被其工作吃滿，其他租戶的登入 API 開始 throttle。團隊不想為每個小租戶建立完整 stack。哪個改善最有效？",
+          "choices": [
+            "所有 function 開啟 provisioned concurrency，因它會形成每租戶硬性 request quota",
+            "把批次匯入與互動 API 分離成不同 function/queue，設定 reserved 或 maximum concurrency，並做 tenant admission/backpressure",
+            "把所有租戶 message 放在同一 FIFO message group，讓整個平台依序處理",
+            "移除 concurrency limits，讓 Lambda 自動擴展直到下游也跟著擴展"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Provisioned concurrency 主要降低 cold start 並預先配置 execution environments，不是 tenant quota 或全域 starvation 防護。",
+            "正確。Workload 分離與 bounded concurrency 保留關鍵 API capacity，也能把 hot tenant 的非同步工作限制在安全速率。",
+            "錯誤。同一 message group 會把所有租戶序列化，雖避免併發，卻造成更嚴重的 head-of-line blocking。",
+            "錯誤。Lambda 可比 database、KMS 或第三方 API 更快擴展；無界 concurrency 會把 noisy-neighbor 問題轉移到下游。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-3.2",
+            "SAA-4.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "lambda-concurrency",
+            "lambda-sqs-max-concurrency",
+            "saas-isolation"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch098-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Tenant-scoped DynamoDB 冪等寫入",
+          "prompt": "建立 invoice API 可能被 gateway 或 client 重試。不同租戶偶爾使用相同的 client request ID，而且同一 request ID 若帶不同金額必須被拒絕。哪個實作最安全？",
+          "choices": [
+            "依賴 API Gateway，假設它不會重送已轉交給 integration 的 request",
+            "把 processed IDs 放在目前 Lambda container 的記憶體集合",
+            "只以 client request ID 做全平台唯一 key，第一個租戶會阻擋其他租戶",
+            "以 tenant、operation 與 request ID 組合成冪等 key，使用 conditional write/transaction 原子保存參數摘要與結果"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。任何網路/API path 都可能出現 ambiguous outcome；side-effect owner 必須自行提供冪等語意。",
+            "錯誤。Lambda execution environments 非持久且可平行，記憶體集合無法建立跨 invocation 的一致性。",
+            "錯誤。沒有 tenant scope 會造成合法碰撞；冪等 identity 必須包含可區分的信任與操作範圍。",
+            "正確。Conditional write 或 transaction 可在 race 下只建立一次 operation record，並用參數摘要辨識同 key 的不相容重用。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "dynamodb-condition",
+            "dynamodb-transactions",
+            "wa-idempotency"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        },
+        {
+          "id": "ch098-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "可恢復且可稽核的 tenant onboarding",
+          "prompt": "Enterprise tenant onboarding 需建立 account、table、KMS grants、quota 與 DNS。同步 Lambda 在第六步逾時後，管理員無法判斷哪些步驟已完成。哪個重構最合適？",
+          "choices": [
+            "將 Lambda timeout 調到 15 分鐘，繼續在單一 request 中完成所有步驟",
+            "授予 onboarding function organization administrator，讓權限錯誤不再阻塞",
+            "使用 durable workflow/state record，讓每一步可冪等重試或補償；全部驗證完成後才把 tenant 標記 ready",
+            "只要 AWS account 建立成功就回報 onboarding 完成，其餘設定由首次 request 自動補齊"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。較長 timeout 沒有解決 partial state、重試重複建立、人工判斷與跨服務補償問題。",
+            "錯誤。擴大權限會增加 blast radius，且服務故障、quota 或 eventual consistency 仍會造成部分完成。",
+            "正確。Durable orchestration 將每個 side effect 變成可觀察狀態，並以 readiness gate 防止未完成隔離的 tenant 接受流量。",
+            "錯誤。Resource existence 不代表 key policy、quota、routing 與 isolation 已正確；未驗證前接受流量會造成安全與一致性風險。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "wa-idempotency",
+            "kms-key-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch098-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Pooled 與 siloed 成本歸屬",
+          "prompt": "財務要把共享 API/Lambda/DynamoDB 成本分攤到租戶，同時也要精確歸屬 enterprise tenant 的獨立 accounts 與 keys。只使用 resource tags 為何不夠？應怎麼做？",
+          "choices": [
+            "所有 pooled 成本平均分攤，因共享服務無法量測 tenant usage",
+            "以 API key request count 代表全部成本，包括儲存、昂貴查詢與背景工作",
+            "Siloed resources 使用啟用的 cost-allocation tags/account；pooled path 另記 tenant-aware request、storage 與 expensive-operation usage",
+            "每次 Lambda invocation 都動態修改同一 function 的 CostCenter tag"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。平均分攤可能符合某種商業政策，但題目要求依使用量歸屬；應用層可產生 tenant meter。",
+            "錯誤。API request 只是成本 driver 之一，無法反映物件大小、database capacity、async job 或高成本模型推論。",
+            "正確。獨立資源可用原生 billing dimensions；共享資源則需在 application path 記錄穩定 tenant identity 與可對帳的 usage units。",
+            "錯誤。Resource tag 不是 per-invocation label，頻繁改 tag 也無法把同一計費期間內的共享使用量可靠分割。"
+          ],
+          "task_keys": [
+            "SAA-4.2",
+            "SAA-4.3",
+            "SAP-2.6",
+            "SAP-3.5"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "cost-allocation-tags",
+            "saas-isolation"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch098-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Pool-to-silo 資料遷移的安全切換",
+          "prompt": "一個大型租戶要從 pooled DynamoDB 移到其專屬 account/table/KMS key，允許短暫唯讀但不可複製其他租戶資料，也必須能 rollback。下列哪些兩項是必要做法？（選兩項）",
+          "choices": [
+            "以可信 tenant key 範圍匯出/複製並驗證筆數、內容、index/access path 與目標 key permissions",
+            "先把 placement metadata 指向空的專屬 table，再在背景補資料",
+            "複製整張 pooled table，切換後再刪除不屬於該租戶的 rows",
+            "只更換 KMS alias，因 alias 更新會自動移動及重新隔離 DynamoDB items",
+            "在一致性邊界暫停或協調寫入，原子切換 placement，並保留來源 checkpoint 與反向切換條件"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。資料選取必須由 tenant-scoped key 驗證，而不只是後過濾；目的端權限與 access patterns 也要在導流前測試。",
+            "錯誤。先導向空資料集會造成遺失與不一致；placement change 應在 copy、delta、validation 完成後才提交。",
+            "錯誤。這會把其他租戶資料帶入隔離環境，違反最小資料移動與 confidentiality boundary。",
+            "錯誤。Alias 只改變 KMS key 的參照，不會把 table items 複製到另一 account，也不等同資料平面遷移。",
+            "正確。切換點必須處理最後增量與 concurrent writes；checkpoint 和保留來源讓錯誤時能有界 rollback。"
+          ],
+          "task_keys": [
+            "SAP-1.4",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "saas-isolation",
+            "dynamodb-fgac",
+            "kms-key-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch098-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "跨租戶讀取與容量飢餓的雙重防護",
+          "prompt": "Pooled SaaS 必須同時防止跨 tenant 讀取，且不能讓單一 hot tenant 耗盡全部 Lambda 與下游容量。下列哪些兩項合起來才能滿足兩個要求？（選兩項）",
+          "choices": [
+            "只設定 API Gateway usage plan，因 quota 也會限制使用者能讀哪些 DynamoDB partitions",
+            "所有資料只使用同一 customer-managed KMS key，因 encryption 會自動授權每個 row",
+            "只為 Lambda 設定 provisioned concurrency，因 warm environments 會阻止跨 tenant access",
+            "從驗證過的 caller claims 建立 tenant context，並以 tenant-aware keys/IAM conditions 約束資料操作",
+            "分離關鍵工作並使用 reserved/maximum concurrency、queue 與 tenant admission control 建立 backpressure"
+          ],
+          "answers": [
+            3,
+            4
+          ],
+          "explanations": [
+            "錯誤。Usage plan 是 best-effort traffic shaping，不是資料授權，也不能保證下游不被其他 invocation path 壓垮。",
+            "錯誤。Encryption at rest 不會替 item 建立 tenant authorization；能 decrypt table 的 principal 仍可能讀取錯誤 partition。",
+            "錯誤。Provisioned concurrency 處理 cold start 與預先容量，不會驗證 tenant，亦不是 per-tenant hard quota。",
+            "正確。可信身分與 key/policy scoping 解決「誰能讀哪些資料」，是 cross-tenant isolation 的核心。",
+            "正確。Bounded concurrency 與 per-tenant backpressure 解決「誰能消耗多少共享 capacity」，補足 noisy-neighbor 隔離。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-2.1",
+            "SAP-2.3",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "api-authorizer",
+            "dynamodb-fgac",
+            "lambda-concurrency"
+          ],
+          "inspiration_ids": [
+            "jayendra-serverless"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 99,
+      "questions": [
+        {
+          "id": "ch099-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "S3 multipart upload 的可恢復大檔上傳",
+          "prompt": "影音平台需接收 80–300 GiB master files。架構審查發現現行 client 想用 single PutObject，但單次 PUT 不支援這種大小；跨國連線也常在接近完成時中斷。團隊希望只重送失敗片段並清理未完成資料。哪個方案最合適？",
+          "choices": [
+            "把每個 part 永久保存成獨立 object 與 manifest；即使下游要求單一原始 object，也不再執行 CompleteMultipartUpload",
+            "使用 multipart upload，但每次中斷都丟棄 upload ID 並重新建立所有 parts，避免保存 client state",
+            "使用 S3 multipart upload，保存 upload ID、獨立重試 parts、完成後組合，並以 lifecycle abort 過期的 incomplete multipart uploads",
+            "啟用 S3 Transfer Acceleration 後繼續 single PutObject；加速會移除單次 PUT 大小限制並提供斷點續傳"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。分片 objects 加 manifest 是另一種資料格式，只有下游明確支援時才可採用；它不能滿足題目既有的單一 object contract。",
+            "錯誤。Multipart 的價值之一是保留 upload ID 與已成功 parts；每次全部重傳會失去可恢復性並浪費頻寬。",
+            "正確。Multipart upload 支援大型物件與獨立 part retry；完成後仍是單一 S3 object，lifecycle 可清除長期未完成且持續計費的 parts。",
+            "錯誤。Transfer Acceleration 可改善長距離傳輸路徑，但不改變 PutObject 的單次上傳限制，也不自動提供 multipart 的 part-level recovery。"
+          ],
+          "task_keys": [
+            "SAA-3.1",
+            "SAA-4.1"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "s3-upload-objects",
+            "s3-put-object",
+            "s3-multipart",
+            "s3-lifecycle"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "短效且限定 object 的 direct upload 授權",
+          "prompt": "已登入 creator 應直接上傳至 S3，application server 不轉送影片。安全要求 presigned request 只能寫入該 creator 的一個預定 key，十分鐘後失效，且完成後要先驗證 metadata 才可轉碼。應怎麼做？",
+          "choices": [
+            "簽發一組長期 IAM access keys 給瀏覽器，允許對整個 bucket `s3:PutObject`",
+            "建立一次 presigned URL 後永久重用，因簽名已證明 creator 身分",
+            "把 ingest bucket 設為 public-write，並用難猜 object key 取代授權",
+            "後端依可信 creator identity 產生短效、限定 method/key 的 presigned request，配合 bucket-policy conditions，完成後再驗證 object"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。把長期 AWS credentials 放進 client 會擴大洩漏範圍；direct upload 不代表必須交付持久 IAM secret。",
+            "錯誤。Presigned URL 是 bearer capability，應短效且單一用途；它也不是永久 subscriber/creator session。",
+            "錯誤。Public-write 讓未授權人士寫入並可能產生成本或惡意內容；不可猜測 key 不是 access control。",
+            "正確。Presigned request 使用簽發 principal 的權限並受有效期與 request 範圍限制；server-side verification 再決定是否進入處理流程。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-3.1"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "s3-presigned"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "S3 notification 的重複與順序處理",
+          "prompt": "同一個影片 key 被重新上傳兩次，consumer 偶爾收到重複 `ObjectCreated`，也看見較舊事件晚於較新事件抵達。系統不可讓舊版本覆蓋新轉碼狀態。哪個設計最安全？",
+          "choices": [
+            "以 bucket/key/version 或 sequencer-aware identity 保存處理狀態，consumer 冪等，並依同 key 的版本規則拒絕 stale event",
+            "假設 S3 event notification 精確交付一次，因此只需修正 consumer timeout",
+            "以事件抵達 consumer 的 wall-clock time 判斷 object 的權威版本",
+            "維護一個全 bucket 共用的 last-event ID，較小者一律忽略"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。把事件 identity 與實際 object version 綁定，原子記錄處理結果，才能同時處理 duplicate 與同 key 的 out-of-order delivery。",
+            "錯誤。S3 event notifications 可能重複，可靠 consumer 必須能安全重處理同一邏輯事件。",
+            "錯誤。Delivery time 受 retry 與網路延遲影響，不等同 object mutation order，不能拿來覆寫版本狀態。",
+            "錯誤。Sequencer 的比較範圍不是跨所有 object 的全域順序；不同 keys 不應共用一個簡單序號。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "s3-event-notifications",
+            "wa-idempotency"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "轉碼工作 queue、visibility 與 DLQ",
+          "prompt": "熱門活動同時上傳上萬支影片，部分損壞檔案每次都讓 worker 失敗。團隊需要平滑吸收 burst，不能讓 poison jobs 無限重試或阻塞正常影片。哪個方案最好？",
+          "choices": [
+            "把已驗證工作放入 durable queue，依處理時間設定 visibility/timeout、限制 workers，超過重試門檻送 DLQ 並修復後選擇性 redrive",
+            "每天自動把 DLQ 全部搬回 source queue，不需分類失敗原因",
+            "把 visibility timeout 設短於正常轉碼時間，讓多個 workers 同時處理以加速",
+            "上傳 HTTP request 內同步完成轉碼，失敗就讓 client 重送整個影片"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Visibility 應涵蓋一般處理時間並和 worker timeout/heartbeat 協調；過短會重複交付，過長會延後失敗重試，DLQ 則隔離 poison jobs。",
+            "錯誤。未修正 poison input 或程式錯誤便全面 redrive，會重建相同 failure storm；應保留原因並選擇性重播。",
+            "錯誤。Visibility 過短會在第一個 worker 尚未完成時讓 message 再度可見；需要長工作時應使用 heartbeat 或 ChangeMessageVisibility 延長。",
+            "錯誤。同步長工作會把 upload availability 與 transcode capacity 綁死，並放大 timeout 與重送成本。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-3.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "sqs-delivery",
+            "sqs-visibility",
+            "sqs-dlq"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "MediaConvert CreateJob 冪等性",
+          "prompt": "Orchestrator 呼叫 AWS Elemental MediaConvert `CreateJob` 後逾時，無法知道 job 是否已建立。直接重試有時產生第二個相同轉碼並重複計費。應如何修正？",
+          "choices": [
+            "每次 retry 都產生新的隨機 ClientRequestToken，以免 MediaConvert 拒絕請求",
+            "從 source object version、output profile 與邏輯 operation 產生穩定 ClientRequestToken，保存 job identity/result，重試時重用",
+            "把 S3 event ID 當作 MediaConvert 已保證 exactly-once job creation 的證明",
+            "允許兩個 jobs 完成後再依 output filename 刪除其中一份"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。新 token 代表新 request，會失去 CreateJob 的冪等保護，正是重複工作的來源。",
+            "正確。MediaConvert 支援 request token 冪等性；穩定 operation identity 與持久化 job state 可處理「成功但 response 遺失」。",
+            "錯誤。S3 通知與 MediaConvert API 是兩個 delivery boundary；notification ID 不會自動成為 downstream API 的冪等 token。",
+            "錯誤。事後刪檔不能回收已執行的轉碼成本，也可能在 completion race 中破壞正確 output。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-4.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "mediaconvert-idempotency",
+            "wa-idempotency"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "MediaConvert queue 與 capacity 分層",
+          "prompt": "平台有兩類工作：付費直播活動結束後 15 分鐘內要產出 VOD；舊片庫則可在 48 小時內批次重轉。單一 queue 的 archival surge 常讓 premium jobs 排隊。哪個設計最好？",
+          "choices": [
+            "為偶發 premium burst 購買最大 reserved queue，但不先確認 reserved queue 支援的功能與一年期容量承諾",
+            "將 premium 與 archival jobs 放在不同 on-demand queues，並在各 queue 內設定 job priority；若長期穩定工作量與功能限制合適，再為該類工作評估 reserved queue",
+            "保留單一 queue 並只提高 premium job priority；priority 會跨所有 queues 全域排序且自動增加帳號容量",
+            "建立兩個 queues，卻把所有 jobs 都提交到 default queue；queue 名稱本身會自動隔離 backlog"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Reserved queue 有購買承諾與功能限制；未量測的偶發尖峰通常應先以 on-demand queues、queue hopping 或配額規劃處理。",
+            "正確。Queue 分離先隔開 SLA 與 backlog；priority 只在同一 queue 內排序。Reserved queue 適合可預測負載且有功能/承諾邊界，不是自動的 burst capacity。",
+            "錯誤。Job priority 只比較同一 queue 中的工作，不會跨 queue 建立全域順序，也不會提高 service quota 或可用容量。",
+            "錯誤。隔離取決於 CreateJob 指向的 queue 及其容量；只建立資源但仍提交到同一 queue 不會改變排程。"
+          ],
+          "task_keys": [
+            "SAA-3.2",
+            "SAA-4.2",
+            "SAP-2.5",
+            "SAP-2.6"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "mediaconvert-queues",
+            "mediaconvert-priority",
+            "mediaconvert-reserved"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "CloudFront 私有 origin 與訂閱者授權",
+          "prompt": "轉碼輸出存放於 S3，只有付費訂閱者可播放。安全要求 viewer 不能直接走 S3 URL，訂閱到期後的授權也不能永久有效。哪個組合最合理？",
+          "choices": [
+            "使用 signed URL，但同時保留 public S3 website endpoint 供舊 client 使用",
+            "只設定 OAC，並把它當作 end-user subscription database",
+            "把 S3 objects 設 public-read，再以隨機長 key 隱藏影片",
+            "S3 origin 保持私有並使用 OAC；應用驗證訂閱後發短效 CloudFront signed URL 或 signed cookie"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Public website endpoint 仍提供旁路，即使 CloudFront URL 已簽名，未授權者也能直接取得物件。",
+            "錯誤。OAC 不知道終端使用者的訂閱狀態，它只是限制哪個 CloudFront distribution 可讀取 origin。",
+            "錯誤。Obscurity 不會阻止 URL 被分享或從 log 洩漏，且 public origin 可繞過所有 viewer authorization。",
+            "正確。OAC 解決 CloudFront 到 origin 的授權；signed URL/cookie 解決 viewer 到 CloudFront 的限時內容授權，兩者責任不同。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-3.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "cf-oac",
+            "cf-private-content"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "影音 source 與 rendition 的生命週期分層",
+          "prompt": "Master files 依法保存七年且可能重新轉碼；熱門 renditions 必須毫秒存取，過季 renditions 幾乎不再觀看。團隊打算把所有 objects 上傳一天後移到最便宜 archive class。哪個修正最好？",
+          "choices": [
+            "Masters、manifests、thumbnails 與 active renditions 共用同一 lifecycle，方便管理",
+            "所有輸出直接進 archive，播放請求發生時再等待 restore",
+            "依資料角色與 retrieval SLA 分開 lifecycle；保留 master，hot renditions 用即時類別，冷資料依最短保存與 restore 成本後轉層",
+            "刪除 master，只保留目前 1080p rendition，因未來可由 manifest 還原原片"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。不同 artifacts 的存取頻率、重建能力與法定保留不同，單一規則會造成過度成本或不可接受 restore latency。",
+            "錯誤。Archive retrieval 需要時間且有費用，不適合題目要求的熱門影片即時播放。",
+            "正確。Storage class 選擇應由 access pattern、minimum duration、retrieval time/cost 與可重建性決定，而不是只比較每 GiB 單價。",
+            "錯誤。Lossy rendition 與 manifest 無法重建原始 master；這也違反七年保存與未來新 codec 的 reprocessing 需求。"
+          ],
+          "task_keys": [
+            "SAA-4.1",
+            "SAP-2.6"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "s3-storage-classes",
+            "s3-lifecycle"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch099-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "媒體 pipeline 的端到端可觀測與安全 redrive",
+          "prompt": "Operations 經常收到「上傳成功但不能播放」，目前只看 S3 bucket size。團隊需要定位到失敗 stage，並在修復後安全重跑。下列哪些兩項最重要？（選兩項）",
+          "choices": [
+            "以 object version、queue message、MediaConvert job/profile、output validation 與 playback URL 建立 correlation ID 與狀態軌跡",
+            "監控 queue age、job failure、DLQ 與 subscriber probe；修正根因後以同一冪等 operation identity 選擇性 redrive",
+            "只監控 CloudFront request count；有 request 就代表 rendition 一定可播放",
+            "每天重新提交所有 master files，以 eventual success 取代個別故障分析",
+            "把 S3 `ObjectCreated` 視為 end-to-end 成功，因 source 已可靠保存"
+          ],
+          "answers": [
+            0,
+            1
+          ],
+          "explanations": [
+            "正確。跨 stage correlation 讓人能回答某個 source 目前在哪一步、用了哪個 profile、產物是否經驗證，而非只看分散服務指標。",
+            "正確。Age/failure/DLQ 揭露處理健康，subscriber probe 驗證外部結果；穩定 token 避免 redrive 建立第二個 billable job。",
+            "錯誤。Request count 不包含 output correctness 或授權結果；使用者也可能反覆請求一個失敗的 URL。",
+            "錯誤。全面 replay 會重複成功工作、增加費用並掩蓋 poison input；應針對失敗 operation 安全 redrive。",
+            "錯誤。Source 上傳完成只代表 ingest 成功；queue、transcode、packaging、authorization 或 delivery 仍可能失敗。"
+          ],
+          "task_keys": [
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "s3-event-notifications",
+            "sqs-dlq",
+            "mediaconvert-idempotency"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        },
+        {
+          "id": "ch099-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "新建影音服務的現行服務與私有交付",
+          "prompt": "公司在 2026 年設計全新的 VOD pipeline，要求 managed file transcoding 不因 retry 重複計費，且影片只能由已授權 viewer 經 CDN 取得。下列哪些兩項符合要求？（選兩項）",
+          "choices": [
+            "只使用 CloudFront signed URL，S3 同時允許匿名 direct read 以相容舊 client",
+            "使用 AWS Elemental MediaConvert，為同一邏輯 job 重用穩定 ClientRequestToken 並保存 job state",
+            "建立新的 Amazon Elastic Transcoder pipeline，output bucket 設 public-read",
+            "S3 origin 使用 OAC 保持私有，viewer authorization 使用短效 CloudFront signed URL/cookie",
+            "使用 MediaConvert，但每次 retry 產生新 token，因新 token 可提高可用性"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。只要 S3 仍匿名可讀，未授權者就能繞過 signed viewer path，CDN 授權形同可選。",
+            "正確。MediaConvert 是目前的 managed file-transcoding 選項之一，request token 與持久化 operation state 用來處理 ambiguous retry。",
+            "錯誤。Elastic Transcoder 已於 2025-11-13 停止支援，不應用於 2026 新架構；public output 也破壞私有交付。",
+            "正確。OAC 封閉 direct-origin path；signed URL/cookie 則把觀看權限與時間/資源範圍綁定到 CloudFront viewer request。",
+            "錯誤。新 token 會被視為新 CreateJob request，無法防止相同 source/profile 被重複處理與計費。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-2.1",
+            "SAP-2.4",
+            "SAP-4.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "elastic-transcoder-eos",
+            "mediaconvert-idempotency",
+            "cf-oac",
+            "cf-private-content"
+          ],
+          "inspiration_ids": [
+            "jayendra-media"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 100,
+      "questions": [
+        {
+          "id": "ch100-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Landing zone 的 account 與 OU 責任分離",
+          "prompt": "受監管金融公司有 50 個產品團隊。現有設計把 Security Hub、稽核 log、shared network 與 production workloads 全放在 Organizations management account，理由是「這樣最中央化」。哪個重構最合理？",
+          "choices": [
+            "將所有 security tools 留在 management account，因 SCP 可完整限制 management account 內的 principals",
+            "保留所有資源在單一 account，只用 tags 區分 team 與 environment",
+            "每個團隊建立獨立 account，但不定義 OU、account vending、baseline 或 owner",
+            "使用 Control Tower/Organizations 建立 workload OUs 與獨立 log archive、security、shared-services accounts，management account 僅做組織管理"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。SCP 不限制 management account 本身；因此不應把一般 production/security workloads 的安全性建立在此假設上。",
+            "錯誤。Tags 有助分類與成本，不提供 account-level blast-radius、quota、billing 與 administrative boundary。",
+            "錯誤。只有 account 數量沒有 governance lifecycle，會產生不一致 baseline、孤兒帳號與難以驗證的例外。",
+            "正確。Account boundary 可降低 blast radius 並分離 ownership；管理帳號應減少人員與 workload，以免組織控制面成為日常營運依賴。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-1.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "control-tower",
+            "organizations-scp"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "SCP 是 permission ceiling 而非授權來源",
+          "prompt": "Security OU 套用 SCP，內容允許 incident responder 執行 EC2 與 IAM actions。Responder role 本身沒有任何 IAM permissions，實際操作仍被拒絕。哪個解釋與修正正確？",
+          "choices": [
+            "SCP 的 Allow 應直接授權；等待數小時讓 permissions propagate 即可",
+            "SCP 只界定 member account 可取得的最大權限；仍要由 identity/resource policy 授權 responder，且不能有適用的 explicit deny",
+            "移除所有 SCP，因 SCP 與 incident response 永遠無法共存",
+            "把 SCP 掛到 management account，便能讓 member-account role 繼承管理權"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。SCP 不授予 permissions；Allow 只表示該 action 沒被這層 permission ceiling 排除。",
+            "正確。Effective permission 是 SCP、IAM、resource policy、permission boundary 等共同結果，實際 access 仍需正向 grant。",
+            "錯誤。SCP 可與受控 recovery role 共存；做法是精確設計 deny、測試 effective access 並保留經核准的 emergency path。",
+            "錯誤。Management account 不受 SCP 約束，且把 policy 掛在它上面不會替 member role 建立 identity permission。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-1.2",
+            "SAP-1.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "organizations-scp"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Preventive、detective 與 proactive controls",
+          "prompt": "公司有三種要求：禁止停用核心 log、持續找出未加密 bucket、在 CloudFormation 建立資源前拒絕違規模板。應如何選擇 Control Tower control 類型？",
+          "choices": [
+            "三者全部使用 detective controls，因發現後再修復等同預防",
+            "不可發生的動作用 preventive；持續評估用 detective；provision 前檢查 IaC 用 proactive，並依 scope 驗證效果",
+            "CloudTrail logging 本身就是 proactive template validation，不需其他 control",
+            "所有 controls 一次套用全組織，不需先測試 Region、resource 或既有例外"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Detective control 在變更後評估，不會阻止 prohibited action；要求「不可發生」時需 preventive mechanism。",
+            "正確。三種類型在不同時間點介入：事前阻止、事後/持續偵測，以及 IaC 建立前驗證，不能互相混稱。",
+            "錯誤。Logging 提供 evidence，不等同在 resource provisioning 前驗證 template 是否符合 policy。",
+            "錯誤。Control 可能影響既有 workload 與 recovery path；應以 pilot OU、相容性與 exception lifecycle 安全部署。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-1.2",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "control-tower-controls"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Organization trail、完整性驗證與 WORM 保留",
+          "prompt": "稽核要求所有 member accounts 的活動集中到 log archive account，保留七年且 privileged workload admin 不能刪除。團隊只開啟 CloudTrail log-file validation，便宣稱 logs 已不可變。哪個方案正確？",
+          "choices": [
+            "讓每個 workload account 擁有自己的 trail/bucket 並自行設定 expiration",
+            "建立 organization trail 到受限 log-archive bucket；分離管理權，啟用 validation 偵測竄改，並以 S3 Object Lock/retention 實作 WORM",
+            "只收集 Control Tower console events，因它們包含所有 member account data events",
+            "保留現況，因 log-file validation 會阻止具有 S3 delete 權限的人刪除 object"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Workload admin 若控制 trail、bucket 與 lifecycle，就能停用或縮短保留，無法形成獨立 evidence boundary。",
+            "正確。Organization trail 解決集中收集；validation 提供完整性偵測；Object Lock 與受保護 ownership 才處理不可刪除的 retention。",
+            "錯誤。Management events 與 data events 的範圍不同，是否收集必須依 audit requirement 明確設定。",
+            "錯誤。Validation 可揭露 log file 被修改或刪除的跡象，但本身不撤銷 S3 delete capability，也不是 WORM control。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-1.3",
+            "SAP-1.2",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "cloudtrail-organization",
+            "control-tower-logging",
+            "s3-object-lock"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "KMS key administration 與 usage 分離",
+          "prompt": "產品管理員需要操作加密資料，但法規禁止他們自行修改 key policy 後授予自己額外 decrypt 權限。目前同一 Admin role 同時擁有 `kms:*` 與資料庫管理權。應如何調整？",
+          "choices": [
+            "分離 key administrators 與 key users，精確設定 key policy/grants/service principals，並測試實際 decrypt 與 restore path",
+            "每天改變 KMS alias 名稱，視為底層 cryptographic key 已完成 rotation 與權限重置",
+            "只在 IAM policy 加入 Allow；即使 key policy 沒有有效授權路徑也一定能使用 key",
+            "保留同一 admin role 的完整 key 與資料權限，因 CloudTrail 已可取代 separation of duties"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Administration 與 cryptographic use 是不同責任；key policy、grants、IAM 與 resource owner 必須共同形成 least-privilege path。",
+            "錯誤。Alias 是可變名稱，更新 alias 不等同 key material rotation，也不會自動重設已授權 principals。",
+            "錯誤。KMS authorization 必須考慮 key policy；單有 IAM Allow 不保證 principal 有可用的 key access。",
+            "錯誤。Audit log 有助偵測，不會阻止同一人修改 policy 後使用 key；預防與事後 evidence 不能互換。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "kms-key-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "AWS Backup Vault Lock Compliance mode 與 restore evidence",
+          "prompt": "Backup dashboard 顯示所有 jobs 成功，團隊因此向稽核員保證 ransomware 後一定能恢復。稽核員要求 recovery points 在 retention 期間不可刪除，且每季證明應用可恢復。哪個做法最好？",
+          "choices": [
+            "使用 Vault Lock Governance mode，因有足夠 IAM 權限的管理員也永遠無法移除 governance lock",
+            "只複寫到另一 Region；replica 一定不會同步 logical corruption 或惡意刪除，所以不需要保留歷史 recovery points",
+            "把 completed backup job 當作應用可恢復的證明，不必實際測試 decrypt、dependency 與 business probe",
+            "先驗證 KMS、roles、retention 與 restore；再設定 Vault Lock Compliance mode 的 min/max retention 與 grace time，並在 grace time 結束前完成復原演練"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Governance mode 能防止非預期操作，但具足夠權限者仍可移除；不符合「特權管理員在 retention 內也不能刪除」的要求。",
+            "錯誤。Replication 與版本化 backup 解決不同問題；邏輯錯誤或惡意動作可能複寫，不能取代具歷史保留的 recovery points。",
+            "錯誤。Backup success 只證明 recovery point 建立，沒有證明能解密、啟動 dependencies、符合 RTO 並通過應用驗證。",
+            "正確。Compliance mode 在 grace time 結束後形成不可移除的 retention 邊界；因此必須先驗證設定與 restore path，再以定期 restore testing證明可恢復。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "backup-vault-lock",
+            "backup-restore-testing"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch100-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "AWS Security Hub CSPM delegated administrator 與 remediation 權限邊界",
+          "prompt": "中央資安團隊要透過 AWS Security Hub CSPM 聚合整個 Organizations 的 posture findings，但不希望日常登入 management account，也不應自動取得所有 workload 的永久 AdministratorAccess。哪個設計最佳？",
+          "choices": [
+            "假設 delegated administrator 自動取得任意 workload resource 的修改權，不需另建 remediation permissions",
+            "在每個 member account 建立相同永久 IAM user 與 access key",
+            "為支援的安全服務設定 delegated administrator，搭配 scoped cross-account remediation roles、短期 sessions 與 audit",
+            "共用 management-account root credentials 給所有 security analysts"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。服務 delegated admin 的管理能力有明確 scope，不等同對每個 member resource 的無限制 AdministratorAccess。",
+            "錯誤。分散長期 users/keys 增加 rotation、offboarding 與 credential leakage 風險，也難以集中治理。",
+            "正確。Delegated administration 把服務管理移出 management account，實際 remediation 再經明確的 role permissions 與可稽核 session。",
+            "錯誤。Root credentials 不適合日常使用，更不應共享；這會破壞個人 attribution 與 least privilege。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-1.4",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "securityhub-organizations",
+            "organizations-scp"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Transit Gateway stateful inspection 對稱路由",
+          "prompt": "公司透過 Transit Gateway 將多個 workload VPC 的 egress 導向 inspection VPC。Flow log 顯示 request 通過 firewall appliance，但 return traffic 走另一條 attachment，stateful session 被丟棄。哪個修正最合適？",
+          "choices": [
+            "所有 TGW route tables 只放相同 `0.0.0.0/0`，假設 return path 自然會對稱",
+            "移除備援 appliance，讓單一路徑簡化為 single point of failure",
+            "只在 firewall ENI 加入更寬的 security group，routing 不需變更",
+            "設計 workload/inspection TGW route tables 與 appliance mode，驗證 forward/return 都經同一 stateful inspection path"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。相同 default route 不代表各 attachment 與 AZ 的 forward/return 選擇一致；必須明確設計 route domains。",
+            "錯誤。單一路徑可能暫時降低不對稱，但破壞可用性；正確做法是讓備援拓撲也維持 flow symmetry。",
+            "錯誤。Security group 只決定允許與否，無法把未經 appliance 的 return packet 改到正確 attachment。",
+            "正確。Stateful appliance 需要雙向 flow 經相同處理節點；TGW appliance mode 與 route-table segmentation 是核心機制。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-3.4",
+            "SAP-1.1"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "tgw-appliance-mode"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch100-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Break-glass access 與例外生命週期",
+          "prompt": "Identity provider 曾中斷兩小時，incident team 無法登入 AWS。公司要建立 emergency access，但不能變成永久後門。下列哪些兩項最重要？（選兩項）",
+          "choices": [
+            "對 emergency 使用與 policy exception 設即時 alert、事後 review、到期撤銷與週期性 access test",
+            "事故發生後再臨時建立 break-glass user，因平時不存在最安全",
+            "預先建立並定期演練獨立保護的 emergency roles/credentials，使用強驗證、明確啟用流程與可追蹤個人身分",
+            "給 incident team 永久 organization-wide AdministratorAccess，避免審批延誤",
+            "讓 emergency role 永久豁免所有 SCP、CloudTrail 與告警，避免任何 control 影響復原"
+          ],
+          "answers": [
+            0,
+            2
+          ],
+          "explanations": [
+            "正確。Alert、expiry 與 post-incident review 讓例外有生命週期，防止暫時權限沉澱成日常常駐權限。",
+            "錯誤。建立新 principal 通常也需要原本已失效的管理路徑；沒有預先測試就不能當 recovery mechanism。",
+            "正確。IdP 故障時才建立 credentials 太晚；必須事前準備、隔離保存並以 drill 驗證真的能登入與執行必要 action。",
+            "錯誤。永久廣泛權限擴大 insider 與 credential compromise 風險；emergency access 應最小化、短效且受監督。",
+            "錯誤。Recovery role 可能需要精確例外，但不能關閉全部 evidence 與偵測；否則緊急路徑成為不可見的攻擊路徑。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-1.2",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "iam-emergency-access",
+            "organizations-scp"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        },
+        {
+          "id": "ch100-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Baseline control 的安全 rollout",
+          "prompt": "新 SCP/control 要禁止 public storage，但組織中有舊帳號與經核准的 recovery workflow。公司必須同時防止違規與避免 control rollout 鎖死復原。下列哪些兩項是必要措施？（選兩項）",
+          "choices": [
+            "建立獨立測試過的 break-glass 與具 owner/理由/期限的 exception path，持續偵測到期與濫用",
+            "只保留一個不受監控的 broad administrator exception，不需要 preventive control",
+            "第一天直接套用 root OU，production outage 再由各團隊人工修復",
+            "先在 pilot OU 與代表性 accounts 部署，驗證 effective permissions、compliance evidence、service 相容性與 rollback",
+            "只檢查 policy JSON 可成功儲存；不需實際測試 denied action 與 recovery action"
+          ],
+          "answers": [
+            0,
+            3
+          ],
+          "explanations": [
+            "正確。Recovery path 與 exception lifecycle 必須事前存在並被監控，才能兼顧防止與可恢復性。",
+            "錯誤。只有廣泛例外會破壞 non-bypassable baseline，且沒有理由、期限與 evidence 便無法治理。",
+            "錯誤。Root-wide big-bang 讓錯誤 deny 同時影響所有 accounts，缺少可控 blast radius 與 learning loop。",
+            "正確。Pilot rollout 以真實 effective behavior 驗證 control，而不是只驗證 syntax；通過後再逐 OU 擴大。",
+            "錯誤。Policy 被接受只表示 control plane 收到設定，不代表 data-plane access、service-linked roles 或 emergency workflow 正確。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-1.4",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "control-tower-controls",
+            "organizations-scp",
+            "iam-emergency-access"
+          ],
+          "inspiration_ids": [
+            "jayendra-multiaccount"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 101,
+      "questions": [
+        {
+          "id": "ch101-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "依 dependency 規劃 migration waves",
+          "prompt": "企業要在一年內搬遷 400 個應用。團隊原本依伺服器作業系統分 wave，但第一次 cutover 才發現付款系統仍依賴未搬的 LDAP、batch file share 與下游 mainframe API。下一輪最應先改善什麼？",
+          "choices": [
+            "將所有 applications 改成同一個 cutover weekend，消除 hybrid coexistence",
+            "依 application 名稱字母排序，避免團隊對優先順序爭論",
+            "建立含 business owner、上下游、identity/network/data dependency、strategy、test、rollback 與共用 foundation 的 wave plan",
+            "只使用 network flow discovery，視為所有商業與人工 dependency 的完整證明"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Big-bang 會集中 400 個應用的未知風險，且難以在單一窗口完成可靠 rollback。",
+            "錯誤。字母順序與技術或業務 dependency 無關，可能再次把上游與下游拆到錯誤 wave。",
+            "正確。Migration wave 是暫時 production architecture；必須同時安排 shared services、驗收條件與可逆切換，而不是只搬主機。",
+            "錯誤。Flow data 很有價值，但看不到低頻工作、人工流程、授權關係與災難時才啟用的 dependency。"
+          ],
+          "task_keys": [
+            "SAP-4.1",
+            "SAP-4.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "migration-wave-planning",
+            "migration-strategies"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "依 workload 條件選擇 migration strategy",
+          "prompt": "Portfolio 內有：即將下線的報表、廠商 SaaS 可替代的 HR 系統、可原樣搬移的 VMware 應用，以及與 mainframe transaction 緊密耦合的核心程式。Architecture board 要求全部 rehost。哪個做法較合理？",
+          "choices": [
+            "所有 mainframe-dependent applications 在期限前全部 refactor，不需先確認介面與 business owner",
+            "依 business value、dependency、license、downtime、data gravity 與 target capability，分別評估 retire/retain/repurchase/relocate/rehost/replatform/refactor",
+            "所有系統先 rehost，因最少 code change 代表總成本與風險一定最低",
+            "把 retain 標記為已完成 migration，無需記錄它對其他已遷移 workloads 的長期 dependency"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。全面 refactor 時程與風險最高；「依賴 mainframe」本身不足以決定如何切分、保留或替換。",
+            "正確。Migration strategy 是每個 workload 的決策，且會隨 discovery 與目標能力更新；沒有單一 R 適用整個 portfolio。",
+            "錯誤。Rehost 可能快速，但會保留 license、operating model 與 architecture debt，也不適用即將 retired 或可 repurchase 的系統。",
+            "錯誤。Retain 是明確策略，不表示 dependency 消失；共存、connectivity、security 與 eventual exit 仍需 owner 與期限。"
+          ],
+          "task_keys": [
+            "SAP-4.1",
+            "SAP-4.2",
+            "SAP-4.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "migration-strategies"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Direct Connect 的 location-level resilience",
+          "prompt": "關鍵混合服務不能因單一 router、circuit 或 Direct Connect location 故障中斷。現況是在同一 location 的同一 connection 建兩個 VIF，並宣稱已有完整備援。哪個目標架構較正確？",
+          "choices": [
+            "依 maximum-resiliency model 使用不同 DX locations 與冗餘 customer/AWS paths，保留已驗證且容量足夠的 VPN fallback",
+            "在同一設施建立一個更大的 LAG，便可承受整個 location 中斷",
+            "只建立 Internet VPN，且不做 bandwidth 或 failover test",
+            "在同一 physical connection 建更多 VIF，因每個 VIF 都是獨立線路"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。不同 locations 加上 customer 與 AWS 端冗餘能涵蓋更多 failure domains；備援路徑必須定期測試。",
+            "錯誤。LAG 可增加容量與 connection redundancy，但同一 location 的共通設施故障仍可能同時影響所有 links。",
+            "錯誤。VPN 可作備援，但必須確認 throughput、route preference、BGP convergence 與實際 workload failover。",
+            "錯誤。多個 VIF 仍共享底層 connection/location failure domain，不會自動成為 physical diversity。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-3.4",
+            "SAP-1.1"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "direct-connect-resiliency"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Direct Connect 與傳輸加密的責任邊界",
+          "prompt": "法遵要求 on-premises 到 AWS 的資料全程加密。Network team 說 Direct Connect 是 private circuit，所以 payload 已自動加密。哪個評估與方案最準確？",
+          "choices": [
+            "在資料進入 DX 前終止 TLS，即使後續 trust boundary 仍要求 encryption 也符合規範",
+            "正確；只要不經 public Internet，所有 Ethernet/IP payload 就自動加密",
+            "啟用 BGP MD5 即可，因它會加密整個 application payload",
+            "錯誤；應依 endpoints 與設備選 MACsec、IPsec VPN over DX 或 application TLS，並驗證實際 encrypted path"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。若規範要求跨越該段 trust boundary 時仍加密，過早 termination 會留下未保護的傳輸區段。",
+            "錯誤。Private connectivity 與 cryptographic confidentiality 是不同屬性；DX 本身不代表所有 payload 已加密。",
+            "錯誤。BGP authentication 保護 routing session，不提供業務資料的端到端 payload encryption。",
+            "正確。加密方法取決於連線型態、支援設備、吞吐與 compliance；設計後還需以 packet/path evidence 驗證。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-3.4",
+            "SAP-1.1",
+            "SAP-1.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "direct-connect-encryption"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Route 53 Resolver 雙向 hybrid DNS",
+          "prompt": "AWS instances 必須解析 `corp.internal` 的 on-premises records；辦公室 clients 也必須解析 Route 53 private hosted zone `apps.aws.internal`。目前兩邊 resolver 互相把所有 queries 轉送，偶爾形成 recursion loop。哪個方案最好？",
+          "choices": [
+            "在 AWS 與 on-prem 建立同名 private zone，期待 resolver 自動合併 records",
+            "建立 Route 53 Resolver outbound endpoint 與指定 `corp.internal` 的 forwarding rule，另用 inbound endpoint 讓 on-prem DNS 轉送 `apps.aws.internal`，兩端跨 AZ 並記錄 queries",
+            "把兩個 private namespaces 全部複製到 public hosted zone，讓 Internet DNS 統一回答",
+            "讓每個 resolver 把 `.` 根網域無條件轉給另一個 resolver，增加可用性"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。兩個權威來源不會自動 merge，可能產生 split-brain 與不同 client 得到不一致答案。",
+            "正確。Inbound 與 outbound endpoints 解決相反方向，conditional rules 明確界定 authority，避免無界互相轉送。",
+            "錯誤。Public zone 會洩漏或暴露內部命名，而且不能替代私有 namespace 的 network-aware resolution。",
+            "錯誤。雙向 root forwarding 最容易形成 recursion loop；規則應限定 suffix 並保留清楚的 authoritative owner。"
+          ],
+          "task_keys": [
+            "SAA-3.4",
+            "SAP-1.1",
+            "SAP-4.2"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "route53-resolver-hybrid"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Overlapping CIDR 的隔離與轉譯策略",
+          "prompt": "兩個待遷移事業部都使用 `10.20.0.0/16`，不能立即 renumber。團隊打算把兩邊 VPC attachments 放入同一 Transit Gateway route table，讓 TGW 自動選對目的地。應改成哪個方案？",
+          "choices": [
+            "加入更廣的 `0.0.0.0/0` route，便能消除相同 CIDR 的歧義",
+            "優先規劃 renumber；過渡期用 PrivateLink/proxy 暴露特定服務，或以 private NAT 建立不重疊的 translated address domain",
+            "保留重疊 routes，改以 security groups 決定 packet 應走哪個 attachment",
+            "讓兩邊都 advertise 相同 prefix，依 BGP 當下選中的路徑決定正確事業部"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。更廣 prefix 的 specificity 較低，不會修復兩個相同更精確 prefix 的 semantic ambiguity。",
+            "正確。Renumber 是長期解；PrivateLink 只暴露服務而非完整互連，NAT 則可建立可路由的非重疊地址空間。",
+            "錯誤。Security groups 過濾已被 routing 選中的流量，不能告訴 TGW 兩個相同 destination prefix 分別代表誰。",
+            "錯誤。相同 prefix 沒有足夠資訊表達 service identity；route selection 可能將流量送往錯誤組織。"
+          ],
+          "task_keys": [
+            "SAA-3.4",
+            "SAP-1.1",
+            "SAP-4.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "tgw-vpc-attachments",
+            "aws-privatelink",
+            "private-nat-overlap"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Application Migration Service 測試、cutover 與 revert",
+          "prompt": "MGN 顯示 replication lag 接近零，專案經理要直接標記伺服器 finalized 並關閉來源。應用尚未在 AWS 驗證 DNS、license、service account 與 business transaction。哪個流程正確？",
+          "choices": [
+            "EC2 instance 狀態為 running 後立即 finalize，其他 dependency 可在日後補測",
+            "第一次 launch 直接設為正式 cutover，因 test launch 會中斷持續 replication",
+            "Replication lag 為零即證明 application 完整可用，可直接 decommission source",
+            "先做 non-disruptive test launch 與驗收，修正 launch settings；cutover 後驗證，失敗則 revert，成功才 finalize/decommission"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Instance running 是 infrastructure signal，不等同 application accepted；過早 finalize 會縮小 rollback 選項。",
+            "錯誤。Test launch 的目的就是在不中斷來源服務下驗證 target，降低正式窗口才發現問題的風險。",
+            "錯誤。Block replication 只代表資料複製進度，不能證明 network、identity、license、application consistency 與 business behavior。",
+            "正確。MGN 的 test/cutover/revert/finalize 階段提供明確 decision gates；來源只在 business acceptance 後才安全退役。"
+          ],
+          "task_keys": [
+            "SAP-4.2",
+            "SAP-4.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "mgn-cutover",
+            "migration-wave-planning"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "DMS full load、CDC 與資料驗證",
+          "prompt": "營運資料庫只能停機 20 分鐘。DMS full load 需要 8 小時，而且 source 在此期間仍持續寫入。團隊打算 full load 完成後立刻切換，只比較兩邊 row count。哪個方案較可靠？",
+          "choices": [
+            "使用 full load + CDC，監控 CDC latency，啟用適當 validation，cutover 時 quiesce/final sync 並保留 rollback gate",
+            "只要 DMS task 顯示 running，就代表所有資料與 datatype 已完全一致",
+            "Full load 完成後忽略 source 的後續 changes，因 target 已有大部分資料",
+            "只比較總 row count；即使 transformation 或 unsupported datatype 改變內容也可視為相同"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。CDC 縮短 outage，validation 與 final-sync gate 則把「task 完成」轉換成可接受的資料遷移證據。",
+            "錯誤。Task state 只說明執行狀態，不是資料內容正確與同步到 cutover point 的證明。",
+            "錯誤。Full load 期間的持續寫入若沒有 CDC 捕捉，target 會缺少 transactions，切換後產生資料遺失。",
+            "錯誤。相同 row count 可能仍有欄位值、encoding、LOB 或 transformation 差異，需使用更完整 validation。"
+          ],
+          "task_keys": [
+            "SAP-4.2",
+            "SAP-4.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "dms-cdc",
+            "dms-validation"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Hybrid identity 與 directory coexistence",
+          "prompt": "遷移期間，使用者與 service accounts 必須同時存取 on-premises 與 AWS applications。公司不能突然更換所有帳密，也不能讓兩邊出現無關的同名帳號。下列哪些兩項是必要原則？（選兩項）",
+          "choices": [
+            "在 AWS 建立全新 directory，複製相同 usernames，但不建立 trust、sync 或 migration mapping",
+            "在第一個 wave 前立即停用 on-prem directory，迫使所有應用完成轉換",
+            "依 trust、latency、outage 與 application protocol 選擇 directory integration/migration pattern，並明確保留 authoritative identity source",
+            "把所有 human 與 service identity 改成一組共享長期 IAM user access keys",
+            "逐 wave 驗證 authentication、group/authorization、service account、DNS 與失敗模式，通過前保留可回復的舊路徑"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。無映射的同名 accounts 會造成不同 security principal 被誤認為同一人，並讓權限與 offboarding 分叉。",
+            "錯誤。Premature cutover 會讓尚未驗證的 dependency 同時失效；identity 應與 application wave 協調。",
+            "正確。Directory 選擇不是只看服務名稱；必須先定義誰是 authority，以及 link outage 時哪些 authentication flow 仍可工作。",
+            "錯誤。共享長期 key 失去個人與 workload attribution，且 IAM user 不是一般企業 directory coexistence 解法。",
+            "正確。Identity 是每個 wave 的 production dependency，需以實際 login、group、service-to-service 與 failure test 作驗收。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-1.2",
+            "SAP-4.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "active-directory-migration"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        },
+        {
+          "id": "ch101-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "伺服器與資料庫 wave 的可逆 cutover",
+          "prompt": "某 wave 同時包含以 MGN rehost 的應用伺服器與以 DMS 搬遷的交易資料庫，停機窗口 20 分鐘。單純 ping 通 EC2 不算成功。下列哪些兩項必須同時納入 cutover gate？（選兩項）",
+          "choices": [
+            "DMS CDC/validation 達標後執行 final sync，再以 application probe 確認 target data；未通過則不 decommission source",
+            "只驗證 Direct Connect BGP session 為 up，因 network 可達即代表應用與資料完成",
+            "只驗證 MGN block replication，因它也保證資料庫 transaction consistency 與 schema compatibility",
+            "只驗證 DMS row count，因資料存在便能證明 application binary、DNS 與權限都正確",
+            "MGN test/cutover 後驗證 network、identity、license、business transaction，並保留 revert/finalize decision"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。DMS 提供持續資料同步與 validation；final sync 必須和應用停止寫入及 business probe 協調。",
+            "錯誤。Connectivity 是必要 dependency，但不證明 target application、directory、database consistency 或 business result。",
+            "錯誤。MGN 的 block replication 不取代 database-aware CDC、transaction cutover 與資料驗證。",
+            "錯誤。Row count 只覆蓋資料的一小部分，不能推論 compute、DNS、identity 與 application semantics。",
+            "正確。MGN 階段處理主機與 launch environment 的可逆切換，且必須用真正 business behavior 驗收。"
+          ],
+          "task_keys": [
+            "SAP-4.2",
+            "SAP-4.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "mgn-cutover",
+            "dms-cdc",
+            "dms-validation",
+            "route53-resolver-hybrid"
+          ],
+          "inspiration_ids": [
+            "jayendra-hybrid"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 102,
+      "questions": [
+        {
+          "id": "ch102-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Kinesis Data Streams 與 MSK 的選擇條件",
+          "prompt": "IoT 平台每秒接收數十萬筆 AWS-native producer events，需要同裝置內順序、數小時 replay 與 managed scaling；既有團隊沒有 Kafka clients、Connect 或 broker 生態需求。哪個選擇最符合現況？",
+          "choices": [
+            "優先使用 Kinesis Data Streams，依 device partition key 與 retention 設計；若 Kafka compatibility 成為硬需求再評估 MSK",
+            "同時寫入 Kinesis 與 MSK，但不定義哪個是 source of truth 或如何處理雙寫失敗",
+            "選 MSK，只因 throughput 高；是否需要 Kafka compatibility 不影響選擇",
+            "使用 Kinesis 並宣稱它保證所有裝置之間的全域 total order"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。題目需求直接對應 Kinesis managed stream、partition ordering 與 retention；服務選擇應由必要契約而非名稱決定。",
+            "錯誤。沒有 authority 與 failure semantics 的雙寫會增加資料分叉、成本與營運複雜度，並非自動提高可靠性。",
+            "錯誤。高 throughput 兩者皆可支援；選 MSK 的主要理由應是 Kafka protocol、clients、ecosystem 或 broker control。",
+            "錯誤。Kinesis 的順序範圍與 partition/shard sequence 有關，不提供所有 partition 的單一全域順序。"
+          ],
+          "task_keys": [
+            "SAA-3.5",
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "kinesis-put-record",
+            "kinesis-quotas",
+            "kinesis-retention",
+            "msk-what-is"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "高 cardinality partition key 與 ordering 範圍",
+          "prompt": "所有 sensors 目前都使用常數 `factory-1` 作 Kinesis partition key，造成 hot shard；架構只要求同一 sensor 的 events 依序，不要求不同 sensors 間全域排序。應如何修改？",
+          "choices": [
+            "使用穩定且高 cardinality 的 sensorId 作 partition key，監控 hot keys 與 shard/on-demand capacity，保留每 sensor 順序",
+            "繼續常數 key，增加更多 consumers 便會提高 stream write capacity",
+            "只使用 event timestamp 作 key，因時間值一定平均且不會碰撞",
+            "每筆 event 使用完全隨機 partition key，同時宣稱同一 sensor 仍必然依序"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。相同 sensorId 經 hash 對應同一 shard sequence，可保留 per-device ordering，又能讓多 sensors 分散到更多 partitions。",
+            "錯誤。Consumers 影響讀取，不會改變 producer 使用單一 partition key 造成的 write hot shard。",
+            "錯誤。Timestamp 可能大量相同或形成非預期分布，也無法自然表達「同一 sensor」的 ordering boundary。",
+            "錯誤。Random key 可分散寫入，但同一 sensor 的 events 會落入不同 shards，失去題目要求的順序。"
+          ],
+          "task_keys": [
+            "SAA-3.5",
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "kinesis-put-record",
+            "kinesis-quotas"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Kinesis throughput、record size 與 quota headroom",
+          "prompt": "新平台以平均每秒 event 數估算 Kinesis capacity，沒有考慮每筆 payload 大小與 burst。正式上線後 WriteProvisionedThroughputExceeded 增加，consumer iterator age 也升高。應先怎麼改善？",
+          "choices": [
+            "只增加 consumers，因 reader 數量會自動提高 producer write throughput",
+            "計算 records 與 bytes 的 input/output demand、consumer model 與 burst，選 provisioned/on-demand，保留 quota/headroom 並對 throttles/age 告警",
+            "依平均 event count 繼續 sizing，因 record bytes 不影響 Kinesis limits",
+            "等待 service 在發生 throttle 後自動提高所有 account quotas，不需預先規劃"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Read consumers 無法修復 write side capacity；producer 仍會在 shard 或 stream limits 遭 throttling。",
+            "正確。把流量轉成服務的實際限制單位，並留出 burst 與 quota headroom，才能選擇適當 capacity mode。",
+            "錯誤。Kinesis capacity 同時受 records 與 bytes 影響；只看事件數會低估大型 payload 的需求。",
+            "錯誤。某些 capacity 可自動調整，但 account/service quotas 與模式特性仍需事前確認，不能以 production failure 當 sizing 方法。"
+          ],
+          "task_keys": [
+            "SAA-3.5",
+            "SAA-4.2",
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "kinesis-quotas",
+            "service-quotas"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Stream retention、consumer checkpoint 與 replay",
+          "prompt": "Fraud consumer 的程式錯誤在兩天後才被發現，需要重新處理過去 48 小時 events。團隊只保存一個所有 consumers 共用 checkpoint，stream retention 為 24 小時。哪個設計較正確？",
+          "choices": [
+            "依 recovery window 設 retention，各 consumer 維護獨立 checkpoint 並能冪等 replay；過期時從 immutable raw S3 重建",
+            "採用 queue delete semantics，最快 consumer 讀完後刪除 record，其他 consumer 不需 replay",
+            "所有 consumers 共用 checkpoint，讓最快的 consumer 替其他 consumer 決定已處理位置",
+            "錯誤發生後才把 retention 從 24 小時提高，已過期 records 便會重新出現"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Independent checkpoints 讓各用途自行前進與回放，immutable raw layer 則提供超過 stream retention 的重建來源。",
+            "錯誤。Kinesis stream records 可被多 consumers 讀取，不以單一 consumer delete 控制生命週期。",
+            "錯誤。不同 consumer 的版本、速度與 failure 狀態不同，共享 checkpoint 會讓落後者跳過尚未處理的資料。",
+            "錯誤。Retention 延長不會復活已經過期的 data；恢復窗口必須在 incident 前設計。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-2.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "kinesis-retention",
+            "wa-idempotency"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Data lake raw/landing zone 與 curated zone 的可重建邊界",
+          "prompt": "ETL job 會直接覆寫 data lake raw prefix；一旦 transformation bug 發生，原始 ERP/stream facts 便無法重建。公司需要可追溯且可重跑的 pipeline。哪個 layout 最合理？",
+          "choices": [
+            "在 raw layer 就地覆寫並把舊值寫入應用 log；log retention 可完全取代受治理的 source data",
+            "只保留 curated Parquet；Glue crawler 保存 schema，所以可重建任何已刪除的原始 values 與事件順序",
+            "將 landing/raw objects 保持 append-only 或 version-aware，依來源與時間分區；轉換結果寫到獨立 stage/curated layer，並保存輸入版本與 checkpoint metadata",
+            "Raw、temporary、failed 與 curated 共用同一 prefix 和 lifecycle policy，再靠檔名辨識資料責任"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。一般應用 log 不具備原始資料的完整性、schema與 retention contract，不能取代受治理的 landing/raw layer。",
+            "錯誤。Crawler catalog 描述結構，不保存被刪除的原始 values、抵達順序或轉換前內容，無法成為重建來源。",
+            "正確。資料層分離讓 raw facts 保持可重播，stage/curated 可獨立修正；輸入版本與 checkpoint metadata則支援追溯和受控重跑。",
+            "錯誤。不同 layers 的 ownership、retention、quality 與 access contract 不同；混用 prefix 和 lifecycle 容易誤刪或越權。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-3.5",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "data-lake-zones",
+            "s3-lifecycle"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Glue schema ownership 與 crawler change policy",
+          "prompt": "Production crawler 每小時執行，producer 新增不相容欄位後，crawler 自動改寫 Glue Catalog table，數十個 Athena 與 ETL jobs 隨即失敗。怎麼避免 discovery 直接破壞 production contract？",
+          "choices": [
+            "只用 S3 folder 名稱當 schema，取消 Data Catalog 與任何版本管理",
+            "永久凍結所有 schema，任何新欄位都在 ingestion 時無聲丟棄",
+            "指定 schema owner/version，設定 crawler update/delete behavior，將不相容變更放入 staging table，驗證 consumers 後再 promote",
+            "讓 crawler 永遠覆寫 table，因最新 schema 必然與所有 consumers 相容"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Folder 可輔助 partition，不足以描述 types、columns、compatibility 與 owner，也無法支援治理。",
+            "錯誤。完全拒絕演進會遺失資料與阻礙產品；重點是有控制地版本化與驗證，而不是永遠不變。",
+            "正確。Discovery 與 authoritative schema publication 應分離；change policy、staging 與 consumer test 建立可控 promotion。",
+            "錯誤。Crawler 發現的是資料現況，不知道 business compatibility；自動覆寫可能發布 breaking change。"
+          ],
+          "task_keys": [
+            "SAA-3.5",
+            "SAP-2.5",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "glue-catalog-crawlers",
+            "glue-crawler-changes"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Lake Formation 與底層 IAM/S3 權限",
+          "prompt": "資料團隊已在 Lake Formation 對 analyst 隱藏 PII columns，但該 role 仍有 `s3:GetObject` 存取整個 raw bucket，能直接繞過 Catalog 查詢下載檔案。哪個修正最正確？",
+          "choices": [
+            "註冊 governed locations，明確選擇 Lake Formation/hybrid mode，縮小 IAM/bucket access，並對 Catalog/data permissions 做 allow/deny 測試",
+            "只更換 S3 encryption key，因加密會自動轉換成 column-level authorization",
+            "讓所有 principals 維持 IAM-only access，同時假設 Lake Formation grants 一定優先於任何直接 S3 permission",
+            "保留 broad S3 access，但把 Lake Formation dashboard 標成 compliant"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Lake Formation 細粒度權限必須和底層 IAM、S3、registered location 及 access mode 一起設計，避免 alternate path。",
+            "錯誤。KMS 控制能否解密 object，不了解 table column/row；它不能取代 data governance policy。",
+            "錯誤。Hybrid/opt-in semantics 必須明確管理；保留 IAM-only principals 可能使預期的 LF control 根本未生效。",
+            "錯誤。Dashboard 狀態不會撤銷 direct object access；實際 effective permissions 才是資料邊界。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "lakeformation-fgac",
+            "lakeformation-hybrid"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Athena partition pruning、columnar format 與 small-file compaction",
+          "prompt": "Athena 每次查詢一小時資料，卻掃描數 TB。Curated zone 目前是數百萬個 5 KB gzip CSV，並以唯一 eventId 作 partition。哪個改善最有效？",
+          "choices": [
+            "保留 tiny CSV，只把副檔名改成 `.parquet`",
+            "增加更多 Athena users/concurrency，讓每個 query 掃描相同 bytes 但更快",
+            "重寫為壓縮 Parquet/ORC，依常用且適度 cardinality 的時間/業務欄位分區，compact files 並驗證 bytes scanned",
+            "繼續以 eventId 分區，因 partition 越多越能縮小每次 scan"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。檔名不會改變實際 encoding；必須真正轉換成 columnar format 才能 column pruning。",
+            "錯誤。Concurrency 不會減少單一查詢的 bytes scanned，反而可能提高總成本與 contention。",
+            "正確。Columnar compression 減少讀取欄位，適當 partition pruning 減少物件範圍，compaction 降低 open/list overhead。",
+            "錯誤。近乎唯一值的 partitions 會增加 Catalog/listing overhead，並形成大量 tiny files。"
+          ],
+          "task_keys": [
+            "SAA-3.5",
+            "SAA-4.3",
+            "SAP-2.5",
+            "SAP-2.6"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "athena-data-optimization"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Athena workgroup 與 Redshift WLM 的適用邊界",
+          "prompt": "同一平台有偶發 ad-hoc S3 查詢，也有每分鐘刷新、數百人同時使用的 BI dashboards。公司需要分開成本與避免 ETL 壓垮 dashboards。下列哪些兩項最合理？（選兩項）",
+          "choices": [
+            "所有工作都使用單一 Athena workgroup，因 serverless 代表不需要 workload isolation",
+            "高並行且可預測的 warehouse workload 使用 Redshift，透過 WLM/queue 設計隔離 dashboard、ETL 與 data science",
+            "Ad-hoc 查詢使用 Athena workgroups 控制 result location、query limits、metrics 與 scan-cost governance",
+            "以 S3 lifecycle rule 當作 query concurrency 與 cost limit",
+            "所有 Redshift users 共用一個無 priority 的 queue，讓 ETL 與 dashboard 自由競爭"
+          ],
+          "answers": [
+            1,
+            2
+          ],
+          "explanations": [
+            "錯誤。Serverless 不代表沒有 cost 或 concurrency governance；不同團隊仍需隔離設定與使用。",
+            "正確。Redshift/WLM 適合管理可預測、高並行的 warehouse workload，能為不同 query class 建立資源與優先順序。",
+            "正確。Workgroup 可把 ad-hoc consumers 的設定、metrics 與 bytes-scanned controls 分開，適合直接查詢 data lake。",
+            "錯誤。Lifecycle 管 object storage retention，不會限制 SQL query 的執行資源或掃描上限。",
+            "錯誤。單一競爭 queue 可能讓長 ETL 擠壓 latency-sensitive dashboard，與題目的 isolation 需求相反。"
+          ],
+          "task_keys": [
+            "SAA-3.3",
+            "SAA-4.3",
+            "SAP-2.5",
+            "SAP-2.6"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "athena-workgroups",
+            "redshift-wlm"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        },
+        {
+          "id": "ch102-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "可 replay 且受治理的即時分析路徑",
+          "prompt": "平台必須同時保證同 device events 可有序 replay，並防止 analyst 查到未核准的 PII columns。下列哪些兩項能力缺一不可？（選兩項）",
+          "choices": [
+            "使用高 cardinality device partition key、足夠 stream retention、獨立 checkpoints 與冪等 consumers",
+            "只使用 Kinesis，因 per-shard ordering 也會自動限制 analyst 的 SQL 權限",
+            "只使用 Lake Formation，因 table grants 也會保存與重播 Kinesis events",
+            "在 curated data 上建立 Lake Formation/IAM/S3 一致的存取邊界，驗證 analyst 的 allowed 與 denied columns",
+            "只為 S3 啟用 encryption，因加密可同時提供 event ordering 與 column authorization"
+          ],
+          "answers": [
+            0,
+            3
+          ],
+          "explanations": [
+            "正確。Partition identity 定義 ordering boundary，retention/checkpoint 定義 replay window，冪等性使重播不重複副作用。",
+            "錯誤。Kinesis 處理事件傳輸與保留，不管理 Athena/Glue table 的 column-level authorization。",
+            "錯誤。Lake Formation 治理 data access，不是 streaming retention 或 consumer checkpoint 服務。",
+            "正確。Fine-grained grants 必須和 alternate S3/IAM paths 一起收斂，才真正限制 analyst 的 PII scope。",
+            "錯誤。Encryption at rest 不定義 stream partition/order，也不知道 analyst 可看哪些 schema columns。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.1",
+            "SAA-3.5",
+            "SAP-2.3",
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "kinesis-put-record",
+            "kinesis-retention",
+            "lakeformation-fgac"
+          ],
+          "inspiration_ids": [
+            "jayendra-datalake"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 103,
+      "questions": [
+        {
+          "id": "ch103-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "以 RTO/RPO 與成本選擇 DR strategy",
+          "prompt": "公司將 workload 分為兩級：Tier A 的 RTO 30 分鐘、RPO 5 分鐘；Tier C 可接受 24 小時恢復與前一晚資料。預算無法讓所有系統 active-active。哪個 DR 規劃最合理？",
+          "choices": [
+            "Tier A只保留每日snapshot與pilot-light compute；不量測20 TiB restore時間便假設可在30分鐘內完成",
+            "Tier A使用backup/restore，Tier C使用multi-site active-active；以最高成本的tier承擔最寬鬆objective",
+            "Tier A使用continuous replication與warm standby並實測promotion；Tier C使用受保護backup/restore並實測restore，讓兩者分別符合RTO/RPO",
+            "兩個tiers都使用warm standby；雖可達Tier A目標，但不評估Tier C較寬鬆目標能否改用更低成本的backup/restore"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Daily snapshot最壞RPO接近一天，且大量資料restore未經量測，無法支持Tier A的5分鐘RPO與30分鐘RTO。",
+            "錯誤。它把昂貴策略配置給低重要性workload，反而讓Tier A採不符合資料點與恢復時間的策略。",
+            "正確。DR strategy要按business impact與RTO/RPO分層，並以promotion/restore實測把replication、capacity、dependencies與runbook納入證據。",
+            "錯誤。此方案可能達到可用性，但沒有回應成本限制；Tier C容許一天恢復，應比較backup/restore是否已足夠。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-4.2",
+            "SAP-2.2",
+            "SAP-2.6"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "dr-strategy"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Recovery Region 的 IaC、keys、secrets 與 quotas",
+          "prompt": "Game day 時，secondary Region 的 database replica 可 promote，但應用無法啟動：KMS key、secret、certificate 與 EC2 quota 尚未準備。團隊原本只建立空 VPC。哪個改進最完整？",
+          "choices": [
+            "假設 KMS keys、Secrets Manager secrets 與 certificates 會自動成為全球資源",
+            "只把 CloudFormation template 存在 source control，不需定期部署或驗證 Region parameters",
+            "保留空 VPC，災難發生後再複製所有 Region-specific dependencies 與申請 quotas",
+            "以版本化 IaC/StackSets 部署或持續驗證 network、IAM、KMS、secrets、certificates 與 capacity，並預先取得 quota headroom"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。許多 security/config resources 具有 Region 或 account scope，必須明確複製、重建或以支援機制同步。",
+            "錯誤。Template 可重現不等於可部署；Region availability、parameters、service roles 與 drift 都需持續驗證。",
+            "錯誤。災難期間才建立 control-plane dependencies 與等待 quota approval，通常無法符合 30 分鐘 RTO。",
+            "正確。Recovery environment 是完整 production dependency graph；IaC、Region-specific state、permissions 與 quotas 都要在 RTO 前準備並測試。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-2.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "cloudformation-stacksets",
+            "service-quotas"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "以 replication lag 與 transaction age 證明 RPO",
+          "prompt": "Aurora Global Database secondary 狀態顯示 `available`，團隊便宣稱 RPO 為零。實際演練發現最後三分鐘訂單未出現在 promoted Region。哪個監控與驗證方式較正確？",
+          "choices": [
+            "監控 replication lag 與 durable business checkpoint/transaction age，接近五分鐘前告警，演練時量測實際資料遺失",
+            "把 Route 53 TTL 設成五分鐘，並把 TTL 當作資料 RPO",
+            "只檢查 destination CPUUtilization，因 CPU 低代表 replication 已追上",
+            "只要 secondary endpoint 可連線，便能推論所有 transactions 已 durable"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。RPO 是「最後可恢復資料點」的時間距離；必須從 replication 與業務 checkpoint 取得 evidence，並以 game day 驗證。",
+            "錯誤。DNS TTL 控制 resolver cache，不描述 source 到 secondary 的資料複寫進度。",
+            "錯誤。CPU 只是 resource utilization，無法直接證明 WAL/transaction replication 已符合 RPO。",
+            "錯誤。Endpoint availability 代表服務可接受連線，不表示 replication 已包含最新 committed business data。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-3.3",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "aurora-global",
+            "aurora-dr"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Route 53 ARC routing control safety rules 與資料層就緒邊界",
+          "prompt": "雙 Region cell 架構已有資料庫 promotion runbook，但操作員曾誤把兩個 ingress 同時切到 active，差點造成 split brain。團隊要讓 traffic switch 有集中、可稽核且能阻擋不安全狀態的控制。哪個改善最合適？",
+          "choices": [
+            "只縮短 DNS TTL；TTL 能驗證 secondary database 已可寫，也能阻止兩個 cells 同時 active",
+            "以 ARC readiness check 直接代替 application transaction probe，任何 readiness 結果都保證資料一致性",
+            "只建立 CloudWatch dashboard，要求值班人員自行記得正確切換順序，不需要可執行 guardrail",
+            "使用 Route 53 ARC routing controls 與 safety rules限制不安全的 control-state 組合；仍把資料層 promotion/fencing 與 business readiness 設為切流前置條件"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。TTL 影響 cache duration，不知道 writer 狀態，也不會對兩個 routing controls 的組合施加原子 safety constraint。",
+            "錯誤。Readiness 能檢查資源與配額準備情況，但不能證明每一筆交易或 application invariant 已正確恢復。",
+            "錯誤。Dashboard 是觀測工具，不會阻止誤操作；高風險 failover 需要可執行的 safety rule 和審計軌跡。",
+            "正確。ARC routing control提供集中 traffic state，safety rules可禁止危險組合；但它不取代 database fencing、promotion 與端到端業務驗證。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-1.3",
+            "SAP-2.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "route53-arc-routing-control",
+            "aurora-dr"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Route 53 failover 的 health signal 與 DNS 限制",
+          "prompt": "Primary application 的 `/health` 固定回 200，即使 database 不可寫也不會失敗。Route 53 因此沒有 failover。團隊還承諾「TTL 30 秒代表所有 clients 30 秒內切換」。哪個修正最準確？",
+          "choices": [
+            "讓 Route 53 health check 直接充當 database writer fencing 與 promotion lock",
+            "將 TTL 設為 0，即可保證 resolver、browser 與既有 TCP sessions 同步切換",
+            "使用能反映必要 dependency/business ability 的 health signal；設定合理 TTL，但同時設計 retry/reconnect，因 cache 與既有連線可超過 TTL",
+            "保留 shallow 200 endpoint，因 health check 不應依賴任何 workload component"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Route 53 選擇 DNS response，不具有 database role coordination 或 writer lock 能力。",
+            "錯誤。Resolver 可有最低 cache 行為，既有連線根本不重新解析；TTL 不能保證 universal switch time。",
+            "正確。Health signal 應回答 endpoint 是否能服務關鍵需求；DNS 只影響新的解析，client cache 與 existing sessions 仍需應用層處理。",
+            "錯誤。完全脫離 dependency 的 shallow endpoint 會在服務實際不可用時仍呈健康，造成 false positive。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-3.4",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-saa-guide",
+            "route53-failover"
+          ],
+          "inspiration_ids": [
+            "jayendra-global",
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "大量資料 restore throughput 與 recovery critical path",
+          "prompt": "團隊每天成功備份 20 TiB 分析資料，便宣稱可在四小時內完成 Region recovery；但從未完整 restore，也未驗證目標 Region 的配額、KMS、網路與下游重建。哪個做法能真正驗證此 RTO？",
+          "choices": [
+            "定期在隔離環境執行代表性或完整 restore，量測並行度與瓶頸，預先驗證配額、KMS、IAM、網路及下游重建，再用 business probe記錄總恢復時間",
+            "只預建空白 compute；只要 instance 已啟動，資料、keys 與 dependencies 可在事件後再處理而不影響 RTO",
+            "只檢查 backup job duration；備份在四小時內完成即代表 restore 必然同速",
+            "把 DNS TTL 設為 30 秒，因名稱切換速度會決定 20 TiB data restore throughput"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。RTO 是整條 recovery critical path 的實測結果；restore throughput、service quota、decrypt、network、rebuild與應用驗證都可能成為瓶頸。",
+            "錯誤。Compute readiness 只是其中一段；沒有 data、identity與 dependency，服務仍不可用且四小時目標未被證明。",
+            "錯誤。Backup 與 restore 的資料路徑、並行度和 dependency 不相同；建立 recovery point 的時間不能證明恢復時間。",
+            "錯誤。DNS 只影響流量入口，無法提高資料還原速度或建立缺失的 keys、roles與 downstream state。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "backup-restore-testing",
+            "service-quotas"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Continuous replication 與 protected backup 的互補",
+          "prompt": "公司有跨 Region replica，架構師因此要刪除 backups。安全團隊指出 ransomware 刪除與 logical corruption 也可能複寫到 secondary。哪個恢復設計最好？",
+          "choices": [
+            "把同一份 corrupted data 再複製到第三個 Region，視為不可變 recovery point",
+            "以 replication 滿足低 RPO/RTO，另保留受 retention/lock 保護的 backups，並定期 restore 到隔離環境驗證",
+            "只做每日 backup，同時宣稱可達五分鐘 RPO 與數分鐘 failover",
+            "只保留 replica，因可用 secondary 不可能包含相同 corruption"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。更多同步副本不會把 corrupted state 變成歷史不可變版本；需要具 retention 的 recovery points。",
+            "正確。Replica 與 backup 對應不同 failure modes；lock/retention 保護歷史點，restore test 則證明資料能實際使用。",
+            "錯誤。每日頻率的最壞資料損失遠大於五分鐘，且 restore 所需時間也未必符合數分鐘 RTO。",
+            "錯誤。Replication 會快速傳遞許多合法但有害的變更；它解決 availability，不完整解決 point-in-time recovery。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "aurora-global",
+            "backup-vault-lock",
+            "backup-restore-testing"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Game day 與 restore test 的可稽核 evidence",
+          "prompt": "法規要求每半年證明核心服務可在 30 分鐘內恢復，RPO 不超過五分鐘。現有 evidence 只有 runbook PDF 與「backup completed」截圖。哪個測試最符合要求？",
+          "choices": [
+            "只 restore 一個 EBS volume，不測 identity、network、application 或 data point",
+            "只做 tabletop discussion，因實際 failover 可能影響 production",
+            "受控執行 dependency/data promotion、traffic、business transaction、RTO/RPO 量測與 failback，保存結果並追蹤缺陷",
+            "執行測試但不記錄開始、資料 checkpoint、完成時間與失敗 remediation"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。單一 volume restore 只驗證局部元件；核心服務還依賴 identity、keys、network、database 與 application。",
+            "錯誤。Tabletop 有助找流程缺口，但不能單獨證明系統能在目標時間內真正恢復。",
+            "正確。端到端 game day 把架構假設轉成可重複測量的 recovery evidence，並包含恢復後的安全 failback。",
+            "錯誤。沒有時間與資料點 evidence，就無法證明 RTO/RPO，也不能確認下一次是否修正。"
+          ],
+          "task_keys": [
+            "SAP-2.2",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "backup-restore-testing",
+            "dr-strategy"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Failback 的資料 reconciliation 與受控切換",
+          "prompt": "公司已在 secondary Region 營運兩天並接受新訂單，原 Region 現在恢復。團隊要 failback，但不能遺失這兩天資料或重建雙 writer。下列哪些兩項正確？（選兩項）",
+          "choices": [
+            "只同步 schema/config，因 business data 在 failover 後會自然對稱",
+            "舊 Region endpoint 一可連線就立刻把 Route 53 指回去",
+            "以 planned switchover/fencing 執行回切，驗證 business transactions 後才恢復正常 routing 並關閉臨時例外",
+            "在舊 Region 從事故前 backup 獨立恢復，兩邊同時接受新 writes",
+            "先穩定目前 authoritative Region，重建向目標 Region 的 replication，驗證 lag、keys、capacity 與 exceptional writes"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。Schema 相同不代表 rows/transactions 相同，尤其所有新 writes 都發生在 recovery Region。",
+            "錯誤。立刻改 DNS 可能把新訂單送到落後資料庫，且既有 sessions 仍留在 secondary，造成分叉。",
+            "正確。Planned switchover 把 writer role、流量與驗證依序協調，並在完成後清理 emergency routes/permissions。",
+            "錯誤。舊 backup 不包含這兩天交易；雙寫又會產生新的 conflict，除非另有明確合併語意。",
+            "正確。Failback 前必須讓目標重新成為完整、最新且可操作的 secondary；可達不代表資料已追上。"
+          ],
+          "task_keys": [
+            "SAP-1.3",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "aurora-dr",
+            "route53-failover"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        },
+        {
+          "id": "ch103-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Aurora Global Database write forwarding 的能力與 DR 邊界",
+          "prompt": "團隊開啟 Aurora Global Database write forwarding，便宣稱 secondary Region 已成為獨立 active writer，primary 故障時不需 failover。下列哪些兩項敘述正確？（選兩項）",
+          "choices": [
+            "Write forwarding 讓每個 secondary 擁有獨立 writer，可在網路分割時各自提交並由 Aurora 自動合併所有衝突",
+            "Primary 不可用時仍需依 Aurora Global Database 的 managed failover/switchover 程序建立新 writer，並驗證應用連線與資料狀態",
+            "Write forwarding 會把 Route 53 health checks、ARC routing controls與應用冪等性全部納入單一資料庫設定",
+            "只要開啟 forwarding，primary outage 時 secondary 會在零資料風險下自動變成 writer，應用無須重連或執行 failover runbook",
+            "Secondary 發出的受支援寫入仍會被轉送到 primary writer；應依需求選擇 read consistency，並測試額外 latency 與限制"
+          ],
+          "answers": [
+            1,
+            4
+          ],
+          "explanations": [
+            "錯誤。Aurora Global Database 不會把分割期間的多個獨立 writer 交易自動合併；forwarded write 仍依賴 primary。",
+            "正確。DR role transition 和 write forwarding 是不同機制；新 writer 建立後仍需檢查 replication、endpoint、session與 business correctness。",
+            "錯誤。Traffic control、request idempotency與資料庫 write routing分屬不同責任，不能由單一 forwarding flag 自動完成。",
+            "錯誤。Forwarding 不等於故障接管；primary outage 仍需執行服務支援的 failover並讓應用重新建立正確連線。",
+            "正確。Forwarding 是 secondary 到 primary writer 的路徑，不是新增獨立 authority；一致性選項、延遲與不支援操作必須納入設計。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAA-3.3",
+            "SAP-1.3",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "aurora-write-forwarding",
+            "aurora-dr"
+          ],
+          "inspiration_ids": [
+            "jayendra-dr"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 104,
+      "questions": [
+        {
+          "id": "ch104-q01",
+          "intent": 1,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "AgentCore 新設計與 Bedrock Agents Classic 邊界",
+          "prompt": "公司在 2026 年為新客戶設計可呼叫 IT tools 的 agent。另一個舊系統仍使用 Amazon Bedrock Agents Classic。Architecture proposal 要求所有新舊 workload 都新建 Classic agents。哪個決策正確？",
+          "choices": [
+            "所有新舊 workload 繼續只建立 Classic agents；maintenance mode 表示功能仍會和新平台同步擴充",
+            "新 workload 採 AgentCore 或 application-managed orchestration；Classic 僅維持既有系統，先盤點 tools、identity、sessions、traces與行為差異，再以分階段驗證遷移",
+            "直接把 Classic agent 的 model ID 改到 AgentCore，原有 action group、identity與trace contract 保證原封不動相容",
+            "同時雙寫兩套 agent runtime 的所有 side effects，但不建立 operation identity或結果 reconciliation，以此當零風險遷移"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Maintenance mode 不等於新功能持續對等；把新 workload 鎖進 legacy 路徑會增加未來遷移成本。",
+            "正確。Maintenance mode 與新設計路徑代表應分開處理：既有系統可維持，新的 workload 採現行平台；遷移必須驗證非模型層 contracts。",
+            "錯誤。Runtime 遷移不只是 model replacement；tools、authorization、session、observability與failure semantics都需驗證。",
+            "錯誤。Shadow/dual-run 可以比較結果，但有副作用的雙寫若無冪等與 reconciliation 會製造重複操作，不能作為安全預設。"
+          ],
+          "task_keys": [
+            "SAP-4.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "bedrock-agents-maintenance"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q02",
+          "intent": 2,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "Agent runtime 的 inbound authentication 與 authorization",
+          "prompt": "AgentCore Runtime 接收 enterprise JWT。現行程式只檢查 token 尚未過期，就允許 caller 操作任意 tenant 的 tools。哪個修正最完整？",
+          "choices": [
+            "使用支援的 IAM/JWT inbound auth，驗證 issuer、audience/client 與必要 claims，之後再做 tenant/action/resource authorization",
+            "只要 endpoint 位於 private subnet，任何 token 都可視為已授權",
+            "只檢查 JWT signature，不需驗證 token 是簽給哪個 audience 或可操作哪些 resources",
+            "用 outbound OAuth credential provider 取代 inbound caller authentication"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Authentication 證明 caller/token；authorization 仍須依可信 claims 與 server-side resource policy 決定允許的 tool action。",
+            "錯誤。Network location 不是 end-user identity，private connectivity 也可能被已入侵 workload 濫用。",
+            "錯誤。有效 signature 只證明 issuer 簽過 token；若 audience/claims 不符，仍可能是拿別處的 token 重放。",
+            "錯誤。Outbound credentials 用於 agent 呼叫下游，不會驗證誰正在呼叫 agent runtime。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "agentcore-inbound-jwt"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q03",
+          "intent": 3,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "Workload identity 與 outbound credentials 分離",
+          "prompt": "IT agent 需呼叫 GitHub 與內部工單 API。有些動作代表目前使用者，有些是 nightly system job。開發者把一組永久 OAuth client secret 放在 system prompt，所有使用者共用。哪個設計較安全？",
+          "choices": [
+            "讓每位使用者把個人 refresh token放進 system prompt，再靠 Guardrails 避免 token 出現在輸出",
+            "需要代表使用者時採 user-delegated OAuth；nightly job 採 workload identity/M2M，兩者使用最小 scopes與短期 credentials，秘密由受控 provider取得而不進 prompt",
+            "把 AgentCore workload token直接送給所有第三方 API；只要 token 有簽章，audience與第三方授權模型不必相符",
+            "所有 GitHub 與工單動作都使用同一 M2M client credential，但在 application log 裡記錄終端使用者名稱"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Prompt 與 trace不是秘密儲存區；Guardrails也不保證 refresh token不會被模型、log或tool path暴露。",
+            "正確。User delegation與machine-to-machine代表不同 principal和 consent；分開取得短期、最小 scope credentials才能保留權限與稽核邊界。",
+            "錯誤。Workload token有特定 audience與用途，不是所有第三方 API 的通用 bearer credential，仍需相應 credential exchange/provider。",
+            "錯誤。共同 M2M credential無法保留 delegated-user authority；事後 log不會把 machine privilege轉成使用者授權。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "agentcore-workload-identity",
+            "agentcore-outbound-credentials"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q04",
+          "intent": 4,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "Probabilistic planning 與 deterministic tool authorization",
+          "prompt": "模型產生 `restart-service(prod, payments)` tool call，JSON schema 完全合法，但 requester 只獲准重啟 dev。團隊想用 system prompt「不要碰 production」作唯一防護。哪個做法正確？",
+          "choices": [
+            "只用 JSON schema驗證 `restart-service`參數；schema通過即代表 requester獲准操作 production target",
+            "只靠 IAM 允許 runtime呼叫 tool gateway；gateway收到合法 AWS principal後，不再檢查 tool action、resource或business context",
+            "只以 Bedrock Guardrails檢查輸入輸出內容；未命中敏感詞就允許所有 side effects",
+            "在 AgentCore gateway/tool enforcement point使用 Cedar policy，將可信 principal、action、resource與context做 default-deny決策；IAM仍限制誰能呼叫 AWS/API enforcement layer"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Schema只證明資料形狀，不知道 requester是否能重啟 production、resource目前是否允許變更。",
+            "錯誤。IAM 可限制誰能到達 AWS資源或gateway，但題目還需要針對每個 tool/resource/context的細粒度決策，不能在入口認證後全面放行。",
+            "錯誤。Guardrails處理內容風險，不是 action/resource authorization engine；安全文字也可能提出未授權副作用。",
+            "正確。AgentCore Policy/Cedar處理確定性的tool authorization；IAM與runtime authentication仍負責外層 principal和API access，兩層互補。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "agentcore-policy-cedar",
+            "agentcore-policy-patterns"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q05",
+          "intent": 5,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "Bedrock Guardrails 與 tool authorization 的不同責任",
+          "prompt": "Guardrail 已阻擋敏感資訊與禁止主題。產品經理因此主張，只要 prompt/output 沒被 guardrail 擋下，就可以直接執行任何 tool。哪個評估正確？",
+          "choices": [
+            "Automated Reasoning checks可以簽發 AWS temporary credentials，因此能同時取代 STS、IAM與tool policy",
+            "Guardrails處理 denied topics、敏感資訊與內容政策；Automated Reasoning checks驗證可形式化的敘述；tool authorization仍由 IAM/AgentCore Policy與business validation獨立執行",
+            "Guardrails通過便代表 caller已有對指定 production resource的 IAM permission，gateway可省略授權",
+            "只做 AgentCore Policy即可；它會自動攔截 PII、模型幻覺與所有不實敘述，不需內容安全控制"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Automated Reasoning checks評估模型內容是否符合規則，不是 credential issuer，也不取代 IAM authorization。",
+            "正確。三者責任不同：內容政策、可形式化 claim驗證、以及 principal/action/resource授權不能互相推論或替代。",
+            "錯誤。Guardrail結果不包含 caller對具體 AWS或business resource的有效權限，不能批准 side effect。",
+            "錯誤。AgentCore Policy可做tool-level確定性授權，但不等於內容過濾或事實驗證；仍需對應 controls。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "bedrock-guardrails-components",
+            "bedrock-guardrails-enforcement",
+            "agentcore-policy-cedar"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q06",
+          "intent": 6,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "高風險 tool 的 durable human approval",
+          "prompt": "Production restart 必須由當值主管核准；主管可能兩小時後才回覆。現況讓 Lambda sleep 等 email，且核准後模型可修改 target。哪個 workflow 最安全？",
+          "choices": [
+            "先執行 restart 再等待核准，若被拒絕便視為補償完成",
+            "把 Lambda timeout 調長到兩小時，收到任何 email response 都視為批准",
+            "使用 Standard Step Functions callback，保存不可變 action/evidence digest，驗證 approver，回呼後重驗並只執行已批准內容",
+            "只寄送 SNS notification；訊息成功送達就表示主管同意"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。高風險 action 的核心要求是事前 oversight；並非所有 restart 都可無損補償。",
+            "錯誤。Sleep 佔用 execution、難處理重啟與 timeout，且任意 email 不等於經驗證的 approver decision。",
+            "正確。Durable callback 可跨越長等待；decision 必須綁定 immutable proposal，避免 approval 後參數被模型更換。",
+            "錯誤。Delivery receipt 只證明通知傳送，不代表人類已檢視、理解並批准特定 action。"
+          ],
+          "task_keys": [
+            "SAP-2.3",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "stepfunctions-callback",
+            "stepfunctions-task-state",
+            "agentcore-policy-patterns"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q07",
+          "intent": 7,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "Task token 的 capability 保護與 replay 防護",
+          "prompt": "Approval email 直接包含 Step Functions raw task token。連結被轉寄後，未授權人員成功呼叫 callback；逾時 approval 還會自動視為允許。哪個修正最好？",
+          "choices": [
+            "允許任何 AWS account 回呼，因知道 task token 已足以證明身分",
+            "保留 raw token 在 URL，只把 token 長度增加",
+            "維持 timeout 自動批准，避免審批流程降低 service availability",
+            "Token 留在 server-side，email 只含短效 decision handle；驗證 approver/action scope，設 timeout/reject branch，完成與執行皆 single-use"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Token secrecy 不能替代 caller authorization；callback 仍應限制 account/principal 並保留 audit。",
+            "錯誤。Task token 本身是 callback capability，暴露在可轉寄 URL、proxy 或 email log 仍可能被濫用。",
+            "錯誤。高風險操作在沒有明確 decision 時應 fail closed 或走人工 escalation，而不是逾時自動批准。",
+            "正確。Application handle 可加入 approver、request、expiry 與 one-time state；真正 token 只由受信任 backend 使用。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-2.3",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "stepfunctions-callback",
+            "stepfunctions-task-state"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q08",
+          "intent": 8,
+          "level": "SAP enrichment",
+          "kind": "single",
+          "tested": "AssumeRole session scope 與 source identity",
+          "prompt": "核准後，executor 需暫時重啟一個特定 service。現在所有 users 共用長期 administrator keys，CloudTrail 只看到相同 role session name。哪個改善最完整？",
+          "choices": [
+            "只使用可由 caller任意填寫的 role session name作唯一終端使用者證據，不需要 source identity或session tags",
+            "使用 session policy加入 role本來沒有的 restart與KMS actions，避免修改 role policy",
+            "讓所有 users assume同一 broad admin role，再靠 CloudTrail event time推測是哪位使用者發動操作",
+            "Assume一個最小權限 role，使用 session policy/tags只做進一步縮限，設定受信任 source identity；短期 credentials僅留在 executor，不進模型 context"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Role session name可能由 caller控制且可重複；source identity與可信 session attributes更適合保留represented-user context。",
+            "錯誤。Session policy與role policy是交集，只能縮小有效 permissions，不能授予 role原本沒有的 action。",
+            "錯誤。共同 broad role擴大 blast radius，event time無法取代個人 attribution與resource-scoped authorization。",
+            "正確。Role決定權限上限，session policy/tags可再縮限，source identity改善跨role audit；短期 credential不應暴露給模型。"
+          ],
+          "task_keys": [
+            "SAP-1.2",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "sts-session-permissions",
+            "sts-source-identity"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q09",
+          "intent": 9,
+          "level": "SAP enrichment",
+          "kind": "multi",
+          "tested": "Agent tool side effect 的冪等與部分失敗處理",
+          "prompt": "Executor 已成功 restart，但回應在 network timeout 中遺失，Step Functions retry 又執行第二次。某些 tools 還可能只完成一半。下列哪些兩項應加入？（選兩項）",
+          "choices": [
+            "對 partial failure 定義可驗證 compensation 或人工 recovery，重試時回傳既有結果而非重做已完成副作用",
+            "只在單一 Lambda execution environment 的記憶體保存最近 actions",
+            "把 requester、approved action、target 與 resource version 綁成 durable idempotency key，原子記錄執行狀態與結果",
+            "假設 Step Functions retry 對所有第三方與 AWS side effects 都提供 exactly-once semantics",
+            "每次 timeout 產生新 operation ID，確保 retry 不會被舊狀態阻擋"
+          ],
+          "answers": [
+            0,
+            2
+          ],
+          "explanations": [
+            "正確。並非所有 side effect 都可單純重試；補償、人工處理與 prior-result replay 必須依 action semantics 設計。",
+            "錯誤。Execution environment 會消失或平行擴展，無法成為可靠的全域 operation ledger。",
+            "正確。Operation identity 必須涵蓋被批准的精確內容；持久化與原子 state transition 才能跨 process/retry 判斷是否已執行。",
+            "錯誤。Workflow retry 只重新呼叫 task，不能把非冪等 downstream API 自動轉成 exactly once。",
+            "錯誤。新 ID 會把同一邏輯操作偽裝成新 action，正好繞過冪等保護。"
+          ],
+          "task_keys": [
+            "SAP-2.4",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "wa-idempotency",
+            "stepfunctions-callback"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        },
+        {
+          "id": "ch104-q10",
+          "intent": 10,
+          "level": "SAP enrichment",
+          "kind": "multi",
+          "tested": "AgentCore、Bedrock inference與成本歸屬的分層 observability",
+          "prompt": "公司要把 agent 上 production，要求未授權 side effect 必須被阻止，也要偵測 runaway token/tool cost 與失敗，但不能無限制保存含敏感資訊的 prompts。下列哪些兩項缺一不可？（選兩項）",
+          "choices": [
+            "只開啟 Bedrock model invocation logging；它會自動包含所有 AgentCore tool traces、第三方 API結果與每個application的完整成本歸屬",
+            "在 executor保留 requester-bound policy、human approval（高風險）與durable idempotency，並於執行前重新驗證精確 action/resource",
+            "只用resource cost tags；帳單標籤能證明每次tool action已獲授權、成功且符合business invariant",
+            "使用 AgentCore Observability收集runtime/session/tool traces與latency/error；另設Bedrock model invocation logs/metrics，並以application inference profile等機制歸屬模型成本，對敏感欄位做redaction與retention",
+            "永久保存raw prompts、OAuth tokens與tool credentials，因完整資料比資料最小化更能降低observability風險"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Model invocation logging聚焦模型請求/回應，不會自動涵蓋AgentCore runtime與tool spans，也不等於application-level成本分攤。",
+            "正確。Observability不能取代預防控制；確定性authorization、approval與冪等 ledger直接保護 side-effect boundary。",
+            "錯誤。Cost metadata只能協助帳務分析，不能證明authorization、tool outcome或business correctness。",
+            "正確。三層訊號需分開建立：AgentCore traces、Bedrock inference telemetry、application inference profile成本歸屬；同時實施redaction、存取與retention。",
+            "錯誤。Raw logging會擴大PII與credential exposure；應依除錯/稽核目的最小化資料，而不是永久保存秘密。"
+          ],
+          "task_keys": [
+            "SAP-2.3",
+            "SAP-2.6",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-guide",
+            "agentcore-policy-cedar",
+            "wa-idempotency",
+            "agentcore-observability",
+            "bedrock-invocation-logging",
+            "bedrock-runtime-metrics",
+            "bedrock-cost-attribution"
+          ],
+          "inspiration_ids": [
+            "jayendra-ai"
+          ],
+          "scope": "SAP-C02 Emerging Topics enrichment / unscored preparation；不是正式 task ID，也不宣稱 SAP-C03 或計分範圍。"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "aws-saa-guide",
+      "title": "AWS Certified Solutions Architect - Associate (SAA-C03) Exam Guide",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03.html",
+      "kind": "official",
+      "usage": "SAA-C03 task mapping and exam scope."
+    },
+    {
+      "id": "aws-sap-guide",
+      "title": "AWS Certified Solutions Architect - Professional (SAP-C02) Exam Guide",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02.html",
+      "kind": "official",
+      "usage": "SAP-C02 task mapping, including emerging-topic scope."
+    },
+    {
+      "id": "wa-idempotency",
+      "title": "REL04-BP04 Make mutating operations idempotent",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_prevent_interaction_failure_idempotent.html",
+      "kind": "official",
+      "usage": "Durable operation identity and safe retry behavior."
+    },
+    {
+      "id": "wa-graceful-degradation",
+      "title": "REL05-BP01 Implement graceful degradation",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_graceful_degradation.html",
+      "kind": "official",
+      "usage": "Optional dependency, timeout, and fallback design."
+    },
+    {
+      "id": "dr-strategy",
+      "title": "REL13-BP02 Select a DR strategy from recovery objectives",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_planning_for_recovery_disaster_recovery.html",
+      "kind": "official",
+      "usage": "RTO/RPO-driven disaster recovery strategy selection."
+    },
+    {
+      "id": "cf-cache",
+      "title": "Understand the CloudFront cache key",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/understanding-the-cache-key.html",
+      "kind": "official",
+      "usage": "Cache-key inputs, cache policy, and response sharing boundaries."
+    },
+    {
+      "id": "cf-oac",
+      "title": "Restrict access to an Amazon S3 origin with CloudFront OAC",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html",
+      "kind": "official",
+      "usage": "Private S3 origins and direct-origin bypass prevention."
+    },
+    {
+      "id": "cf-private-content",
+      "title": "Serve private content with CloudFront signed URLs and signed cookies",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PrivateContent.html",
+      "kind": "official",
+      "usage": "Viewer authorization for private CDN content."
+    },
+    {
+      "id": "waf-rate",
+      "title": "AWS WAF rate-based rule statements",
+      "url": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-rate-based.html",
+      "kind": "official",
+      "usage": "Rate control behavior and scope."
+    },
+    {
+      "id": "sqs-delivery",
+      "title": "Amazon SQS standard queues provide at-least-once delivery",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues-at-least-once-delivery.html",
+      "kind": "official",
+      "usage": "Duplicate delivery and idempotent consumer requirements."
+    },
+    {
+      "id": "sqs-dlq",
+      "title": "Using dead-letter queues in Amazon SQS",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html",
+      "kind": "official",
+      "usage": "Poison-message isolation and controlled redrive."
+    },
+    {
+      "id": "lambda-concurrency",
+      "title": "Lambda reserved concurrency and provisioned concurrency",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html",
+      "kind": "official",
+      "usage": "Concurrency isolation, scaling ceilings, and cold-start capacity."
+    },
+    {
+      "id": "aurora-global",
+      "title": "Using Amazon Aurora Global Database",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html",
+      "kind": "official",
+      "usage": "Cross-Region replication and global database topology."
+    },
+    {
+      "id": "aurora-dr",
+      "title": "Aurora Global Database switchovers, failovers, and write fencing",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html",
+      "kind": "official",
+      "usage": "Writer promotion, failover, failback, and write-fencing behavior."
+    },
+    {
+      "id": "route53-failover",
+      "title": "Route 53 failover records and health checks",
+      "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-values-failover.html",
+      "kind": "official",
+      "usage": "DNS failover policy, health signals, and record configuration."
+    },
+    {
+      "id": "saas-isolation",
+      "title": "SaaS Tenant Isolation Strategies",
+      "url": "https://docs.aws.amazon.com/whitepapers/latest/saas-tenant-isolation-strategies/saas-tenant-isolation-strategies.pdf",
+      "kind": "official",
+      "usage": "Pool, silo, bridge, tenant identity, and isolation principles."
+    },
+    {
+      "id": "api-authorizer",
+      "title": "Use API Gateway Lambda authorizers",
+      "url": "https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html",
+      "kind": "official",
+      "usage": "Authenticated request context and API authorization."
+    },
+    {
+      "id": "api-usage-plans",
+      "title": "API Gateway usage plans and best-effort quotas",
+      "url": "https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html",
+      "kind": "official",
+      "usage": "Usage-plan throttles, quotas, and non-authorization boundary."
+    },
+    {
+      "id": "dynamodb-fgac",
+      "title": "Use IAM policy conditions for fine-grained DynamoDB access",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/specifying-conditions.html",
+      "kind": "official",
+      "usage": "LeadingKeys and tenant-scoped table access."
+    },
+    {
+      "id": "dynamodb-condition",
+      "title": "DynamoDB condition expressions",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html",
+      "kind": "official",
+      "usage": "Race-safe conditional writes."
+    },
+    {
+      "id": "dynamodb-transactions",
+      "title": "DynamoDB transactions",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transactions.html",
+      "kind": "official",
+      "usage": "Atomic multi-item state changes and idempotent request support."
+    },
+    {
+      "id": "kms-key-policy",
+      "title": "AWS KMS key policies",
+      "url": "https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html",
+      "kind": "official",
+      "usage": "Key administration, key usage, grants, and authorization."
+    },
+    {
+      "id": "cost-allocation-tags",
+      "title": "Activating user-defined cost allocation tags",
+      "url": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activating-tags.html",
+      "kind": "official",
+      "usage": "Resource-level billing attribution."
+    },
+    {
+      "id": "s3-multipart",
+      "title": "Amazon S3 multipart upload overview",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html",
+      "kind": "official",
+      "usage": "Large-object part upload, retry, completion, and abort behavior."
+    },
+    {
+      "id": "s3-presigned",
+      "title": "Download and upload objects with presigned URLs",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html",
+      "kind": "official",
+      "usage": "Time-limited bearer access to specific S3 operations."
+    },
+    {
+      "id": "s3-event-notifications",
+      "title": "Amazon S3 event notification ordering and duplicate delivery",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html",
+      "kind": "official",
+      "usage": "At-least-once events, ordering, versions, and sequencers."
+    },
+    {
+      "id": "s3-storage-classes",
+      "title": "Amazon S3 storage classes",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html",
+      "kind": "official",
+      "usage": "Access latency, retrieval, minimum duration, and storage trade-offs."
+    },
+    {
+      "id": "s3-lifecycle",
+      "title": "Managing the lifecycle of Amazon S3 objects",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html",
+      "kind": "official",
+      "usage": "Object transitions, expiration, and incomplete multipart cleanup."
+    },
+    {
+      "id": "mediaconvert-idempotency",
+      "title": "AWS Elemental MediaConvert request idempotency",
+      "url": "https://docs.aws.amazon.com/mediaconvert/latest/apireference/idempotency.html",
+      "kind": "official",
+      "usage": "CreateJob client request tokens and idempotent retries."
+    },
+    {
+      "id": "mediaconvert-queues",
+      "title": "Working with AWS Elemental MediaConvert queues",
+      "url": "https://docs.aws.amazon.com/mediaconvert/latest/ug/working-with-queues.html",
+      "kind": "official",
+      "usage": "Queue priorities, on-demand, and reserved capacity."
+    },
+    {
+      "id": "elastic-transcoder-eos",
+      "title": "Support for Amazon Elastic Transcoder ended November 13, 2025",
+      "url": "https://aws.amazon.com/blogs/media/support-for-amazon-elastic-transcoder-ending-soon/",
+      "kind": "official",
+      "usage": "Retired-service boundary for new media architectures."
+    },
+    {
+      "id": "control-tower",
+      "title": "What is AWS Control Tower?",
+      "url": "https://docs.aws.amazon.com/controltower/latest/userguide/what-is-control-tower.html",
+      "kind": "official",
+      "usage": "Landing zone, account governance, and organizational structure."
+    },
+    {
+      "id": "control-tower-controls",
+      "title": "AWS Control Tower preventive, detective, and proactive controls",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/designing-control-tower-landing-zone/controls.html",
+      "kind": "official",
+      "usage": "Control behavior, timing, scope, and deployment."
+    },
+    {
+      "id": "control-tower-logging",
+      "title": "Logging in AWS Control Tower",
+      "url": "https://docs.aws.amazon.com/controltower/latest/userguide/about-logging.html",
+      "kind": "official",
+      "usage": "Control Tower log-archive responsibilities."
+    },
+    {
+      "id": "organizations-scp",
+      "title": "AWS Organizations service control policies",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "kind": "official",
+      "usage": "Permission ceilings, inheritance, management-account scope, and effective permissions."
+    },
+    {
+      "id": "cloudtrail-organization",
+      "title": "Creating an organization trail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/creating-trail-organization.html",
+      "kind": "official",
+      "usage": "Centralized CloudTrail collection across member accounts."
+    },
+    {
+      "id": "s3-object-lock",
+      "title": "Amazon S3 Object Lock",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html",
+      "kind": "official",
+      "usage": "WORM retention and legal-hold behavior."
+    },
+    {
+      "id": "backup-vault-lock",
+      "title": "AWS Backup Vault Lock modes",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html#vault-lock-modes",
+      "kind": "official",
+      "usage": "Governance versus Compliance mode, grace time, and immutable retention controls."
+    },
+    {
+      "id": "backup-restore-testing",
+      "title": "AWS Backup restore testing and validation",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing-validation.html",
+      "kind": "official",
+      "usage": "Scheduled restore tests and validation evidence."
+    },
+    {
+      "id": "securityhub-organizations",
+      "title": "Integrating AWS Security Hub CSPM with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-accounts-orgs.html",
+      "kind": "official",
+      "usage": "Security Hub CSPM delegated administration, member enrollment, and central findings."
+    },
+    {
+      "id": "tgw-appliance-mode",
+      "title": "Transit Gateway appliance-mode routing scenario",
+      "url": "https://docs.aws.amazon.com/vpc/latest/tgw/transit-gateway-appliance-scenario.html",
+      "kind": "official",
+      "usage": "Symmetric routing through stateful inspection appliances."
+    },
+    {
+      "id": "iam-emergency-access",
+      "title": "Set up emergency access to the AWS Management Console",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/emergency-access.html",
+      "kind": "official",
+      "usage": "Break-glass preparation, testing, and protected credentials."
+    },
+    {
+      "id": "migration-strategies",
+      "title": "AWS large-migration strategy selection",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/large-migration-guide/migration-strategies",
+      "kind": "official",
+      "usage": "Workload-level migration strategy decisions."
+    },
+    {
+      "id": "migration-wave-planning",
+      "title": "AWS application portfolio wave planning",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/application-portfolio-assessment-guide/wave-planning.html",
+      "kind": "official",
+      "usage": "Dependency-aware migration waves and readiness."
+    },
+    {
+      "id": "direct-connect-resiliency",
+      "title": "Direct Connect maximum-resiliency model",
+      "url": "https://docs.aws.amazon.com/directconnect/latest/UserGuide/max-resiliency-set-up.html",
+      "kind": "official",
+      "usage": "Connection and location diversity."
+    },
+    {
+      "id": "direct-connect-encryption",
+      "title": "Encryption in AWS Direct Connect",
+      "url": "https://docs.aws.amazon.com/directconnect/latest/UserGuide/encryption-in-transit.html",
+      "kind": "official",
+      "usage": "MACsec, IPsec, and encryption-in-transit boundaries."
+    },
+    {
+      "id": "route53-resolver-hybrid",
+      "title": "Route 53 Resolver for hybrid DNS",
+      "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver.html",
+      "kind": "official",
+      "usage": "Inbound and outbound endpoints with forwarding rules."
+    },
+    {
+      "id": "aws-privatelink",
+      "title": "What is AWS PrivateLink?",
+      "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html",
+      "kind": "official",
+      "usage": "Service-specific private connectivity without full network peering."
+    },
+    {
+      "id": "tgw-vpc-attachments",
+      "title": "Transit Gateway VPC attachment limitations",
+      "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-vpc-attachments.html",
+      "kind": "official",
+      "usage": "VPC attachment routing and overlapping-CIDR limitations."
+    },
+    {
+      "id": "private-nat-overlap",
+      "title": "Private NAT Gateway for overlapping networks",
+      "url": "https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/private-nat-gateway.html",
+      "kind": "official",
+      "usage": "Address translation for overlapping private networks."
+    },
+    {
+      "id": "active-directory-migration",
+      "title": "Migrating Active Directory workloads to AWS",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/migration-microsoft-workloads-aws/migrating-active-directory-workloads.html",
+      "kind": "official",
+      "usage": "Directory coexistence and migration patterns."
+    },
+    {
+      "id": "mgn-cutover",
+      "title": "Application Migration Service cutover, revert, and finalize",
+      "url": "https://docs.aws.amazon.com/mgn/latest/ug/revert-finalize-cutover.html",
+      "kind": "official",
+      "usage": "MGN test, cutover, revert, and finalization stages."
+    },
+    {
+      "id": "dms-cdc",
+      "title": "Creating AWS DMS tasks for ongoing replication",
+      "url": "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Task.CDC.html",
+      "kind": "official",
+      "usage": "Full load plus change data capture."
+    },
+    {
+      "id": "dms-validation",
+      "title": "AWS DMS data validation",
+      "url": "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html",
+      "kind": "official",
+      "usage": "Source-target data validation during migration."
+    },
+    {
+      "id": "kinesis-put-record",
+      "title": "Kinesis Data Streams PutRecord partition-key mapping",
+      "url": "https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecord.html",
+      "kind": "official",
+      "usage": "Partition key, shard mapping, and ordering scope."
+    },
+    {
+      "id": "kinesis-quotas",
+      "title": "Kinesis Data Streams quotas and limits",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html",
+      "kind": "official",
+      "usage": "Record, byte, shard, and stream capacity constraints."
+    },
+    {
+      "id": "kinesis-retention",
+      "title": "Changing the Kinesis data retention period",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/kinesis-extended-retention.html",
+      "kind": "official",
+      "usage": "Replay windows and stream retention."
+    },
+    {
+      "id": "glue-catalog-crawlers",
+      "title": "AWS Glue Data Catalog and crawlers",
+      "url": "https://docs.aws.amazon.com/glue/latest/dg/catalog-and-crawler.html",
+      "kind": "official",
+      "usage": "Catalog metadata, schema discovery, and crawler roles."
+    },
+    {
+      "id": "glue-crawler-changes",
+      "title": "Configure crawler schema-change handling",
+      "url": "https://docs.aws.amazon.com/glue/latest/dg/crawler-schema-changes-prevent.html",
+      "kind": "official",
+      "usage": "Crawler update/delete policies and schema protection."
+    },
+    {
+      "id": "lakeformation-fgac",
+      "title": "Lake Formation fine-grained access control",
+      "url": "https://docs.aws.amazon.com/lake-formation/latest/dg/access-control-fine-grained.html",
+      "kind": "official",
+      "usage": "Table, row, column, and data-cell access controls."
+    },
+    {
+      "id": "lakeformation-hybrid",
+      "title": "Lake Formation hybrid access mode",
+      "url": "https://docs.aws.amazon.com/lake-formation/latest/dg/hybrid-access-mode.html",
+      "kind": "official",
+      "usage": "IAM and Lake Formation permission coexistence."
+    },
+    {
+      "id": "athena-data-optimization",
+      "title": "Athena data optimization, partitioning, and small files",
+      "url": "https://docs.aws.amazon.com/athena/latest/ug/performance-tuning-data-optimization-techniques.html",
+      "kind": "official",
+      "usage": "Columnar formats, partition pruning, and file compaction."
+    },
+    {
+      "id": "athena-workgroups",
+      "title": "Use Athena workgroups to control query access and costs",
+      "url": "https://docs.aws.amazon.com/athena/latest/ug/workgroups-manage-queries-control-costs.html",
+      "kind": "official",
+      "usage": "Query separation, settings, metrics, and cost controls."
+    },
+    {
+      "id": "redshift-wlm",
+      "title": "Amazon Redshift workload management",
+      "url": "https://docs.aws.amazon.com/redshift/latest/dg/cm-c-implementing-workload-management.html",
+      "kind": "official",
+      "usage": "Warehouse queue and workload isolation."
+    },
+    {
+      "id": "cloudformation-stacksets",
+      "title": "AWS CloudFormation StackSets concepts",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/what-is-cfnstacksets.html",
+      "kind": "official",
+      "usage": "Multi-account and multi-Region infrastructure deployment."
+    },
+    {
+      "id": "service-quotas",
+      "title": "Requesting a service quota increase",
+      "url": "https://docs.aws.amazon.com/servicequotas/latest/userguide/request-quota-increase.html",
+      "kind": "official",
+      "usage": "Pre-provisioned capacity and quota readiness."
+    },
+    {
+      "id": "bedrock-agents-maintenance",
+      "title": "Amazon Bedrock Agents Classic maintenance mode",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/agents-classic-maintenance-mode.html",
+      "kind": "official",
+      "usage": "Legacy-service and new-customer architecture boundary."
+    },
+    {
+      "id": "agentcore-inbound-jwt",
+      "title": "Configure an AgentCore Runtime inbound JWT authorizer",
+      "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/inbound-jwt-authorizer.html",
+      "kind": "official",
+      "usage": "Runtime caller authentication and JWT validation."
+    },
+    {
+      "id": "agentcore-workload-identity",
+      "title": "Understand AgentCore workload identities",
+      "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/understanding-agent-identities.html",
+      "kind": "official",
+      "usage": "Stable agent workload identity."
+    },
+    {
+      "id": "agentcore-outbound-credentials",
+      "title": "Obtain outbound credentials with AgentCore Identity",
+      "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/obtain-credentials.html",
+      "kind": "official",
+      "usage": "User-delegated and machine-to-machine credential retrieval."
+    },
+    {
+      "id": "bedrock-guardrails-components",
+      "title": "Amazon Bedrock Guardrails components",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails-components.html",
+      "kind": "official",
+      "usage": "Content filters, denied topics, sensitive information, and grounding."
+    },
+    {
+      "id": "bedrock-guardrails-enforcement",
+      "title": "Monitor and enforce Amazon Bedrock Guardrails",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails-enforcements.html",
+      "kind": "official",
+      "usage": "Guardrail use, enforcement, and monitoring."
+    },
+    {
+      "id": "stepfunctions-callback",
+      "title": "Step Functions callback with task token",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html",
+      "kind": "official",
+      "usage": "Durable callback and human-approval integration pattern."
+    },
+    {
+      "id": "stepfunctions-task-state",
+      "title": "Step Functions Task state timeout and heartbeat fields",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/state-task.html",
+      "kind": "official",
+      "usage": "Task-token lifetime, timeout, and callback behavior."
+    },
+    {
+      "id": "sts-session-permissions",
+      "title": "Control permissions for assumed-role sessions",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_assumerole.html",
+      "kind": "official",
+      "usage": "Role permissions, session policy intersection, and temporary credentials."
+    },
+    {
+      "id": "sts-source-identity",
+      "title": "Monitor assumed roles with source identity",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_monitor.html",
+      "kind": "official",
+      "usage": "Persistent represented-user attribution in role sessions."
+    },
+    {
+      "id": "bedrock-invocation-logging",
+      "title": "Amazon Bedrock model invocation logging",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-invocation-logging.html",
+      "kind": "official",
+      "usage": "Model input/output logging configuration and data handling."
+    },
+    {
+      "id": "bedrock-runtime-metrics",
+      "title": "Monitor Bedrock runtime inference with CloudWatch metrics",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/monitoring-runtime-metrics.html",
+      "kind": "official",
+      "usage": "Invocation, latency, error, and token telemetry."
+    },
+    {
+      "id": "bedrock-cost-attribution",
+      "title": "Application inference profiles for Bedrock cost attribution",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/cost-mgmt-application-inference-profiles.html",
+      "kind": "official",
+      "usage": "Application-level inference usage and cost attribution."
+    },
+    {
+      "id": "jayendra-global",
+      "title": "AWS Global Traffic Management — Route 53, Global Accelerator & CloudFront",
+      "url": "https://jayendrapatil.com/aws-global-traffic-management-route53-global-accelerator-cloudfront/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-serverless",
+      "title": "AWS Serverless API Architecture — API Gateway + Lambda",
+      "url": "https://jayendrapatil.com/aws-serverless-api-architecture-api-gateway-lambda/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-media",
+      "title": "AWS CloudFront with S3",
+      "url": "https://jayendrapatil.com/aws-cloudfront-with-s3/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-multiaccount",
+      "title": "AWS Multi-Account Architecture — Organizations & Control Tower",
+      "url": "https://jayendrapatil.com/aws-multi-account-architecture-organizations-control-tower/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-hybrid",
+      "title": "AWS Hybrid Cloud Networking Architecture",
+      "url": "https://jayendrapatil.com/aws-hybrid-cloud-networking-architecture-direct-connect-transit-gateway/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-datalake",
+      "title": "AWS Data Lake & Analytics Architecture",
+      "url": "https://jayendrapatil.com/aws-data-lake-analytics-architecture/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-dr",
+      "title": "AWS Disaster Recovery Architecture Strategies",
+      "url": "https://jayendrapatil.com/aws-disaster-recovery-architecture-strategies/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "jayendra-ai",
+      "title": "GenAI Application Architecture on AWS",
+      "url": "https://jayendrapatil.com/aws-genai-architecture-bedrock-rag-agents-guardrails/",
+      "kind": "community",
+      "usage": "Topic and distractor inspiration only; no wording copied."
+    },
+    {
+      "id": "lambda-sqs-max-concurrency",
+      "title": "Configuring maximum concurrency for Amazon SQS event sources",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-scaling.html",
+      "kind": "official",
+      "usage": "Event-source maximum concurrency, reserved concurrency interaction, batch size, and scaling behavior."
+    },
+    {
+      "id": "s3-put-object",
+      "title": "Amazon S3 PutObject API",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html",
+      "kind": "official",
+      "usage": "Single-operation upload constraints and PutObject behavior."
+    },
+    {
+      "id": "s3-upload-objects",
+      "title": "Uploading objects to Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/upload-objects.html",
+      "kind": "official",
+      "usage": "Explicit 5 GB single-operation upload limit and multipart-upload guidance."
+    },
+    {
+      "id": "iam-session-tags",
+      "title": "Passing session tags in AWS STS",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html",
+      "kind": "official",
+      "usage": "Trusted tenant attributes on temporary role sessions and tag-based authorization."
+    },
+    {
+      "id": "sqs-visibility",
+      "title": "Amazon SQS visibility timeout",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html",
+      "kind": "official",
+      "usage": "Duplicate-delivery risk, retry delay, and ChangeMessageVisibility behavior."
+    },
+    {
+      "id": "mediaconvert-priority",
+      "title": "Setting job priority in AWS Elemental MediaConvert",
+      "url": "https://docs.aws.amazon.com/mediaconvert/latest/ug/setting-the-priority-of-a-job.html",
+      "kind": "official",
+      "usage": "Priority ordering within a MediaConvert queue."
+    },
+    {
+      "id": "mediaconvert-reserved",
+      "title": "Working with reserved queues in AWS Elemental MediaConvert",
+      "url": "https://docs.aws.amazon.com/mediaconvert/latest/ug/working-with-reserved-queues.html",
+      "kind": "official",
+      "usage": "Reserved queue capacity, commitments, and feature boundaries."
+    },
+    {
+      "id": "msk-what-is",
+      "title": "What is Amazon Managed Streaming for Apache Kafka?",
+      "url": "https://docs.aws.amazon.com/msk/latest/developerguide/what-is-msk.html",
+      "kind": "official",
+      "usage": "Managed Apache Kafka compatibility, clients, brokers, and ecosystem boundary."
+    },
+    {
+      "id": "data-lake-zones",
+      "title": "Naming structure for data lake layers",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/defining-bucket-names-data-lakes/naming-structure-data-layers.html",
+      "kind": "official",
+      "usage": "Distinct landing, raw, stage, analytics, and curated data-layer responsibilities."
+    },
+    {
+      "id": "aurora-write-forwarding",
+      "title": "Using write forwarding in an Aurora global database",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-write-forwarding.html",
+      "kind": "official",
+      "usage": "Forwarded writes, consistency options, limitations, and primary-writer dependency."
+    },
+    {
+      "id": "route53-arc-routing-control",
+      "title": "Routing control in Amazon Route 53 ARC",
+      "url": "https://docs.aws.amazon.com/r53recovery/latest/dg/routing-control.html",
+      "kind": "official",
+      "usage": "Cell traffic controls, safety rules, and failover guardrails."
+    },
+    {
+      "id": "agentcore-policy-cedar",
+      "title": "Understanding Cedar policies in Amazon Bedrock AgentCore",
+      "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/policy-understanding-cedar.html",
+      "kind": "official",
+      "usage": "Deterministic principal, action, resource, and context authorization semantics."
+    },
+    {
+      "id": "agentcore-policy-patterns",
+      "title": "Common AgentCore Policy patterns",
+      "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/policy-common-patterns.html",
+      "kind": "official",
+      "usage": "Role-based, tool-disable, emergency-shutdown, and data-operation policy patterns."
+    },
+    {
+      "id": "agentcore-observability",
+      "title": "Add observability to Amazon Bedrock AgentCore resources",
+      "url": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-configure.html",
+      "kind": "official",
+      "usage": "Runtime, session, trace, span, tool, latency, and error telemetry."
+    }
+  ]
+}

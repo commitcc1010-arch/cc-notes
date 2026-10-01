@@ -1,0 +1,3602 @@
+{
+  "part": 6,
+  "author_agent": "P06-A",
+  "chapters": [
+    {
+      "chapter": 61,
+      "questions": [
+        {
+          "id": "ch061-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "依故障範圍選擇 Multi-AZ 或 Multi-Region",
+          "prompt": "某公司的訂單 API 目前把三台 EC2 都放在 us-east-1a。業務要求單一 Availability Zone 故障時仍可下單，但未要求整個 Region 中斷時繼續服務，也希望先控制成本與操作複雜度。哪個改造最符合需求？",
+          "choices": [
+            "將負載平衡器與 Auto Scaling group 分布到至少兩個 AZ，並確認資料層與必要依賴也具有跨 AZ 的復原能力",
+            "在同一個 AZ 再增加三台 EC2，因為六台執行個體代表六個故障網域",
+            "在 us-east-1a 建立兩個 subnet，讓每組 EC2 使用不同 subnet",
+            "直接建立第二個 Region 的完整 active-active 系統，因為所有 production workload 都必須 Multi-Region"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。需求的故障範圍是單一 AZ，計算、入口與狀態依賴都跨 AZ 才能真正抵抗該故障；一個 AZ 可包含一個或多個離散資料中心。",
+            "錯誤。同一 AZ 內的更多 instances 只能改善個別主機故障，無法隔離 AZ 級電力、網路或基礎設施事件。",
+            "錯誤。Subnet 本身不形成新的 AZ；兩個 subnet 若都在 us-east-1a，仍共享同一 AZ 故障邊界。",
+            "錯誤。Multi-Region 可處理 Region 級需求，但題目未要求，且會引入跨 Region 資料、部署與營運複雜度。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["gi-az", "fault-az", "aws-saa-d2"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch061-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "找出假 Multi-AZ 架構中的共享依賴",
+          "prompt": "一個 checkout 服務的 ALB 與 EC2 已分布在三個 AZ，RDS 也啟用 Multi-AZ。團隊要驗證「失去任一 AZ 仍可完成付款」。哪兩項檢查最可能揭露仍存在的單一 AZ 失敗點？（選兩項）",
+          "choices": [
+            "只確認 Auto Scaling group 的 desired capacity 大於 1",
+            "確認每個 AZ 的 private subnet 是否都把對外流量路由到同 AZ 可用的 NAT 路徑，且失去一個 AZ 後剩餘路徑有足夠容量",
+            "把所有 instance type 改成同一系列，方便統一採購",
+            "確認付款服務使用的 secret、queue、KMS 權限與第三方連線不依賴失敗 AZ 中唯一的 endpoint 或 appliance",
+            "只查看 RDS 主控台是否顯示 Multi-AZ"
+          ],
+          "answers": [1, 3],
+          "explanations": [
+            "錯誤。Instance 數量沒有說明它們分布在哪裡，也沒有涵蓋 egress、state 與安全依賴。",
+            "正確。跨 AZ compute 若共用另一 AZ 的唯一 NAT 或 inspection path，仍會在該路徑故障時一起失效，且 surviving path 也可能容量不足。",
+            "錯誤。Instance family 一致性是容量與成本議題，不能證明 end-to-end 的故障隔離。",
+            "正確。完整可用性受最大共享依賴限制；唯一 endpoint、key path、queue 或外部連線都可能推翻 Multi-AZ 宣稱。",
+            "錯誤。RDS 的 Multi-AZ 標籤只描述資料庫拓撲，不能代表整個交易路徑都跨 AZ。"
+          ],
+          "task_keys": ["SAP-1.3"],
+          "source_ids": ["fault-az", "nat-overview", "aws-sap-d1"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch061-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "區分 RDS Multi-AZ 與 read replica",
+          "prompt": "一個 RDS MySQL 資料庫需要在 AZ 故障時由 AWS 管理 failover；目前讀取量不高，但業務不能接受把非同步 replica 的舊資料當成同步 HA。應優先選擇哪個設計？",
+          "choices": [
+            "建立一個跨 Region read replica，並把它當作同步 standby",
+            "建立多個 read replicas，讓應用程式同時對所有 replicas 寫入",
+            "啟用合適的 RDS Multi-AZ deployment，並讓應用程式使用資料庫端點與重連機制",
+            "把所有讀取送到一般 Multi-AZ standby，因為每種 Multi-AZ 拓撲都提供 reader endpoint"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。一般 read replica 使用非同步複寫，主要用於讀取擴展或 DR 元件，不能直接等同同步 AZ HA。",
+            "錯誤。RDS read replica 不是多主寫入節點；一般寫入仍應送往 writer。",
+            "正確。RDS Multi-AZ 是符合題目之 managed availability/failover 需求的選項；failover 後既有連線仍需由 client 重建。",
+            "錯誤。Readable standby 與 reader endpoint 取決於特定 Multi-AZ deployment 類型，不能對所有拓撲一概而論。"
+          ],
+          "task_keys": ["SAA-2.2", "SAA-3.3"],
+          "source_ids": ["rds-multiaz", "rds-read"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch061-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "AZ evacuation 後的剩餘容量",
+          "prompt": "一個 web tier 平時在三個 AZ 各有 4 台 instances，尖峰需要至少 8 台才能符合 latency SLO。ALB 與 Auto Scaling 都已跨三個 AZ。團隊要證明失去一個 AZ 後仍可承載尖峰，最重要的下一步是什麼？",
+          "choices": [
+            "只開啟 cross-zone load balancing；只要流量能跨區，容量一定足夠",
+            "在同一 AZ 放置已停止的 standby instances，等故障時再啟動",
+            "把每台 instance 的 EBS volume 加倍，因為儲存量可取代 compute capacity",
+            "以失去一個 AZ 的條件做負載測試，驗證剩餘 8 台、Auto Scaling、下游與 quotas 都能維持 SLO"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Cross-zone 能分配流量，但不會憑空產生 targets、下游連線或 service quota headroom。",
+            "錯誤。同 AZ 的停止 instances 會和該 AZ 一起不可用，且啟動時仍可能遇到容量不足。",
+            "錯誤。EBS 容量與 web tier 的可服務運算容量是不同限制。",
+            "正確。數學上剩餘 8 台剛好等於需求，不含 headroom；必須用 evacuation load 驗證 readiness、下游容量與擴展時序。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["fault-az", "asg-target", "sq-intro"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch061-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "判斷 Multi-Region 的必要性",
+          "prompt": "某內部報表系統可接受 8 小時停機與前一晚資料，使用者都在單一國家；現有 Multi-AZ 設計已通過 AZ game day。架構委員會提議改為雙 Region active-active。哪個評估最合理？",
+          "choices": [
+            "要求先提出 Region loss、資料主權或全球 latency 的明確目標，再比較 Multi-Region 的資料一致性、部署、觀測與成本負擔",
+            "立即採用 active-active，因為任何 Multi-AZ 系統都不算 production-ready",
+            "只把每日 backup 複製到另一 Region，並宣稱應用已是 active-active",
+            "只在第二 Region 建立空 VPC；只要 VPC 存在就可達成 8 小時 RTO"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Multi-Region 應由區域失效、法規或全球服務目標驅動；低 RTO/RPO 需求未必值得承擔 active-active 的長期複雜度。",
+            "錯誤。Production 並不一律要求 Multi-Region；設計要和具體 business continuity 目標匹配。",
+            "錯誤。跨 Region backup 是 DR 資料元件，不會讓第二地區立即接收流量或擁有完整依賴。",
+            "錯誤。空 VPC 沒有 application、data、identity、capacity 與 runbook，不能證明可在 RTO 內恢復。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["wa-dr", "dr-options", "wa-rto-rpo"],
+          "inspiration_ids": ["jay-dr", "jay-mr-aa"]
+        },
+        {
+          "id": "ch061-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "雙 Region 架構的隱藏共享依賴",
+          "prompt": "一個 API 在兩個 Regions 都有 compute 與資料庫，但安全審查發現仍可能因單一 Region 故障而兩地同時無法部署或解密。哪兩項改造最直接降低這種風險？（選兩項）",
+          "choices": [
+            "把兩地的 artifact 都只保存在 primary Region 的單一 S3 bucket",
+            "讓所有 emergency operator 只能透過 primary Region 的唯一 bastion 登入",
+            "確保 recovery Region 能取得受控的 artifacts、secrets 與所需 KMS key，並測試在 primary 不可用時的部署與解密路徑",
+            "把 artifacts 複製到 recovery Region，但 secrets、KMS 解密權限與緊急身分驗證仍只依賴 primary Region",
+            "盤點 DNS、憑證、identity、quotas 與第三方依賴，為其中的單點建立獨立 recovery path"
+          ],
+          "answers": [2, 4],
+          "explanations": [
+            "錯誤。Recovery deployment 仍需跨回失敗 Region 讀 artifact，會製造共享單點。",
+            "錯誤。唯一 bastion 讓 operator access 本身成為 primary Region 依賴。",
+            "正確。資料平面之外，artifact、secret 與 key 的可用性會直接決定第二 Region 是否真的能啟動。",
+            "錯誤。複製 artifact 只消除一段依賴；若 secrets、KMS 或 emergency identity 仍錨定 primary，recovery stack 依舊無法完成部署與解密。",
+            "正確。雙 Region 聲明必須包含完整 dependency graph；global 名稱也不能取代故障模式分析與實測。"
+          ],
+          "task_keys": ["SAP-1.3", "SAP-2.2"],
+          "source_ids": ["dr-options", "wa-dr", "aws-sap-d1"],
+          "inspiration_ids": ["jay-mr-aa"]
+        },
+        {
+          "id": "ch061-q07",
+          "intent": 7,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "DNS failover 的 TTL、健康與資料限制",
+          "prompt": "團隊為 primary 與 secondary Region 建立 Route 53 failover records，TTL 為 60 秒。有人保證 primary health check 失敗後，所有使用者會在 60 秒內無縫切換且資料一定正確。哪個說法最準確？",
+          "choices": [
+            "正確，Route 53 會代理每條既有 TCP 連線並同步兩地資料庫",
+            "不正確；health check 影響後續 DNS 答覆，實際切換仍受 resolver/client cache、既有連線、secondary capacity 與資料 promotion/一致性影響",
+            "不正確，但唯一原因是 Route 53 health check 最短只能每 24 小時執行一次",
+            "正確，只要 TTL 低於 300 秒，任何 recursive resolver 都必須立即丟棄 cache"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Route 53 回答 DNS 查詢，不是連線代理，也不負責資料複寫或資料庫 promotion。",
+            "正確。TTL 是 DNS cache 行為的一部分，不是全體 client 的切換 SLA；完整 failover 還需要健康判定、容量與一致資料。",
+            "錯誤。Route 53 health checks 能以秒級頻率執行；問題不在每日一次。",
+            "錯誤。Resolver 與應用程式可能有額外 cache 或長連線，不能承諾所有 clients 按 TTL 精準切換。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-2.4"],
+          "source_ids": ["r53-failover", "wa-dr"],
+          "inspiration_ids": ["jay-mr-aa"]
+        },
+        {
+          "id": "ch061-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "使用 ARC routing control 執行受控 Region evacuation",
+          "prompt": "金融服務要求 Region evacuation 必須由兩位值班人員核准，且 incident 期間不能依賴建立新的 DNS/control-plane 資源。哪個方案最符合這個操作要求？",
+          "choices": [
+            "事故發生後才手動建立 secondary stack 與新的 Route 53 records",
+            "讓單一應用 health endpoint 自動同時 promotion 資料庫並切換全球流量",
+            "每次事故臨時修改 DNS weight，且不保留審核或 safety rule",
+            "預先建立 Amazon Application Recovery Controller routing controls，設定 safety rules，並由核准流程呼叫高可用 data-plane API 切換"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Incident 中建立資源會把 RTO 暴露於 control-plane、quota、template 與人工作業延遲。",
+            "錯誤。單一 health signal 可能誤判，也不能取代資料 promotion 次序與人為授權。",
+            "錯誤。臨時 DNS 編輯缺乏預先驗證、guardrail 與可重複的 recovery data path。",
+            "正確。ARC routing controls 可預先配置，safety rules 可限制不安全狀態，並以 data-plane endpoint 執行受控切換。"
+          ],
+          "task_keys": ["SAP-2.4"],
+          "source_ids": ["arc-rc", "arc-dataplane"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch061-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Failover 前驗證 surviving capacity 與 quotas",
+          "prompt": "一個三 AZ 服務平時每 AZ 使用 35% 容量。團隊認為失去一個 AZ 後其餘兩區會自動 scale out，因此不用預先檢查 quotas。哪個修正最重要？",
+          "choices": [
+            "把平均 CPU alarm 門檻提高，避免 failover 時告警",
+            "只確認 Auto Scaling policy 存在，因為 AWS 一定提供所需 instance capacity",
+            "以 N-1 負載計算並測試剩餘容量，預查 instance、IP、ENI、連線與下游 service quotas，保留啟動與 warmup headroom",
+            "等第一次 AZ 事故後再提交 quota increase，以便使用真實數字"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。降低告警敏感度不會增加 capacity，反而可能隱藏 evacuation 的使用者影響。",
+            "錯誤。Auto Scaling 是請求與控制機制，不保證所需 type、IP 或下游 quota 在事故時必然可得。",
+            "正確。Fault tolerance 需要可承載 N-1 流量的完整路徑；quota、IP、連線與 warmup 都應在事故前驗證。",
+            "錯誤。Quota increase 可能需處理時間，不能放在已開始計時的 recovery critical path。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["wa-dr", "sq-intro", "asg-warmup"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch061-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "AZ／Region game day 的有效證據",
+          "prompt": "團隊要執行一次 AZ evacuation game day，目標是證明 checkout 在一區失效時仍符合 SLO，並能安全恢復。哪兩項屬於必要做法？（選兩項）",
+          "choices": [
+            "事前定義 hypothesis、stop conditions、允許的 error budget 與安全範圍",
+            "只終止一台沒有流量的 instance，看到 Auto Scaling 補回就結束",
+            "只保存 CloudFormation deployment success 當作可用性證據",
+            "為避免結果難看，測試期間暫停所有 business outcome alarms",
+            "量測偵測、流量撤離、交易正確性、RTO、剩餘容量與 failback，保留時間線及後續修正"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。Fault injection 必須有清楚假設、範圍與 stop condition，才能避免測試本身造成不可控傷害。",
+            "錯誤。單機 replacement 不能代表整個 AZ 的 network、egress、state 與容量故障。",
+            "錯誤。資源建立成功是 control-plane 訊號，不證明使用者交易或資料在故障中正確。",
+            "錯誤。Business alarms 是測試判定的重要證據；應控制通知流程而不是隱藏影響。",
+            "正確。有效 game day 要測完整生命週期，包括 failback 與資料驗證，並把結果轉成可追蹤改善。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["fis-intro", "wa-dr", "cw-slo"],
+          "inspiration_ids": ["jay-ha"]
+        }
+      ]
+    },
+    {
+      "chapter": 62,
+      "questions": [
+        {
+          "id": "ch062-q01",
+          "intent": 1,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "由 RTO、RPO、成本與操作能力選 DR strategy",
+          "prompt": "一個員工入口網站的 RTO 是 4 小時、RPO 是 30 分鐘。團隊可在 recovery Region 事先保留資料庫與核心網路，但不願全年支付完整 production compute，也能以 IaC 在 90 分鐘內啟動其餘 tiers。哪個 DR strategy 最貼近限制？",
+          "choices": [
+            "Multi-site active-active，因為它永遠是最低成本方案",
+            "Pilot light：持續維護資料與核心元件，災難時部署或啟動其餘 capacity",
+            "只保留本機磁碟 snapshot，災難後再設計 recovery architecture",
+            "Warm standby，且要求縮小版系統在災難前完全沒有任何 compute"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Active-active 常駐多地完整能力，成本與資料操作複雜度最高，題目沒有近零 RTO 要求。",
+            "正確。Pilot light 保留 critical core 與資料複寫，其他層可在事故時啟動，符合 4 小時 RTO 與成本限制。",
+            "錯誤。單一 snapshot 既未說明跨 Region，也缺少 identity、network、code 與恢復次序。",
+            "錯誤。Warm standby 的定義是縮小但可運作的完整 stack；完全沒有 compute 更接近 pilot light。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-2.2"],
+          "source_ids": ["wa-dr", "dr-options", "wa-rto-rpo"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "完整的 backup-and-restore recovery path",
+          "prompt": "一個低優先級應用選擇 backup-and-restore，RTO 為 12 小時。哪兩項工作最能把「有 backup」變成可執行的整體復原？（選兩項）",
+          "choices": [
+            "只保護 RDS；application binaries、IaC、secrets 與 DNS 可在事故後重新猜測",
+            "將可用的 recovery points 複製到所需 account/Region 邊界，並驗證可由 recovery authority 解密",
+            "假設 AWS Backup 會自動還原所有非受支援的 SaaS 與 application workflow",
+            "保留版本化 IaC、artifacts 與 dependency-order runbook，定期從空環境執行 restore 和 business validation",
+            "把所有 restore steps 留在單一工程師的個人筆記中"
+          ],
+          "answers": [1, 3],
+          "explanations": [
+            "錯誤。資料庫只是 dependency graph 的一部分；缺 code、configuration、identity 與 ingress 仍無法服務。",
+            "正確。Recovery point 若位於同一失敗或受攻擊邊界，或 recovery 人員無法解密，就不是可用的復原材料。",
+            "錯誤。AWS Backup 支援特定資源；應用程式與外部依賴仍需架構和 runbook。",
+            "正確。IaC 與 dependency-order 執行可重建環境；實際 restore 與交易驗證才能量出 RTO。",
+            "錯誤。個人筆記沒有版本、審查、交接與演練證據；只有在它被轉成團隊擁有、可執行且定期驗證的 runbook 後，才可成為復原材料。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["dr-options", "backup-restore", "wa-dr"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "辨識真正的 pilot light",
+          "prompt": "下列哪個架構最符合 pilot light，而不是 backup/restore 或 warm standby？",
+          "choices": [
+            "第二 Region 只有離線 backups，災難後才建立 network、database 與 compute",
+            "第二 Region 有縮小但正在處理真實流量的完整 application stack",
+            "第二 Region 持續接收資料複寫並保留必要 network/identity core，但 web 與 worker capacity 必須在 failover 前啟動或部署",
+            "兩個 Regions 都以 production capacity 同時接收寫入"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。幾乎所有 runtime 都需災後建立，屬於 backup-and-restore。",
+            "錯誤。縮小但完整且持續運作的 stack 是 warm standby；若只保留核心資料與基礎、故障時才啟動其餘 compute，才是 pilot light。",
+            "正確。Pilot light 的核心資料與基礎持續存在，但非核心 compute 仍需在 recovery 時啟動。",
+            "錯誤。兩地同時服務是 active-active，需處理多地寫入與衝突語意。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["dr-options", "wa-dr"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "辨識 warm standby 與 scaling requirement",
+          "prompt": "一個 SaaS 在 recovery Region 長期運行一套縮小的 ALB、application fleet 與 database replica；它每分鐘接受 synthetic transaction，發生災難時需 promotion 並把 fleet 從 20% 擴到 100%。這是哪種策略？",
+          "choices": [
+            "Warm standby，因為完整但縮小的系統已可運作，failover 後仍需擴容",
+            "Pilot light，因為任何需要擴容的系統都叫 pilot light",
+            "Backup-and-restore，因為 primary Region 仍然存在 backups",
+            "Active-active，因為 synthetic transaction 等同 production traffic"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Warm standby 保留功能完整的縮小環境，可較快接手但仍須驗證 scale-up 與 surviving capacity。",
+            "錯誤。Pilot light 通常缺少部分 serving compute；題目中的完整 stack 已經運行。",
+            "錯誤。存在 backup 不會改變 runtime recovery strategy 的分類。",
+            "錯誤。Synthetic probes 用於驗證，不表示兩地同時承接真實 production workload。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["dr-options", "wa-dr"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Active-active 的寫入語意與 corruption recovery",
+          "prompt": "全球購物車服務計畫在兩個 Regions active-active，兩地都可接受更新。哪兩項設計決策不可省略？（選兩項）",
+          "choices": [
+            "定義 write ownership、衝突解決或 business invariant，並驗證同一購物車在並行更新時的結果",
+            "假設非同步複寫等同單一全球 serializable transaction，不需要應用層決策",
+            "移除 point-in-time backups，因為兩地 replicas 足以處理邏輯刪除與惡意修改",
+            "只用低 DNS TTL，就能保證所有寫入順序一致",
+            "保留獨立版本或 point-in-time recovery，因為 corruption 可能被複寫到所有 active sites"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。Active-active 最大難點是多地寫入語意；必須明確決定衝突、所有權與不可破壞的業務規則。",
+            "錯誤。非同步 replication 不會自動提供跨 Region 單一交易序列。",
+            "錯誤。Replication 能複製好資料，也會複製壞資料；仍需獨立 recovery point。",
+            "錯誤。DNS 決定 endpoint 選擇，不定義 database consistency 或 global write ordering。",
+            "正確。Backup/PITR 處理的是邏輯 corruption、刪除與勒索情境，和 infrastructure availability 互補。"
+          ],
+          "task_keys": ["SAP-2.4"],
+          "source_ids": ["dr-options", "backup-airgap", "wa-dr"],
+          "inspiration_ids": ["jay-mr-aa"]
+        },
+        {
+          "id": "ch062-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "AWS Elastic Disaster Recovery 的適用邊界",
+          "prompt": "企業要把 300 台 VMware 上的 legacy servers 以持續 block-level replication 保護到 AWS，災難時啟動 recovery EC2，之後還要支援 failback。哪個方案最合適？",
+          "choices": [
+            "在每個 Amazon RDS instance 內安裝 AWS DRS agent",
+            "用 Route 53 health check 複寫 server blocks",
+            "使用 AWS DRS 保護 server-hosted workloads，並為 RDS、DynamoDB、S3 等 managed state 另採其原生 recovery 機制",
+            "用 AWS Backup 取代所有 application dependency、DNS 與 failback 設計"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。客戶不能登入 managed RDS host 安裝 server replication agent。",
+            "錯誤。Route 53 管理 DNS 答覆與 health routing，不複寫磁碟 block。",
+            "正確。DRS 適合 server-hosted application 的持續 block replication 與 recovery launch；managed services 仍須使用各自能力。",
+            "錯誤。Backup 是 recovery data/control 元件，不會自動完成全部依賴、流量與 failback lifecycle。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["drs-concepts", "drs-failback", "dr-options"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q07",
+          "intent": 7,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "Replication 與 point-in-time recovery 的互補",
+          "prompt": "資料庫已跨 Region 非同步複寫。某次錯誤 migration 在 primary 刪除資料，幾秒後 deletion 也出現在 replica。哪個改善最能處理此類風險？",
+          "choices": [
+            "保留獨立、可還原的 point-in-time recovery 或版本化 backup，並定期測試 recovery",
+            "再新增一個同步 read replica，但允許相同 migration 自動執行",
+            "把 replication lag alarm 關閉，避免誤報",
+            "只把 DNS TTL 降低，讓 deletion 不會傳播"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Replication 主要改善基礎設施故障下的 RPO/availability；獨立 recovery points 才能回到 corruption 前狀態。",
+            "錯誤。若相同錯誤變更仍會傳播，更多 replicas 只會增加受影響副本。",
+            "錯誤。關閉 lag 可視性既不能恢復資料，也會削弱 recovery readiness。",
+            "錯誤。DNS 不控制 data replication 或 database transaction。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-2.2"],
+          "source_ids": ["wa-dr", "backup-airgap", "backup-restore"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "降低 workload compromise 對 backup 的影響",
+          "prompt": "安全團隊擔心 production administrator 憑證遭竊後，攻擊者會刪除 workloads 與所有 backups。哪兩項控制最能縮小這個 blast radius？（選兩項）",
+          "choices": [
+            "讓 production role 永久擁有所有 backup vault 與 KMS key 的刪除權限",
+            "在支援的資源上使用跨帳號 recovery copy 或 logically air-gapped vault，並由獨立 recovery authority 管理",
+            "取消 backup encryption，避免 KMS key 不可用",
+            "使用 Vault Lock／vault access policy 與 least privilege 限制刪除和修改，並測試 recovery role 可實際還原",
+            "只增加 database replicas，因為 replica 永遠不會收到惡意刪除"
+          ],
+          "answers": [1, 3],
+          "explanations": [
+            "錯誤。把 workload administration 與 recovery deletion 放在同一權限邊界，正是題目要避免的風險。",
+            "正確。獨立帳號或邏輯隔離 vault 可減少 production compromise 同時控制 recovery copies 的機會。",
+            "錯誤。取消 encryption 會削弱機密性；正確作法是設計獨立且可用的 key/recovery authority。",
+            "正確。不可變或受限 vault 控制必須和 least privilege、實際 restore 測試一起使用。",
+            "錯誤。Replicas 通常會複寫合法 API 發出的 delete/corruption，不能取代 protected backup。"
+          ],
+          "task_keys": ["SAP-2.3"],
+          "source_ids": ["backup-airgap", "backup-vault-lock", "backup-restore"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "把 failover 與 failback 設計成同一 lifecycle",
+          "prompt": "Primary Region 故障後，recovery Region 已接受新訂單 12 小時。Primary 修復時，團隊打算直接把 DNS 切回並用舊 primary 資料覆寫 recovery database。最重要的修正是什麼？",
+          "choices": [
+            "先把 TTL 設成零，因為零 TTL 會自動合併兩地資料",
+            "直接切回；primary 是原本主站，所以一定擁有最新資料",
+            "停止記錄 recovery Region 的新寫入，簡化操作",
+            "依 runbook 重新同步或 reconcile recovery 期間的 writes，驗證一致性與容量，再以受控方式切回並監控"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。DNS TTL 不具資料合併語意，且 client/resolver cache 也不能保證零延遲。",
+            "錯誤。Primary 在故障後已落後 12 小時，盲目切回會造成資料遺失或 split-brain。",
+            "錯誤。刪除 recovery 期間的業務寫入不是可接受的 failback 策略。",
+            "正確。Failback 必須把 recovery site 產生的新 authoritative state 安全帶回，並包含 validation 與 traffic control。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["wa-dr", "arc-rc"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch062-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "用 recurring restore test 證明 DR readiness",
+          "prompt": "AWS Backup console 顯示最近 30 天所有 jobs 都是 COMPLETED。稽核人員問：是否已證明 2 小時 RTO 與 15 分鐘 RPO？哪個回答最準確？",
+          "choices": [
+            "是；backup job completed 等同完整 application 在 RTO 內可服務",
+            "是；只要 recovery point 已加密，便不需要 restore test",
+            "否；需定期執行 restore/failover，驗證 data、dependencies、business transactions、capacity 與實際 RTO/RPO 並保留證據",
+            "否；唯一有效測試是永久關閉 primary Region"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Completed 只證明特定 backup 工作完成，不代表解密、還原、啟動與業務驗證都能在時限內完成。",
+            "錯誤。Encryption 是必要控制之一，不能替代 recovery execution。",
+            "正確。DR readiness 是可執行能力；restore testing、business validation 與 measured timing 才能證明目標。",
+            "錯誤。可以用隔離 recovery environment、FIS 與受控演練取得證據，不必製造不可逆 production 災難。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["backup-restore", "res-hub-policy", "fis-intro"],
+          "inspiration_ids": ["jay-dr"]
+        }
+      ]
+    },
+    {
+      "chapter": 63,
+      "questions": [
+        {
+          "id": "ch063-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "正確定義 RTO 與 RPO",
+          "prompt": "風險委員會說：「付款服務中斷後最多 60 分鐘要恢復，而且最多只能回到中斷前 5 分鐘內的資料。」這兩個要求分別代表什麼？",
+          "choices": [
+            "RPO 60 分鐘，RTO 5 分鐘",
+            "Availability 60%，MTTR 5 分鐘",
+            "RTO 60 分鐘，RPO 5 分鐘",
+            "RTO 與 RPO 都是全年平均值，因此單次事故可以無限延長"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。RPO 描述可接受的資料年齡／遺失量，而非恢復服務所需時間。",
+            "錯誤。Availability 與 MTTR 是不同指標，不能取代對單次 recovery 的 downtime/data-loss 目標。",
+            "正確。60 分鐘是 service restoration deadline（RTO）；5 分鐘是可接受 recovery point 的最大資料落後（RPO）。",
+            "錯誤。RTO/RPO 是 workload 的 business recovery targets，不是允許任一事故超標的平均值。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["wa-rto-rpo", "aws-saa-d2"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "由 business impact 建立分級 recovery objectives",
+          "prompt": "公司有即時付款、每日推薦模型與法規文件庫三套 workload。有人建議全部設定 zero RTO/zero RPO，因為這最安全。架構師應如何回應？",
+          "choices": [
+            "接受，因為任何 managed service 都自動提供 zero RTO/zero RPO",
+            "依每個 workflow 的 downtime/data-loss impact、法規、依賴與成本分級，設定可量測且可測試的目標",
+            "只複製目前 backup schedule 當作 RPO，不需要詢問業務",
+            "使用資料庫 SLA 當作三套 application 的完整 recovery objective"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Managed service 的 availability、failover 與 data semantics 不等於應用程式的零目標。",
+            "正確。Recovery objectives 源自業務影響與約束；不同 workflow 應有不同投資與可接受風險。",
+            "錯誤。現有設定是 implementation，不是 business requirement，且 backup schedule 不一定等於 achieved RPO。",
+            "錯誤。Application 還包含 identity、network、queues、objects 與 client path，不能只用 database SLA 代表。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["wa-rto-rpo", "aws-sap-d2"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "計算 end-to-end RTO critical path",
+          "prompt": "團隊量到 database restore 需 35 分鐘，便宣稱可符合 45 分鐘 RTO。哪兩項還必須納入 end-to-end critical path 才能判定？（選兩項）",
+          "choices": [
+            "事故偵測、宣告、授權與自動化啟動所需時間",
+            "把所有可平行步驟無條件相加，而不建立依賴圖或辨識真正 critical path",
+            "只從資料庫恢復完成開始計時，排除事故偵測、宣告與授權時間",
+            "dependency 啟動、traffic convergence、client reconnection 與 business transaction validation",
+            "只量到 ALB health check 轉綠便停止計時，不等待 DNS convergence、client reconnect 與成功交易"
+          ],
+          "answers": [0, 3],
+          "explanations": [
+            "正確。RTO 從中斷開始計時，偵測、決策與授權延遲都會消耗 recovery budget。",
+            "錯誤。真正 critical path 應辨識依賴與可安全平行的步驟；盲目相加會扭曲結果。",
+            "錯誤。RTO 從業務中斷開始計時；排除偵測、宣告與授權會系統性低估真實恢復時間。",
+            "正確。資料還原後仍需讓 application、ingress 與 clients 正常運作，並證明業務結果正確。",
+            "錯誤。Infrastructure health 不是 business readiness；DNS、既有連線、client retry 與交易驗證仍可能位於 critical path。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["wa-dr", "wa-rto-rpo", "dr-options"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "建立 transaction-level RPO data graph",
+          "prompt": "訂單交易同時寫入 RDS、把收據放到 S3，並送出 SQS message 觸發出貨。團隊只用 RDS 的 PITR 時間宣稱整個交易 RPO 為 5 分鐘。哪兩項修正最重要？（選兩項）",
+          "choices": [
+            "把 S3 object/version、queue/workflow state 與必要 configuration 納入 recovery point 分析",
+            "假設所有 AWS services 的 recovery points 天然具有同一 atomic timestamp",
+            "為跨資料來源建立 reconciliation 與 idempotent replay 規則，處理恢復點不一致",
+            "刪除 SQS，因為任何 queue 都無法參與 DR",
+            "只把 RDS backup 頻率提高，其他 state 就會自動同步"
+          ],
+          "answers": [0, 2],
+          "explanations": [
+            "正確。完整訂單的 authoritative/derived state 分布在多個 stores，RPO 必須涵蓋全部必要資料。",
+            "錯誤。獨立服務的 backup、replication 與 retention 並不形成自動跨服務交易快照。",
+            "正確。若資料來源回到不同時間點，reconciliation 與安全 replay 才能恢復 business invariant。",
+            "錯誤。Queue 可被納入 recovery 設計；問題是要定義 retention、replay 與 side-effect 語意。",
+            "錯誤。RDS 設定不會改變 S3、SQS 或 application configuration 的 recovery point。"
+          ],
+          "task_keys": ["SAP-2.4"],
+          "source_ids": ["wa-rto-rpo", "dr-options", "backup-restore"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q05",
+          "intent": 5,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "由 backup policy 推導 achieved RPO",
+          "prompt": "Backup plan 每小時啟動一次，但 start window 可延後 2 小時，某些 jobs 需 50 分鐘，跨帳號 copy 又可能落後 30 分鐘。可以直接宣稱 recovery account 的 RPO 是 1 小時嗎？",
+          "choices": [
+            "可以；只要 schedule 寫 hourly，其他時間都不影響 RPO",
+            "不可以；要依最後一個已完成、已複製、可解密且通過 restore 驗證的 recovery point 計算",
+            "可以；backup job 進入 RUNNING 就等同可還原",
+            "不可以；任何 backup-based DR 都沒有 RPO"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Schedule 是觸發意圖；window、執行時間、copy lag 與失敗會改變實際 recovery point。",
+            "正確。Achieved RPO 由最後可用且可還原的 recovery point 決定，而不是規則名稱。",
+            "錯誤。尚未完成的 job 不一定有一致、可用的 recovery artifact。",
+            "錯誤。Backup-based DR 可以有可量測 RPO，只是通常大於即時 replication，且需以執行證據確認。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-3.4"],
+          "source_ids": ["backup-plan-schedule", "backup-cross-account", "backup-restore", "wa-rto-rpo"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q06",
+          "intent": 6,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "把 replication lag 當作訊號而非保證",
+          "prompt": "RDS MySQL 跨 Region read replica 的 `ReplicaLag` 平時低於 2 秒。產品經理因此要求文件寫成「任何災難都保證 zero RPO」。架構師應採取哪個立場？",
+          "choices": [
+            "同意；只要目前 lag 很低，就等於未來每次 failover 都零資料遺失",
+            "同意；read replica promotion 會自動等待所有未傳輸 transactions",
+            "拒絕；lag 是當下觀測訊號，應告警 stalled replication、測試 promotion/consistency，並保留 PITR 以處理 corruption",
+            "拒絕；read replica 永遠不能用於任何 DR"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。非同步複寫在故障瞬間可能有 lag 或未傳輸資料，歷史低值不是 zero-RPO contract。",
+            "錯誤。Promotion 行為與最後已複寫狀態依服務而定，不能保證取得失敗 primary 上尚未傳出的寫入。",
+            "正確。Lag 應用於 readiness 與風險監控；promotion、資料驗證和獨立 recovery points 仍不可省略。",
+            "錯誤。Read replica 可作為讀取擴展與 DR 元件，只是不能被誤寫成同步零風險保證。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-3.4"],
+          "source_ids": ["rds-read", "wa-dr", "backup-restore"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "依 dependency sequence 恢復 workload",
+          "prompt": "Recovery runbook 第一個步驟是切換 public DNS，之後才建立 KMS permissions、database、queue 與 application。演練時使用者先看到大量 5xx。哪個修正最合理？",
+          "choices": [
+            "先依 dependency graph 恢復 identity/network/keys、authoritative data、messaging 與 compute，通過 readiness 和交易驗證後再切流量",
+            "保留順序但把 DNS TTL 設成 1 秒",
+            "先讓 ALB health check 只檢查 web process 是否存活，database、queue 與 KMS 尚未就緒也回 healthy",
+            "把所有步驟改成人工序列，避免 IaC 平行化"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Ingress 應在可服務依賴就緒後才開放；可平行化獨立工作，但不能破壞真實 dependency order。",
+            "錯誤。更短 TTL 只可能加快部分 resolver/client 取得新答案，不能建立缺失的 dependencies；若 recovery stack 已通過 readiness，低 TTL 才可能縮短 DNS convergence。",
+            "錯誤。只做 shallow liveness 會讓尚不能完成交易的 targets 提前接流量；只有把 readiness 與必要依賴分開建模並在切流量前驗證，才不會重演 5xx。",
+            "錯誤。自動化與安全平行化可縮短 RTO；問題是 dependency modeling，不是自動化本身。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["wa-dr", "dr-options"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "正確解讀 AWS Resilience Hub assessment",
+          "prompt": "Resilience Hub assessment 顯示某 workload 的 estimated RTO/RPO 符合 policy。團隊是否可直接把它當成 audit proof，聲稱已完成 recovery test？",
+          "choices": [
+            "可以；assessment 會自動執行所有 business transactions 與 failback",
+            "可以；只要 policy 數字填得夠低，workload 就會自動符合",
+            "不可以；Resilience Hub 只能顯示成本，與 resiliency 無關",
+            "不可以；assessment 是 configuration posture 與估計，仍需執行 restore/failover、資料驗證與實測 RTO/RPO"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Assessment 不等於完整 production failover 與 application-level validation。",
+            "錯誤。Policy 定義目標，不會因輸入零而自動改造 resources 或 data paths。",
+            "錯誤。Resilience Hub 的核心就是 resiliency policy、assessment 與 recommendations，不是單純成本服務。",
+            "正確。Assessment 可找出缺口，但真正 compliance 仍要靠可重複 recovery execution 與 evidence。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["res-hub-policy", "wa-dr"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "驗證 restored workload 而非只有 resources",
+          "prompt": "Restore automation 已把 RDS、EC2 與 ALB 建立完成。哪兩項證據最能證明 workload 而非單純 resources 已恢復？（選兩項）",
+          "choices": [
+            "執行代表性 login、下單、付款與查詢，確認結果及 side effects 正確",
+            "只保存 EC2 instance state 為 running 的截圖",
+            "核對資料完整性、reconciliation、security controls、telemetry 與 achieved RTO/RPO，並由 owner sign-off",
+            "只確認 CloudFormation stack status 是 CREATE_COMPLETE",
+            "刪除 restore job IDs 與時間線，避免產生稽核資料"
+          ],
+          "answers": [0, 2],
+          "explanations": [
+            "正確。Business transactions 驗證完整 request/data path 與使用者可見結果。",
+            "錯誤。Running 只代表 VM state，不代表 application、data 或 external dependencies 正常。",
+            "正確。資料、控制與營運可觀測性都要驗證，時間線才可用來證明目標與找出瓶頸。",
+            "錯誤。Stack 建立成功是 control-plane completion，不是 business readiness。",
+            "錯誤。保留 job IDs、timestamps 與 outputs 才能提供 audit 與改善依據。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["backup-restore", "wa-rto-rpo", "cw-slo"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch063-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "以明確 clock 與 acceptance criteria 執行 DR game day",
+          "prompt": "DR 演練中，團隊在遇到錯誤後暫停 RTO 計時 40 分鐘進行人工除錯，最後宣稱 50 分鐘內達成 1 小時 RTO。哪個結論正確？",
+          "choices": [
+            "宣稱有效，因為人工除錯時間不屬於 recovery",
+            "宣稱無效；RTO 從 interruption 到恢復 business service，除錯、授權與等待時間都在 clock 內，且還要驗證 RPO 與 failback",
+            "只要 infrastructure 最終建立，任何時間都可算符合",
+            "把下一次 RTO 改成平均值即可保留此次結果"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。使用者在人工除錯期間仍無法完成業務，因此時間必須計入 RTO；只有事前明確定義且不影響服務可用性的觀察階段，才可能位於停止計時之後。",
+            "正確。演練要事前定義 clock start/stop、acceptance threshold、資料點與安全條件，不能事後排除不方便的時間。",
+            "錯誤。RTO 是 business service restoration 目標，並非 resource creation completion。",
+            "錯誤。不能用平均值掩蓋單次 recovery objective breach；應據此改善 runbook 或 architecture。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["fis-intro", "wa-rto-rpo", "wa-dr"],
+          "inspiration_ids": ["jay-dr"]
+        }
+      ]
+    },
+    {
+      "chapter": 64,
+      "questions": [
+        {
+          "id": "ch064-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "依真正瓶頸選 cache、replica、queue 或 horizontal scaling",
+          "prompt": "商品 API 的 profiling 顯示 80% request time 花在重複查詢同一批幾乎不變的商品分類資料；database CPU 已高，寫入很少，使用者可接受 5 分鐘內的資料。第一個最精準的改善是什麼？",
+          "choices": [
+            "在同步 read path 前加 SQS，讓使用者等待 consumer 回傳查詢",
+            "採 cache-aside，把分類查詢結果放入 ElastiCache，設定符合 5 分鐘 freshness 的 TTL 並量測 hit rate",
+            "只增加 application instances，因為更多 callers 會降低 database CPU",
+            "新增 write replicas 並把相同資料同時寫入每個 replica"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Queue 適合可延後工作；把互動式查詢排隊會改變契約，且不直接消除重複 database reads。",
+            "正確。高重複、低變動且允許短暫 stale 的讀取適合 caching；TTL 與 hit rate 讓正確性和效益可量測。",
+            "錯誤。增加 callers 可能讓已受限的 database 更忙；應先優化受限 stage。",
+            "錯誤。一般 RDS read replicas 不是 multi-writer，且題目的瓶頸是重複讀取而非寫入。"
+          ],
+          "task_keys": ["SAA-3.3"],
+          "source_ids": ["cache-strategies", "aws-saa-d3"],
+          "inspiration_ids": ["jay-cache"]
+        },
+        {
+          "id": "ch064-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Cache-aside 的 miss、TTL 與 invalidation",
+          "prompt": "團隊要對可修改的商品價格使用 cache-aside。哪個 implementation 最能避免把 cache 誤當成 authoritative store？",
+          "choices": [
+            "所有讀取只查 cache；miss 時直接回傳「商品不存在」，永遠不讀 database",
+            "把所有價格設為無限 TTL，因為 ElastiCache 會自動偵測 RDS row 更新",
+            "先更新 cache 再略過 database write，讓 cache 成為唯一資料來源",
+            "Cache miss 時讀 authoritative database 並填 cache；寫入成功後 invalidation 或更新版本，另定義 TTL、staleness 與 stampede protection"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Cache miss 不代表 authoritative data 不存在；cache 可以 eviction 或尚未 warm。",
+            "錯誤。ElastiCache 不會自動理解任意 RDS row 的 business invalidation；無限 TTL 會造成永久 stale。",
+            "錯誤。若 cache 不是以 durability 為主要責任，跳過 database 會在 eviction/failure 時遺失價格。",
+            "正確。Cache-aside 的 application 明確管理 miss、populate 與 invalidation，並把資料庫保留為 authoritative source。"
+          ],
+          "task_keys": ["SAA-3.3"],
+          "source_ids": ["cache-strategies"],
+          "inspiration_ids": ["jay-cache"]
+        },
+        {
+          "id": "ch064-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Cache 故障與 cold-cache surge",
+          "prompt": "大型 Redis/Valkey cache cluster failover 後，大量 keys 被 eviction，所有 application instances 同時回源，RDS 連線飽和。哪兩項改造最能降低下一次 cold-cache impact？（選兩項）",
+          "choices": [
+            "讓 application 能把 cache miss 視為正常路徑，並以 request coalescing、抖動 TTL 或受控 warmup 限制同一 key 的同時回源",
+            "Cache unavailable 時讓所有 requests 無限 retry，直到 RDS 恢復",
+            "依 engine 與 workload 選擇合理 memory、eviction、replication/failover 設定，並對回源 database 設 admission limit",
+            "假設只要有 replica 就永遠不會發生 miss 或 eviction",
+            "Failover 後一次把所有 keys 以最大並行度重建"
+          ],
+          "answers": [0, 2],
+          "explanations": [
+            "正確。Coalescing 與 jitter 可防止 hot key stampede；受控 warmup 避免 cache recovery 反而擊倒 authoritative store。",
+            "錯誤。無限 retries 會形成 retry storm，放大 connection 與 database pressure。",
+            "正確。Cache 高可用設定和 application fallback 必須一起設計，且 database 需要明確的保護邊界。",
+            "錯誤。Replica 改善特定 node failure，不會消除 TTL expiry、eviction、logic error 或全域冷啟。",
+            "錯誤。全量最大並行回填會把 read surge 集中到同一時刻。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["cache-strategies", "wa-grace"],
+          "inspiration_ids": ["jay-cache"]
+        },
+        {
+          "id": "ch064-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "安全使用 RDS read replica",
+          "prompt": "報表查詢佔 RDS PostgreSQL 讀取量的 70%，可接受數十秒舊資料；checkout 寫入與 read-after-write 查詢必須使用最新資料。哪個 routing 最合理？",
+          "choices": [
+            "把 checkout writes 送到每個 read replica，避免 writer 成為單點",
+            "把報表送到 read replica 並監控 lag；checkout writes 與需要 read-after-write 的查詢留在 writer，另處理 promotion/reconnect",
+            "把所有查詢送到任何 Multi-AZ standby，因為每種 standby 都是 read endpoint",
+            "把 writer 關閉，僅使用 replicas 以降低成本"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。一般 read replicas 是 read-only 非同步副本，不接受任意 multi-writer。",
+            "正確。將 stale-tolerant analytics 分離可擴展讀取；一致性敏感路徑仍由 writer 服務。",
+            "錯誤。Readable standby 取決於 RDS deployment 類型，不能把所有 Multi-AZ standby 當通用 reader。",
+            "錯誤。Replica 仍依賴 writer 的 replication source，且無法承接正常 writes。"
+          ],
+          "task_keys": ["SAA-3.3"],
+          "source_ids": ["rds-read", "rds-multiaz"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch064-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Queue 吸收 burst 但不隱藏 downstream overload",
+          "prompt": "影片轉碼 producer 可在 10 分鐘送入 100 萬個 jobs，consumer fleet 長期每分鐘只能完成 5,000 個；影片超過 6 小時就失去商業價值。哪兩項設計最合理？（選兩項）",
+          "choices": [
+            "只監控 ApproximateNumberOfMessagesVisible；不必監控 message age",
+            "Consumer 收到 message 後立即刪除，再開始轉碼",
+            "把 queue retention 設成最高 14 天，假設只要 backlog 尚未過期就不必增加 processing capacity",
+            "讓 consumer processing 冪等，完成 durable output 後才刪除，並從 arrival/processing rate 計算所需 capacity",
+            "監控 ApproximateAgeOfOldestMessage，對超過 useful deadline 的工作採明確丟棄／重導策略並擴展 consumers"
+          ],
+          "answers": [3, 4],
+          "explanations": [
+            "錯誤。Depth 不含 job 的等待時間與 deadline；同一深度在不同 arrival rate 下風險不同。",
+            "錯誤。先刪除會讓 worker failure 造成永久 job loss。",
+            "錯誤。SQS retention 最長可設 14 天，但 retention 只延後資料消失，不能提高每分鐘 5,000 個的完成速率，也無法挽回六小時後失去價值的工作。",
+            "正確。At-least-once processing 需要 idempotency；capacity planning 必須比較 arrival 與完成速率。",
+            "正確。Oldest age 直接反映 SLO/商業期限，超時工作不應永遠排擠仍有價值的工作。"
+          ],
+          "task_keys": ["SAA-2.1"],
+          "source_ids": ["sqs-metrics", "sqs-standard", "sqs-visibility", "aws-saa-d2"],
+          "inspiration_ids": ["jay-event-driven"]
+        },
+        {
+          "id": "ch064-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "讓 application tier 可水平擴展",
+          "prompt": "Web application 使用 Auto Scaling，但使用者在 scale-out 後常被登出，且新 instances 看不到舊 instance 上的 uploads。最根本的修正是什麼？",
+          "choices": [
+            "把 session 與 uploads 移到適合的 shared/durable stores，讓任一 healthy instance 都能服務下一個 request",
+            "永久啟用 sticky session，並把每位使用者綁在一台 instance 上",
+            "在 scale-out 時複製 process memory 到新 instance",
+            "把所有 instances 放回同一 AZ，讓 local filesystem 比較接近"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Authoritative state 外置後 instances 才能被任意替換與水平擴展，並跨 AZ 分布。",
+            "錯誤。Stickiness 可作短期相容手段，但會造成不均衡、failover session loss 與擴展限制。",
+            "錯誤。Auto Scaling 不提供 application process memory replication，也不應依賴它保存 session。",
+            "錯誤。同一 AZ 既不共享各 instance 的 filesystem，也降低 failure isolation。"
+          ],
+          "task_keys": ["SAA-2.1", "SAA-2.2"],
+          "source_ids": ["asg-target", "wa-horizontal", "fault-az"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch064-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "選擇符合 target tracking 假設的 metric",
+          "prompt": "每台 web instance 的吞吐量近似固定；當 fleet 增加時，每台分到的 ALB requests 會下降。哪個 target tracking metric 最符合比例擴展特性？",
+          "choices": [
+            "全公司每日營收總額，因為營收越高就一定需要更多 instances",
+            "Fleet 的總 CPUCreditBalance，因為更多 instances 會讓總 credit 一直增加",
+            "ALBRequestCountPerTarget 或具有同類反比例特性的自訂 per-capacity demand metric",
+            "每月一次發布的 marketing campaign 數量"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。營收和每單運算成本不一定呈固定關係，且增加 capacity 不會讓總營收 metric 下降。",
+            "錯誤。總 credit 會隨 instance 數改變基準，通常不是 demand/capacity 的因果比例訊號。",
+            "正確。Per-target request demand 隨負載增加而升、隨 capacity 增加而下降，適合 target tracking。",
+            "錯誤。低頻且非直接 demand 的 metric 無法及時驅動 elasticity。"
+          ],
+          "task_keys": ["SAA-3.2"],
+          "source_ids": ["asg-target"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch064-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Default instance warmup 與 readiness",
+          "prompt": "新 EC2 需要 8 分鐘載入模型後才能正常服務，但 scaling policy 在它啟動 1 分鐘後就把其初期低 CPU 納入平均並觸發 scale-in，造成震盪。應如何修正？",
+          "choices": [
+            "把所有 alarms 關閉，讓 fleet 自由擴縮",
+            "只把 health-check grace period 設得更長，並假設它對所有 scaling policy 都等同 instance warmup",
+            "把 application 在模型尚未載入時就回報 healthy",
+            "設定符合實際初始化時間的 default instance warmup，並讓 readiness/health check 在 dependency 就緒後才成功"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。停用 alarms 會移除容量 feedback 與異常訊號；只有在改用另一套明確的 scaling controller 與保護機制時才可能合理，不能用來修正 warmup/readiness。",
+            "錯誤。Health-check grace 與 scaling warmup 服務不同目的，不能一概互換。",
+            "錯誤。過早 healthy 會把 request 送到尚未可服務的 instance。",
+            "正確。Warmup 防止新容量尚未貢獻就影響 aggregate metrics，readiness 則保護 request routing。"
+          ],
+          "task_keys": ["SAA-3.2"],
+          "source_ids": ["asg-warmup", "asg-health", "elb-health"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch064-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "平均 CPU 正常時診斷 p99",
+          "prompt": "API 平均 CPU 35%、p50 80 ms，但 p99 偶爾 4 秒。團隊先不假設單一根因，哪兩項調查最能以多訊號找出真正的 constrained stage？（選兩項）",
+          "choices": [
+            "依 operation、版本與 AZ 切分 p99 時段，將慢窗與 downstream latency、retry、throttle、connection 與 queue 指標對齊",
+            "只看 fleet 平均 CPU；低於 50% 即可證明沒有 performance problem",
+            "立即把每台 instance 加大兩倍，不保留 baseline",
+            "只看單一分鐘的快照，未對齊 request volume、版本、AZ 或 downstream 指標",
+            "關聯 ElastiCache `CacheHits/CacheMisses`、RDS engine-appropriate replica lag 與 `DatabaseConnections`、SQS oldest-message age、服務 throttles 與 p99"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。先以同一時間軸與維度找出哪個 stage 的 saturation 與 p99 同步變化，可建立可驗證假設；個別 trace mechanics 留給後續深入定位。",
+            "錯誤。I/O wait、lock、retries 或少數慢 dependency 可讓 p99 很差而平均 CPU 仍低。",
+            "錯誤。Scale-up 可能暫時掩蓋問題，卻沒有證明 bottleneck，也難比較效果。",
+            "錯誤。孤立快照無法分辨因果或共同尖峰；只有在流量、版本與依賴皆穩定時才可能提供有限線索，不能作主要診斷。",
+            "正確。這些 AWS 指標把 cache、database connection/replication、queue 與 quota 等候選限制對齊使用者結果；若應用另有 connection-pool saturation，也應以自訂 metric 補上。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["cw-concepts", "elasticache-metrics", "rds-metrics", "sqs-metrics"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch064-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "以 SLO 與成本驗證 performance change",
+          "prompt": "團隊同時加入 cache、read replica 與更大的 instances，平均 latency 下降 10%，但 p99、errors 與成本來源不明。下一輪最好的方法是什麼？",
+          "choices": [
+            "保留所有變更，因為任何平均改善都證明三個元件都必要",
+            "使用相同代表性 traffic 與 failure conditions，逐一或以受控實驗變更主要瓶頸，比較 percentiles、errors、lag/backlog、hit rate 與每次成功交易成本",
+            "只比較兩次測試的 instance 數量，不需要 business SLO",
+            "將 p99 換成平均值，因為平均較容易達標"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。同時保留所有變更無法建立因果，也可能長期支付無效元件；只有在事故緊急緩解且後續仍安排拆分驗證時，才適合作暫時措施。",
+            "正確。Controlled comparison 能確認哪個機制解決哪個 bottleneck，並把效能、可靠性和成本放在同一決策。",
+            "錯誤。Instance 數不能代表使用者結果或 downstream constraints。",
+            "錯誤。若 SLO 關注 tail latency，平均值會掩蓋少數嚴重慢請求。"
+          ],
+          "task_keys": ["SAP-2.5"],
+          "source_ids": ["cw-slo", "cw-concepts"],
+          "inspiration_ids": ["jay-autoscaling"]
+        }
+      ]
+    },
+    {
+      "chapter": 65,
+      "questions": [
+        {
+          "id": "ch065-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "辨識 quota 的 scope、類型與 adjustability",
+          "prompt": "團隊要把服務部署到新 Region，架構師看到「Lambda concurrent executions、VPCs per Region、某 API requests per second」三種限制。第一步應怎麼做？",
+          "choices": [
+            "假設所有 limits 都是 global，primary Region 的 increase 會自動套用",
+            "把三者都當作 EC2 capacity reservation",
+            "在 Service Quotas 與服務文件中確認 quota code、account/Region scope、default/applied value、adjustability，以及它是 resource count 或 request-rate limit",
+            "等 production 出現 throttle 後再判斷是哪一種"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Quotas 有 global、Regional、account-specific 與 service-specific 差異，不能推定自動轉移。",
+            "錯誤。Resource quota、API throttle 與 EC2 capacity 是不同邊界。",
+            "正確。先分類 scope 與 limit semantics，才能決定 increase、admission、retry 或 architecture change。",
+            "錯誤。Launch/DR readiness 必須在流量前驗證，否則 recovery 或促銷時才發現會太晚。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["sq-intro", "aws-saa-d2"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch065-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Service Quotas Automatic Management 的適用邊界",
+          "prompt": "平台團隊想對所有 AWS limits 啟用 automatic management，並把 threshold 設 100%，相信之後永遠不會 throttling。哪個修正最準確？",
+          "choices": [
+            "只對支援且可監控的 quotas 啟用，設定能留下處理 lead time 的 threshold，並保留 owner、budget、downstream 與 hard-limit 控制",
+            "做法正確；Automatic Management 能讓每個不可調整 quota 無限增長",
+            "把 threshold 保持在 100%，等用量碰到 quota 才開始申請 increase",
+            "停用所有 workload alarms，因為 quota service 會取代 observability"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Automatic Management 有支援範圍與條件，只是 quota management 元件，不會創造 downstream capacity 或免除治理。",
+            "錯誤。並非所有 quotas 都 adjustable 或受此功能支援，也不存在無限 scaling 保證。",
+            "錯誤。100% 才觸發代表 workload 可能已被 throttle，且 quota increase 不保證即時核准；只有完全無流量風險的測試環境才可能容忍這種零 lead-time 設定。",
+            "錯誤。Quota usage、throttle 與 business outcome 仍需持續監控。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["sq-auto", "sq-intro"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch065-q03",
+          "intent": 3,
+          "level": "SAA → SAP",
+          "kind": "multi",
+          "tested": "建立 quota headroom 與 growth alarms",
+          "prompt": "活動流量預計四週後成長 3 倍。哪兩項做法最能在 quota exhaustion 前留出行動時間？（選兩項）",
+          "choices": [
+            "只監控 EC2 CPU，因為所有 quota 都會先反映在 CPU",
+            "使用 Service Quotas usage metric 或 service-specific usage/throttle metrics，計算 applied quota 的 utilization 與 headroom",
+            "只在出現大量 429 後才告警，避免 false positive",
+            "用 AWS Budget 當作毫秒級 concurrency limiter",
+            "把近期成長率與活動預測納入門檻，提早提交 increase 或降低 admission，並驗證 recovery Region 也有 headroom"
+          ],
+          "answers": [1, 4],
+          "explanations": [
+            "錯誤。Concurrency、API rate、IP 或 connection limits 可能先耗盡而 CPU 仍正常。",
+            "正確。Usage/quota 比率讓不同 limits 可被一致追蹤，service-specific metrics 則補充 throttle 行為。",
+            "錯誤。等使用者已收到 429 才處理通常沒有 lead time。",
+            "錯誤。Budget 是成本治理訊號，不是 request data-path 的即時 capacity control。",
+            "正確。Quota planning 要結合 growth 與 DR/launch scope，並在事故前完成 increase 或 admission strategy。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-3.4"],
+          "source_ids": ["sq-intro", "cw-alarm"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch065-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "區分 Lambda reserved 與 provisioned concurrency",
+          "prompt": "同一帳號有 checkout 與 image-resize 兩個 Lambda。Image resize burst 會耗盡 account concurrency，checkout 另有 cold-start latency 要求。哪個設計最合理？",
+          "choices": [
+            "只替 image resize 設 provisioned concurrency，這會自動保留 checkout 的 account capacity",
+            "替所有 functions 設相同最大 reserved concurrency，無視下游 database limits",
+            "只增加 function timeout，因為 timeout 等同 concurrency",
+            "用 reserved concurrency 隔離／限制 functions 並保留 checkout capacity；若要降低 checkout startup latency，再評估 provisioned concurrency"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Provisioned concurrency 預初始化 environments，並不自動替另一 function 隔離帳號 concurrency。",
+            "錯誤。Reserved concurrency 應依 priority 與 downstream capacity 分配，不是平均分滿。",
+            "錯誤。Timeout 增加反而可能讓 execution 占用 concurrency 更久。",
+            "正確。Reserved concurrency 同時提供 reservation 與 cap；provisioned concurrency 解決 startup latency，是不同責任。"
+          ],
+          "task_keys": ["SAA-3.2"],
+          "source_ids": ["lambda-conc"],
+          "inspiration_ids": ["jay-serverless"]
+        },
+        {
+          "id": "ch065-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "有界 exponential backoff、jitter 與 idempotency",
+          "prompt": "某 AWS API 短暫回傳 throttling。500 個 clients 目前都每 10 ms 無限重試，讓服務更難恢復。最適合的修正是什麼？",
+          "choices": [
+            "把 retry interval 固定改成 11 ms，確保 clients 同步",
+            "只對 retryable failures 使用有限次數、exponential backoff 與 jitter，遵守 total deadline，非冪等 writes 使用 operation key",
+            "把所有 timeouts 改成 24 小時，讓 request 永遠不失敗",
+            "對 validation error 也無限 retry，因為所有 4xx 都是暫時性"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。固定且同步的 retry 仍會產生 thundering herd。",
+            "正確。Backoff+jitter 分散重試，有界 deadline 防止資源被永久占用，idempotency 保護重送 side effects。",
+            "錯誤。過長 timeout 會累積 threads/connections，掩蓋 sustained overload。",
+            "錯誤。不可重試的 client/configuration errors 不會因重送而成功。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["sdk-retry", "wa-grace"],
+          "inspiration_ids": ["jay-serverless"]
+        },
+        {
+          "id": "ch065-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "以 bulkhead 保留 critical transaction capacity",
+          "prompt": "Checkout 與 personalized recommendations 共用同一 Lambda concurrency 和 RDS connection pool。促銷時 recommendations 讓 checkout 失敗。哪兩項改造最符合 graceful degradation？（選兩項）",
+          "choices": [
+            "為 checkout 與 recommendation 分隔 reserved concurrency、queues 或 connection pools，並依 database 安全 capacity 設上限",
+            "把兩者放入同一個更大的無界 work queue",
+            "在壓力升高時關閉或回傳 cached/default recommendations，優先保留 checkout",
+            "讓 recommendation clients 無限 retry，直到取得 checkout connections",
+            "對兩種流量都回傳成功，即使付款尚未授權"
+          ],
+          "answers": [0, 2],
+          "explanations": [
+            "正確。Bulkhead 可阻止 optional workload 吃完所有 shared capacity，cap 也保護 database。",
+            "錯誤。無界共享 queue 仍允許 optional work 排擠 critical deadlines。",
+            "正確。Recommendation 可近似或暫停，checkout 則保留正確性與 capacity。",
+            "錯誤。無限 retries 會加劇 saturation，沒有創造真正容量。",
+            "錯誤。Graceful degradation 不可捏造不可逆 financial success。"
+          ],
+          "task_keys": ["SAP-2.4"],
+          "source_ids": ["wa-grace", "lambda-conc"],
+          "inspiration_ids": ["jay-serverless"]
+        },
+        {
+          "id": "ch065-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "依 useful age 管理 asynchronous backlog",
+          "prompt": "Recommendation jobs 若等待超過 20 分鐘就沒有價值。SQS retention 是 4 天，consumer 過載後 backlog age 已達 2 小時。最合理的處置是什麼？",
+          "choices": [
+            "把 retention 增加到 14 天，讓無效 jobs 保存更久",
+            "只看 visible message count，不需要 oldest age",
+            "繼續按 FIFO 處理所有舊 recommendations，即使新的 checkout events 也在等",
+            "定義 maximum useful age，監控 oldest age/arrival/completion rate，擴容並將過期工作丟棄或送往明確的處置流程"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Retention 是最大保存時間，不是商業 deadline，也不增加 processing throughput。",
+            "錯誤。Age 才顯示使用者期限是否已違反；depth 單獨不足。",
+            "錯誤。已失去價值的工作會繼續消耗 scarce capacity。",
+            "正確。Bounded usefulness 讓 queueing 成為可控 backpressure，而不是無限延後失敗。"
+          ],
+          "task_keys": ["SAA-2.1"],
+          "source_ids": ["sqs-metrics", "wa-grace"],
+          "inspiration_ids": ["jay-event-driven"]
+        },
+        {
+          "id": "ch065-q08",
+          "intent": 8,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "為可近似與不可近似功能設計誠實降級",
+          "prompt": "下游 inventory service 暫時不可用。產品頁可以顯示稍舊庫存，但下單不能超賣。哪個 degraded-mode contract 最合理？",
+          "choices": [
+            "產品頁顯示帶時間戳的 cached inventory；checkout 無法確認時回 pending/拒絕或排入受控流程，並發布 degraded-mode metrics",
+            "所有 checkout 都直接回 SUCCESS，之後再看是否有庫存",
+            "因 inventory 不可用，連靜態產品圖片與說明也全部回 500",
+            "隱藏 degraded mode，不建立任何 metric，避免客戶知道"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。可近似的 read 可降級，但不可捏造需要強 correctness 的 inventory reservation。",
+            "錯誤。未確認庫存就回成功會破壞不可超賣的 invariant；只有業務明確接受 backorder、補償與客戶通知時，才可改成另一種經產品批准的契約。",
+            "錯誤。Failing optional content 會把局部 dependency failure 擴大成全站 outage。",
+            "錯誤。降級狀態必須可觀測，才能控制 error budget、容量與恢復。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-2.4"],
+          "source_ids": ["wa-grace", "cw-slo"],
+          "inspiration_ids": ["jay-ha"]
+        },
+        {
+          "id": "ch065-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "把 quotas 納入 DR readiness",
+          "prompt": "Recovery Region 的 CloudFormation dry run 已成功建立少量 resources。正式簽署「可在 RTO 內承載 10 倍 disaster traffic」之前，哪一項是最完整的下一個驗證動作？",
+          "choices": [
+            "盤點 recovery account/Region 中各 quota 的 Region、AZ 或 resource scope 與 applied value，也確認 IP/ENI、instance 與連線上限，但不部署 production-scale recovery stack 或執行代表性 disaster load",
+            "直接部署 production 數量並執行代表性 disaster load，卻沿用 primary Region 的 quota 假設，不先核對 recovery Region 的 quota scope、applied value 與 increase lead time",
+            "先核對 recovery account/Region 的 quota scope、applied value 與 increase lead time，再以 production 數量建立 recovery stack；在 RTO 時鐘內測試啟動速率、代表性流量、IP/ENI、connections、instance capacity、下游 headroom 與業務 SLO",
+            "完成 quota 與 production-scale steady-state load 驗證，但先人工預熱所有容量再開始 RTO 計時，且不測試真實 failover 的啟動速率與下游故障後 headroom"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。這個 quota/capacity inventory 補足了 scope 與 applied value，但缺少 production-scale deployment、代表性流量與業務 SLO，仍不能證明 data plane 可承載災難負載。",
+            "錯誤。Production-scale load test 很重要，但未先驗證 recovery Region 的 quota scope、applied value 與 increase lead time，可能直到演練或事故才發現無法取得所需容量。",
+            "正確。它同時驗證 control-plane quota、production-scale data plane、啟動與擴展時序、下游容量和使用者結果，並把所有步驟放進真實 RTO 時鐘。",
+            "錯誤。Steady-state capacity 證據不能取代 recovery execution；先預熱再計時會漏掉啟動速率，且未驗證下游故障後 headroom，無法支持題目的 RTO 宣稱。"
+          ],
+          "task_keys": ["SAP-2.2"],
+          "source_ids": ["sq-intro", "wa-dr"],
+          "inspiration_ids": ["jay-dr"]
+        },
+        {
+          "id": "ch065-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "有 safety controls 的 overload game day",
+          "prompt": "團隊要測試 recommendation overload 不會拖垮 checkout。哪兩項最能產生可信證據？（選兩項）",
+          "choices": [
+            "測試前移除所有 concurrency caps，讓 database 自行失敗",
+            "在定義範圍與 stop conditions 下增加 optional load 或限制 capacity，觀察 throttle、retry volume、queue age 與 rejection/degradation rate",
+            "只確認 CloudWatch alarm 曾進入 ALARM，不看交易結果",
+            "先把所有 quotas 提到無限大，再宣稱 graceful degradation 通過",
+            "量測 checkout success/latency、資料正確性與恢復時間，據結果調整 bulkhead、threshold 與 runbook"
+          ],
+          "answers": [1, 4],
+          "explanations": [
+            "錯誤。無 safeguards 的 production overload 不是受控實驗，可能破壞核心資料。",
+            "正確。受控注入配合 system signals 可驗證 admission、retry 與 backpressure 行為。",
+            "錯誤。Alarm 是偵測元件；題目要證明核心 business transaction 被保護。",
+            "錯誤。移除限制會跳過真正要測的 finite boundary 與 degradation mechanism。",
+            "正確。Business SLO、correctness 與 recovery 才是 acceptance criteria，結果應回饋架構。"
+          ],
+          "task_keys": ["SAP-3.4"],
+          "source_ids": ["fis-intro", "wa-grace", "cw-slo"],
+          "inspiration_ids": ["jay-ha"]
+        }
+      ]
+    },
+    {
+      "chapter": 66,
+      "questions": [
+        {
+          "id": "ch066-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "由使用者結果定義 SLI、SLO 與 error budget",
+          "prompt": "Checkout 團隊過去只看 EC2 CPU，現在要建立能反映使用者是否成功完成交易的 28 天 rolling SLO。下列哪個定義最可操作？",
+          "choices": [
+            "99.9% 的有效 checkout requests 在 800 ms 內成功完成，以 28 天為 interval；不符合部分消耗 error budget 並觸發對應 burn-rate action",
+            "EC2 CPU 永遠低於 60%，因為 CPU 就是 checkout availability",
+            "服務要「一直很快」，不設定 threshold、population 或時間區間",
+            "直接採用 RDS SLA 當作整個 checkout path 的 SLO"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。它定義 user-visible outcome、門檻、population 與 interval，能計算 compliance/error budget。",
+            "錯誤。CPU 是 supporting resource signal，不等同成功 checkout。",
+            "錯誤。沒有可量測 threshold、population 與 interval，就無法計算 compliance、告警或比較改善效果。",
+            "錯誤。完整 checkout 還包含 ingress、application、payments 與其他 dependencies。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["cw-slo", "aws-sap-d3"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "區分 metrics、logs 與 traces 的責任",
+          "prompt": "付款成功率突然下降，但服務跨越 API、queue 與 database，單一畫面看不出失敗在哪裡。哪兩項敘述正確描述 telemetry 的互補角色？（選兩項）",
+          "choices": [
+            "把每個 request ID 都做成 metric dimension，是最低成本且唯一需要的觀測方式",
+            "Metrics 用來觀察成功率、latency 與趨勢並驅動 alarms；traces 用來連接單次 request 的跨服務 path",
+            "Dashboard 可以取代原始 logs，因此不需保留事件 context",
+            "Logs 保存錯誤、參數與事件 context；以穩定 correlation ID 和 trace/deploy 資訊關聯",
+            "Traces 應作為唯一不可變 audit record，取代 CloudTrail"
+          ],
+          "answers": [1, 3],
+          "explanations": [
+            "錯誤。每個 ID 都會建立高 cardinality custom metrics；request-level identity 更適合 log/trace。",
+            "正確。Metrics 提供 population-level signal，traces 分解特定 request dependencies。",
+            "錯誤。Dashboard 是呈現層，不保留每個事件的詳細診斷 context。",
+            "正確。Logs 可說明 implicated component 發生什麼事，correlation fields 讓三種 telemetry 互相定位。",
+            "錯誤。Trace sampling 與 retention 不適合取代 API audit trail。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["cw-concepts", "cwl-concepts", "xray-concepts"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch066-q03",
+          "intent": 3,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "先監控 business outcome 再看 resource",
+          "prompt": "所有 EC2 CPU 都低於 40%，但訂單完成率下降；同時 SQS oldest age 與下游 429 增加。哪個 alarm strategy 最合理？",
+          "choices": [
+            "只告警 EC2 status checks，因為 CPU 正常代表 application 正常",
+            "把 accepted HTTP requests 當作 completed orders，不追蹤最終結果",
+            "以訂單成功率、end-to-end latency 或 backlog age 為 primary user-impact alarms，再用 CPU、429、connections 與 queue metrics 診斷",
+            "移除 business metrics，避免它們和 resource metrics 衝突"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Dependency saturation 或 queued work 可在 EC2 CPU 正常時傷害使用者。",
+            "錯誤。Accepted 只量到入口接收，付款、持久化或履約仍可能失敗；只有 API 契約本身就是 durable asynchronous admission 時，accepted 才能作另一個獨立 SLI。",
+            "正確。User outcome 決定是否真的 outage，resource signals 用來解釋原因。",
+            "錯誤。Business 與 resource signals 是互補關係：前者判斷使用者影響，後者協助定位受限元件。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-3.1"],
+          "source_ids": ["cw-slo", "cw-concepts", "sqs-metrics"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "以 percentile 觀察 tail latency",
+          "prompt": "某 API 一小時內 99% requests 為 100 ms，1% requests 為 10 秒。團隊只看 average，認為服務約 199 ms 很健康。哪個修正最合理？",
+          "choices": [
+            "改看每月平均，資料越多越能掩蓋短期異常",
+            "把所有 instance 的 p99 直接相加得到 global p99",
+            "把 p99 解讀成單一最慢 request",
+            "以符合 SLO window 的 p95/p99 搭配 sample count、success rate 與 operation dimensions，保留 average 作輔助"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。更長平均 window 會讓 tail impact 更難被看到。",
+            "錯誤。Percentiles 不能用普通加法合併；應由符合統計條件的 aggregate distribution 計算。",
+            "錯誤。P99 是分布中第 99 百分位，並非單一最慢 request；若樣本量極小或統計不適合計算 percentile，才應改用原始樣本或其他統計。",
+            "正確。Tail percentile 直接暴露受影響少數使用者，count 與 success rate 提供統計和品質 context。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["cw-concepts"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "設定 M-of-N 與 missing data",
+          "prompt": "一個 error metric 只在發生錯誤時發布，平時完全沒有 datapoint。Alarm 使用 3 個 periods、2 datapoints to alarm。若目標是「沒有 error 時不要因 missing 而告警」，應怎麼設定？",
+          "choices": [
+            "永遠把 missing data 當 breaching，因為沒有資料一定是 outage",
+            "保留 2-of-3 抗單點雜訊，並依 emission contract 將 missing 視為 notBreaching；另用獨立 heartbeat 監控 telemetry silence",
+            "把 missing data 當作一個真實值 100%，不需要知道 metric 語意",
+            "只要設定 dashboard，alarm 便會自動理解 missing"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。對稀疏 error-only metric，正常無錯也會沒有資料，breaching 會產生 false alarms。",
+            "正確。M-of-N 可容忍瞬間 spike，missing treatment 必須符合發布語意；heartbeat 解決 telemetry loss 的另一風險。",
+            "錯誤。Missing 並不是任意數值，應由 metric contract 判斷。",
+            "錯誤。Dashboard 不會改變 alarm evaluation。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["cw-alarm"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "用 composite alarm 降低 page noise",
+          "prompt": "每個 EC2、RDS、queue alarm 都直接 page on-call，造成同一事件 40 次通知。團隊希望只有「使用者 SLO 受影響且至少一個相關 dependency 異常」才 page，同時保留元件 alarms 供診斷。應使用什麼？",
+          "choices": [
+            "建立 CloudWatch composite alarm 組合 user-impact 與 dependency alarms，讓底層 alarms 不直接執行 page action",
+            "刪除所有 component alarms，只保留一張 dashboard",
+            "把所有 alarms 用 OR 組合，任何單一低風險事件都 page",
+            "將 alarm history 當作新的 metric dimension"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Composite alarm 可用 Boolean rule 限制通知條件，底層 alarms 仍保留 state 與診斷價值。",
+            "錯誤。刪除 component signals 會降低 root-cause visibility，dashboard 也不主動 page。",
+            "錯誤。無差別 OR 會讓任何底層波動都 page，通常放大 noise；只有每個 constituent alarm 都代表獨立且必須立即處理的 user impact 時才適合。",
+            "錯誤。Alarm history 不是用來建立 dependency Boolean logic 的 metric。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["cw-composite", "cw-slo"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "控制 custom metric cardinality 與 EMF 成本",
+          "prompt": "開發團隊使用 Embedded Metric Format，準備把 userId、requestId、full URL 與 timestamp 全設為 dimensions。哪個建議最好？",
+          "choices": [
+            "全部保留，因為 EMF 會讓 unlimited cardinality 免費",
+            "移除所有 dimensions，讓任何 service/operation 都無法分辨",
+            "只保留有界且可行動的 dimensions，例如 service、operation、status class；把 user/request 等高 cardinality 欄位留在 log/trace",
+            "每次 request 動態建立新的 dimension name，避免重複"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。每組 dimension values 可形成獨立 custom metric，會增加數量與成本。",
+            "錯誤。完全無 dimensions 會失去必要 breakdown；應選 bounded operational dimensions。",
+            "正確。Metrics 適合聚合，log/trace 適合 request-level context。",
+            "錯誤。動態 key 會讓 schema 與 cardinality 更不可控。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["cw-emf"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "區分 Logs retention、Insights、metric filter 與 subscription",
+          "prompt": "團隊要讓 application logs 保存 90 天、偶爾互動查詢，並把符合 security pattern 的新事件持續送到中央處理器。哪兩項配置正確？（選兩項）",
+          "choices": [
+            "使用 CloudWatch metric retention 設定刪除 log events",
+            "在 log group 設定 retention/encryption，使用 Logs Insights 做 ad hoc queries",
+            "把 Logs Insights query 當成永遠運行的 streaming consumer",
+            "為每個 raw log field 建立一個高 cardinality custom metric",
+            "使用 subscription filter 將 matching events 持續送往支援的 destination；需要 bounded alarm signal 時另用 metric filter"
+          ],
+          "answers": [1, 4],
+          "explanations": [
+            "錯誤。Metric retention 與 log group retention 是不同機制。",
+            "正確。Log group 控制保存生命週期；Insights 適合互動式分析。",
+            "錯誤。Logs Insights 是 query 能力，不是 continuous delivery pipeline。",
+            "錯誤。Raw high-cardinality fields 會產生大量 metrics；應只抽取有界 operational signal。",
+            "正確。Subscription filter 是持續事件傳送機制，metric filter 則從 log pattern 產生可告警數值。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["cwl-concepts", "logs-insights", "logs-filter", "logs-subscription", "cw-emf"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "CloudWatch cross-account observability 與 ownership",
+          "prompt": "公司有 80 個 workload accounts，希望 central operations 能跨帳號查看 metrics、logs 與 traces，但 workload teams 仍保留自己的 retention 與 incident ownership。哪個設計最合理？",
+          "choices": [
+            "把所有 production resources 搬到單一帳號，因為 observability 不能跨帳號",
+            "把每個 workload 的長期 access keys 複製到 central dashboard server",
+            "假設 central view 會自動修改所有 source log retention 與 alarms",
+            "使用 CloudWatch cross-account observability，把 source accounts 連到 monitoring account，標準化 identifiers/access，並保留 source-account owners 與 response paths"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。單帳號擴大 blast radius，也不是 cross-account telemetry 的必要條件。",
+            "錯誤。複製長期 credentials 增加風險；應使用服務提供的授權與 linking。",
+            "錯誤。集中觀察不等於自動接管 source configuration 或 operational ownership。",
+            "正確。Monitoring account 提供統一視圖，同時 source accounts 保留資源、政策與責任邊界。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["cw-xacct"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        },
+        {
+          "id": "ch066-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "區分 runtime、API audit 與 configuration history",
+          "prompt": "部署後 checkout latency 上升。調查同時需要 runtime impact、誰修改了 security group，以及 resource configuration 前後差異。哪兩項描述正確？（選兩項）",
+          "choices": [
+            "用 CloudWatch SLO/metrics/logs 量測使用者影響，再與 deploy/change timestamp 關聯",
+            "只看綠色 dashboard 即可證明沒有任何 API change",
+            "使用 CloudTrail 當作毫秒級 application latency time series",
+            "使用 AWS Config 作為每筆 checkout transaction 的業務 event log",
+            "用 CloudTrail 查 API actor/time，用 AWS Config 查 resource configuration/history，兩者和 runtime telemetry 互補"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。CloudWatch 描述 runtime 與 user outcome，是判斷 rollback impact 的主要證據。",
+            "錯誤。Dashboard 只呈現選定 signals，不能否定未顯示的 configuration change。",
+            "錯誤。CloudTrail 記錄 AWS API activity，不是 application latency metric 系統。",
+            "錯誤。Config 追蹤資源 configuration 與 compliance，不是業務交易日誌。",
+            "正確。CloudTrail 回答誰做了什麼 API 操作，Config 回答資源狀態如何改變。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["cloudtrail-events", "config", "cw-slo"],
+          "inspiration_ids": ["jay-cloudwatch"]
+        }
+      ]
+    },
+    {
+      "chapter": 67,
+      "questions": [
+        {
+          "id": "ch067-q01",
+          "intent": 1,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "Metrics、traces、logs 的診斷順序",
+          "prompt": "API p99 在新版本後惡化，但只有 2% requests 受影響。哪個調查流程最有效率？",
+          "choices": [
+            "先閱讀所有服務的隨機 logs，不先限定 operation、版本或受影響 population",
+            "先由 SLO/metrics 確認 operation、時間與版本，再比較快慢 traces 定位 path，最後查 implicated components 的 logs",
+            "只看平均 CPU，因為 distributed latency 一定由 CPU 引起",
+            "永久 100% tracing，並取消 metrics 和 logs"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。沒有先縮小範圍，logs 量大且缺少因果路徑，容易浪費時間。",
+            "正確。Population signal 找 impact，trace 找 request path，log 解釋該 component 的事件細節。",
+            "錯誤。Tail latency 可能來自 downstream、retry、cold start 或 connection wait。",
+            "錯誤。100% tracing 可能昂貴，且 trace 不能取代 alarm population 或詳細 event logs。"
+          ],
+          "task_keys": ["SAA-2.2", "SAP-3.3"],
+          "source_ids": ["cw-concepts", "xray-concepts"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "跨同步服務傳遞 trace context",
+          "prompt": "ALB 後的 Service A 呼叫 Service B，再呼叫 payment API。Service map 顯示三段互不相關的 root traces，無法還原一筆交易。最可能的修正是什麼？",
+          "choices": [
+            "讓 ingress、application 與 supported SDK/client calls 傳遞 W3C/X-Ray 支援的 trace context，並在下游建立 child spans/subsegments",
+            "每個 service 都產生新的 root trace，並只記在 local disk",
+            "以 source IP 當作跨服務唯一 request identity",
+            "移除 Service B 的 instrumentation，減少 trace nodes"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。共同 trace context 才能把同步 child calls 連回同一 causal path。",
+            "錯誤。新的 roots 正是 path 被切斷的原因；local log 也無法自動建立 parent-child。",
+            "錯誤。NAT、proxy 與連線重用會讓多個 requests 共享 IP，不能作 trace identity。",
+            "錯誤。移除 instrumentation 會增加盲點，不會修復 context propagation。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["xray-concepts", "cw-otel"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "理解 segment、subsegment 與 inferred node",
+          "prompt": "X-Ray service map 顯示 Service A 到外部 API 的 inferred node，但外部 API 沒有自己的 trace SDK。哪個解讀最正確？",
+          "choices": [
+            "Inferred node 證明外部 API 已完整上傳它的 internal logs 與 spans",
+            "每個 segment 都必定代表一台 EC2 instance",
+            "只要 map 有 edge，就能直接證明外部 API 是根因",
+            "Service A 的 downstream call data 可產生 inferred node；它顯示依賴與觀測到的 call，但下游內部仍可能沒有 instrumentation"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Inferred node 可由 caller observation 建立，不代表 downstream 有完整 telemetry。",
+            "錯誤。Segment 表示 traced service/resource 的工作，不等同固定一台 host。",
+            "錯誤。Map edge 是診斷線索，仍需 trace timeline、responses 與 metrics 驗證 causality。",
+            "正確。Caller 能記錄 outbound subsegment，X-Ray 據此顯示 inferred dependency，但內部細節仍不可見。"
+          ],
+          "task_keys": ["SAA-2.2"],
+          "source_ids": ["xray-concepts"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "以 sampling 控制成本且不隱藏 rare failures",
+          "prompt": "支付 API 每秒 50,000 requests，錯誤率約 0.02%，其中 premium transactions 必須有較佳診斷覆蓋。哪兩項 sampling 設計合理？（選兩項）",
+          "choices": [
+            "只 sample success，因為 failed requests 會污染資料",
+            "保留有界 baseline sampling，並為高價值 operation/attributes 建立較高優先的 targeted rules",
+            "永久 trace 100% traffic，且不設定成本或 retention guardrail",
+            "由一個月無 sampled errors 推論 rare error 不存在",
+            "以 error-rate metrics/logs 監控完整 population，將 sampling 當診斷取樣而非唯一 availability signal"
+          ],
+          "answers": [1, 4],
+          "explanations": [
+            "錯誤。排除 failures 會失去最需要分析的 traces。",
+            "正確。Baseline 保留整體可見性，targeted rules 對重要或罕見路徑增加機率。",
+            "錯誤。高流量 100% tracing 可能造成不必要的 telemetry 成本與管理壓力。",
+            "錯誤。Sampling 沒看到事件不代表 population 沒有事件。",
+            "正確。Metrics/logs 可覆蓋完整計數，traces 用來分解被抽中的 path。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["xray-concepts", "cw-slo"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Annotations、metadata 與敏感資料邊界",
+          "prompt": "團隊想讓 traces 可依 operation、tenant tier 與 deployment version 搜尋，也想附上大型 debug payload。哪個做法最合理？",
+          "choices": [
+            "把完整 customer email、password 與 payload 都作為 indexed annotations",
+            "每個 request 動態建立唯一 annotation key",
+            "把有界且可搜尋的 operation/tier/version 放 annotations；較大非索引 context 放 metadata，並移除 secrets 與不必要個資",
+            "Metadata 不會被儲存，因此可安全放 credentials"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。敏感資料不應放入 telemetry；高 cardinality 個資也不適合作為 indexed annotation。",
+            "錯誤。穩定 schema 才能查詢與治理，動態 key 會失控。",
+            "正確。Annotations 用於有界 searchable attributes，metadata 用於非索引細節，兩者都需 data minimization。",
+            "錯誤。Metadata 仍是 trace data，不能把 credentials 放進去。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["xray-concepts"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "把 service map 當作 hypothesis 而非因果證明",
+          "prompt": "Service map 顯示 DynamoDB node 的 latency 顏色最深。工程師因此直接宣稱 DynamoDB 是 root cause。哪個下一步最嚴謹？",
+          "choices": [
+            "選取同 operation 的 slow traces，檢查 timeline、retries、client wait、response codes 與 correlated logs/metrics，再判斷責任",
+            "先提高 DynamoDB capacity，卻不檢查 caller retries、SDK backoff、response codes 或 client-side waiting",
+            "只依 node 顏色判定，因為 visualization 等同 causal proof",
+            "忽略 upstream retry；同一 downstream call 永遠只會發生一次"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Map 是聚合線索；trace timeline 與 service metrics 才能區分 downstream 慢、caller retry 或 client-side wait。",
+            "錯誤。提高 capacity 只有在確定是 capacity throttling 時才有用；若延遲來自 caller retry、網路等待或應用序列化，它只會增加成本而不消除根因。",
+            "錯誤。Service-map correlation 與聚合 latency 只能形成假設，不能單獨證明 downstream 是 root cause。",
+            "錯誤。Retries 可能放大 call count 與總等待，是常見 tail-latency 成因。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["xray-concepts", "cw-concepts"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "用 trace timeline 分解 p99 bottleneck",
+          "prompt": "Slow trace 有三個 spans：A 同時呼叫 B（900 ms）與 C（850 ms），之後重試 B（700 ms）；root duration 為 1.7 秒。哪兩項分析方式正確？（選兩項）",
+          "choices": [
+            "把 B 與 C 的 900+850 ms 相加，因為任何 spans 都必然串行",
+            "只看每個 service 的月平均，不比較 fast traces",
+            "辨識 B/C 的 overlap、retry 與 root exclusive time；平行 spans 的 wall-clock contribution 不能直接相加",
+            "把所有 services 同時加大，因為 trace 不能提供局部線索",
+            "比較相同 operation 的 fast/slow traces，並以 B latency、retry rate、connections/throttles metrics 驗證假設"
+          ],
+          "answers": [2, 4],
+          "explanations": [
+            "錯誤。Parallel spans 重疊，直接相加會高估 critical path。",
+            "錯誤。月平均會掩蓋 tail；需要相同 operation/version 的分布比較。",
+            "正確。Timeline 結構能指出真正串行等待與 retry cost。",
+            "錯誤。無差別 scale 既昂貴，也無法確認問題是否在 capacity。",
+            "正確。Trace 建立 path hypothesis，service metrics 則驗證是否為持續 bottleneck。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["xray-concepts", "cw-concepts"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "跨 asynchronous messaging 關聯 producer 與 consumer",
+          "prompt": "Producer 將 jobs 放入 SQS，數分鐘後 consumer 處理。團隊希望既能看 queue wait，也能把一筆 business job 串起來。哪兩項做法正確？（選兩項）",
+          "choices": [
+            "使用 SQS `AWSTraceHeader` system attribute 傳遞 X-Ray-compatible trace context，consumer 取出 context 建立處理 span／segment，並另加穩定 job/business ID",
+            "讓整個 queue 的所有 messages 永久共用同一 trace ID",
+            "把 queue wait 全算成 consumer Lambda execution duration",
+            "將 producer enqueue、queue wait 與 consumer processing 視為不同 timing segments，搭配 SQS age metrics",
+            "只依 message body 的自然語言內容人工比對"
+          ],
+          "answers": [0, 3],
+          "explanations": [
+            "正確。`AWSTraceHeader` 是 SQS 保留的 system attribute，可延續原 trace；business ID 則支援跨抽樣與長時間 queue wait 的營運查詢，兩者責任不同。",
+            "錯誤。共用一個 trace 會混合無關 jobs 並破壞 trace size/semantics。",
+            "錯誤。Consumer duration 不含 message 在 queue 中等待的時間。",
+            "正確。Async path 有明確 admission、waiting 與 processing 階段，需用 traces 和 queue metrics 共同觀察。",
+            "錯誤。自然語言人工比對缺少穩定鍵值、容易誤關聯且無法自動化；只有一次性的小型調查可把它當輔助，不能作正式追蹤設計。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["xray-sqs", "cw-otel", "sqs-metrics"],
+          "inspiration_ids": ["jay-event-driven", "jay-xray"]
+        },
+        {
+          "id": "ch067-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "新 instrumentation 遷移到 OpenTelemetry",
+          "prompt": "公司在 2026 年 10 月開始一個預計運行五年的新 tracing 平台。Legacy X-Ray SDKs/daemon 已進 maintenance mode，AWS 公告其 support timeline。最合理的方向是什麼？",
+          "choices": [
+            "完全取消 tracing，直到 2027 年後再決定",
+            "以 OpenTelemetry／ADOT instrument 新服務，依需求 export 到 X-Ray/CloudWatch，並規劃 legacy SDK/daemon migration 與 context compatibility 測試",
+            "新服務全部依賴 legacy daemon，且不建立 migration plan",
+            "只替換 exporter binary，就假設 missing application spans 與 context propagation 都會自動修復"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Support transition 是遷移理由，不是失去可觀測性的理由。",
+            "正確。Legacy X-Ray SDKs 與 daemon 已在 2026-02-25 進入 maintenance mode，官方目前把 end of support 列為 N/A；長期新平台應採 OpenTelemetry，並驗證 instrumentation、propagation、resource attributes、sampling 與 backend 相容性。",
+            "錯誤。對長期新系統忽略已公告的 maintenance/EOS timeline 會累積技術風險。",
+            "錯誤。Exporter 只處理傳送／轉換，不能替代應用程式 spans 與 header propagation。"
+          ],
+          "task_keys": ["SAP-3.1"],
+          "source_ids": ["xray-timeline", "xray-migrate-otel", "cw-otel"],
+          "inspiration_ids": ["jay-xray"]
+        },
+        {
+          "id": "ch067-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "關聯 deployment、trace distribution 與 telemetry cost",
+          "prompt": "Canary release 後只出現一條 8 秒 trace，團隊立刻要 rollback；同時 sampling 成本在一週內增加 8 倍。哪個決策方法較完整？",
+          "choices": [
+            "只依一條 anecdotal trace rollback，無須確認它屬於哪個版本",
+            "把 sampling 永久提升至 100%，成本不列入 architecture decision",
+            "在 spans/logs 加入 service、operation 與 deployment identity，比較 canary/control 的 SLO 與 trace distribution，設定 sampling/cardinality budget，再依預定 gate rollback",
+            "移除版本 attributes，讓兩個 cohorts 混在一起比較"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。一條 trace 可觸發調查，但需用 population-level metrics 與 cohort identity 判定 release impact。",
+            "錯誤。Telemetry volume 本身需要成本與資料治理。",
+            "正確。版本關聯、SLO distribution 和預定 rollback gate 提供可辯護決策，sampling budget 控制長期成本。",
+            "錯誤。沒有版本 identity 就無法把 regression 歸因到 canary。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["cw-slo", "xray-concepts", "cw-emf"],
+          "inspiration_ids": ["jay-xray"]
+        }
+      ]
+    },
+    {
+      "chapter": 68,
+      "questions": [
+        {
+          "id": "ch068-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "依需求確定性分層使用 commitments、On-Demand 與 Spot",
+          "prompt": "一個 analytics 平台有 40% 全年穩定 compute baseline、20% 無法預測的互動流量，以及 40% 可 checkpoint 且可延後的夜間 batch。哪兩項採購策略最合理？（選兩項）",
+          "choices": [
+            "以保守的穩定 baseline 評估合適 Savings Plan／RI，保留不確定互動 burst 為 On-Demand",
+            "依年度最高峰購買三年 commitment，確保每個小時都付相同峰值",
+            "把 singleton metadata database 完全放在 Spot，且不做 replica 或 backup",
+            "讓可重跑 batch 使用 diversified Spot capacity，實作 checkpoint/idempotency，必要時以 On-Demand 補位",
+            "所有 workload 都用 On-Demand，因為穩定多年需求也不值得評估 discount"
+          ],
+          "answers": [0, 3],
+          "explanations": [
+            "正確。Commitment 應覆蓋有高度把握的每小時基線；不可預測 demand 保留彈性可降低浪費。",
+            "錯誤。依短期峰值承諾會在非峰值小時產生大量未使用 commitment。",
+            "錯誤。不可中斷的單點 state 不適合完全依賴可回收 Spot capacity。",
+            "正確。Batch 能 checkpoint、retry 與分散 pool，最能承受 Spot interruption。",
+            "錯誤。On-Demand 有彈性，但對穩定長期 baseline 不評估 commitments 可能錯失顯著節省。"
+          ],
+          "task_keys": ["SAA-4.2"],
+          "source_ids": ["sp-intro", "spot-interrupt", "spot-rebalance"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Compute Savings Plans 的 flexibility 與非容量性質",
+          "prompt": "公司預期未來一年會在 EC2 instance families、Regions、Fargate 與 Lambda 之間調整 compute，但能承諾固定每小時的合格 compute spend。哪個選項最符合？",
+          "choices": [
+            "購買 On-Demand Capacity Reservation，因為它會自動折扣 Lambda 與 Fargate",
+            "購買 EC2 Instance Savings Plan，因為它可跨所有 Regions 與 compute services",
+            "評估 Compute Savings Plans；它提供較廣的合格 compute flexibility，但不保證 EC2 capacity，未使用的 hourly commitment 也不會累積到下一小時",
+            "購買 Standard RI，因為 RI discount 可套用所有 AWS 服務"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Capacity Reservation 解決特定 EC2 capacity 可用性，不是 Lambda/Fargate discount。",
+            "錯誤。EC2 Instance Savings Plans 的 family/Region commitment 較窄。",
+            "正確。Compute Savings Plans 適合跨多種合格 compute usage 的彈性需求；它是 billing commitment，不是 runtime capacity。",
+            "錯誤。EC2 RI billing benefit 有明確 matching scope，不涵蓋所有 AWS services。"
+          ],
+          "task_keys": ["SAA-4.2"],
+          "source_ids": ["sp-types", "sp-apply", "sp-intro"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "EC2 Instance Savings Plans 的 family／Region commitment",
+          "prompt": "某 EC2 fleet 未來三年確定留在 us-east-1 的 m7i family，但 size、OS 與 tenancy 可能調整；團隊希望以較窄彈性換取較佳折扣潛力。應優先評估什麼？",
+          "choices": [
+            "Compute Savings Plans，因為越廣彈性一定永遠有最高折扣",
+            "EC2 Instance Savings Plans，並以穩定 family/Region 的合格用量評估 hourly commitment",
+            "Spot only，因為 family 穩定就代表 workload 可中斷",
+            "On-Demand Capacity Reservation，因為 reservation 本身就是長期 billing discount"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Compute Savings Plans 更靈活，但題目明確接受較窄 family/Region boundary 以換取 discount。",
+            "正確。EC2 Instance Savings Plans 適合穩定 instance family 與 Region，仍需避免過度承諾。",
+            "錯誤。採購穩定性不等於應用程式具 interruption tolerance。",
+            "錯誤。Capacity Reservation 提供容量 assurance，本身不自動提供 billing discount。"
+          ],
+          "task_keys": ["SAA-4.2"],
+          "source_ids": ["sp-types", "sp-purchase"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q04",
+          "intent": 4,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "區分 EC2 RI discount 與 Capacity Reservation",
+          "prompt": "交易系統要求在 us-east-1a 一定能啟動 50 台指定 EC2 type，同時希望穩定用量取得折扣。哪個敘述最準確？",
+          "choices": [
+            "任何 Regional RI 都會在所有 AZ 預留 50 台 capacity",
+            "Capacity Reservation 自動等同三年最高折扣，不需要 Savings Plan 或 RI",
+            "購買 Regional RI 就能得到指定 AZ 容量；不需要 Zonal RI 或 On-Demand Capacity Reservation",
+            "以 On-Demand Capacity Reservation 或符合條件的 Zonal RI 解決特定 AZ capacity；billing discount 另依 Savings Plan／RI matching 規則評估"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Regional RI 主要提供 billing benefit，不建立特定 AZ capacity reservation。",
+            "錯誤。Capacity Reservation 與 discount 是可組合但不同的責任。",
+            "錯誤。Regional RI 提供區域層級折扣與 size flexibility（須符合規則），但不保留指定 AZ 容量；Zonal RI 或 ODCR 才承擔該 capacity 責任。",
+            "正確。先分開 capacity assurance 與 billing discount，才能避免把採購工具誤當 runtime guarantee。"
+          ],
+          "task_keys": ["SAA-4.2", "SAP-2.6"],
+          "source_ids": ["ec2-ri", "ec2-ri-types", "ec2-cr"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Standard 與 Convertible EC2 RIs 的 trade-off",
+          "prompt": "公司有一批非常穩定、三年內不會換 family 的 legacy EC2；另一批可能在一年後因 license 改變而換 family。哪個決策原則正確？",
+          "choices": [
+            "穩定 fleet 可評估 Standard RI；變動風險較高者評估 Convertible RI 的 exchange flexibility，並接受通常較低 discount",
+            "所有 Standard RIs 都可隨時無條件換到任何 AWS service",
+            "Convertible RI 會自動把 running instances 重新部署到新 family",
+            "兩種 RIs 都是 Spot capacity，因此可能隨時被中斷"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Standard 偏向穩定 matching 與折扣，Convertible 以較低折扣換取符合 offering rules 的 exchange flexibility。",
+            "錯誤。Standard RI 不是任意交換產品；現行可修改項目只包括 Availability Zone、scope，以及同一 instance family 與 generation 內的 size，且受 platform、tenancy 與 instance size flexibility 限制，更不能跨到任何 AWS service。",
+            "錯誤。RI 是 billing instrument，不會修改或重新部署 runtime instances。",
+            "錯誤。RI 與 Spot 是不同 purchasing model；RI 不代表可回收 capacity。"
+          ],
+          "task_keys": ["SAP-2.6"],
+          "source_ids": ["ec2-ri", "ec2-ri-types", "ec2-ri-modify", "ec2-ri-exchange"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "區分 commitment coverage 與 utilization",
+          "prompt": "一個 organization 的 Savings Plans utilization 為 99%，但 coverage 只有 45%。這最可能表示什麼？",
+          "choices": [
+            "99% eligible usage 已獲 discount，但買來的 commitment 大多未使用",
+            "Coverage 與 utilization 完全相同，數字不可能不同",
+            "既有 commitment 幾乎都被消耗，但仍有大量 eligible usage 以非 Savings Plans 費率計費；是否加購仍要看穩定性與未來變更",
+            "Savings Plans 已預留 99% EC2 capacity"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。這把兩個定義顛倒；99% utilization 代表 purchased commitment 幾乎使用完。",
+            "錯誤。Coverage 看 usage 被 discount 覆蓋的比例，utilization 看 commitment 被消耗的比例。",
+            "正確。低 coverage/high utilization 可代表還有未覆蓋用量，但不能在不了解 durable baseline 時直接加購。",
+            "錯誤。Savings Plans 不提供 EC2 capacity reservation。"
+          ],
+          "task_keys": ["SAP-1.5"],
+          "source_ids": ["sp-purchase", "sp-apply"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "以 durable baseline 而非短期 peak 購買 commitment",
+          "prompt": "公司剛完成一週大型活動，compute spend 是平時 5 倍；三個月後會把部分 EC2 遷移到 containers。財務希望立刻依這一週 peak 購買三年 commitment。架構師應怎麼做？",
+          "choices": [
+            "依 peak 全買，因為未使用 commitment 可自動轉到下一年度",
+            "使用代表性歷史、seasonality、rightsizing 與 migration forecast 推估保守 hourly baseline，再做 sensitivity analysis",
+            "完全忽略所有穩定需求，只用 Spot",
+            "先買 commitment，再決定 target architecture，因為 billing 不受服務遷移影響"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Hourly commitment 未使用部分仍付費，不會累積成未來 credit。",
+            "正確。長期承諾必須扣除暫時 peak 與預期 architecture changes，並保留不確定性。",
+            "錯誤。穩定且不可中斷的基線仍適合評估 commitments；Spot 取決於 interruption tolerance。",
+            "錯誤。Eligible usage 與 flexibility 會隨 EC2、containers、serverless 遷移而改變。"
+          ],
+          "task_keys": ["SAP-2.6"],
+          "source_ids": ["sp-purchase", "sp-intro"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "建立可承受 Spot interruption 的 workload",
+          "prompt": "基因分析 batch 要使用 Spot 降低成本，每個 job 需 6 小時。哪兩項設計能讓 interruption 不致丟失整個工作？（選兩項）",
+          "choices": [
+            "所有 checkpoint 只存 instance store，instance 終止後再讀回",
+            "只選當下最便宜的一個 instance type 和單一 AZ",
+            "將進度定期寫到 durable store，讓重新領取 job 的 worker 可冪等續跑",
+            "假設每次一定會收到且有足夠時間處理 interruption notice，否則不做 recovery",
+            "使用多個相容 instance types/AZ capacity pools，處理 interruption/rebalance signals，並保留必要的非 Spot capacity"
+          ],
+          "answers": [2, 4],
+          "explanations": [
+            "錯誤。Instance store 隨 instance 終止而失去，不能作唯一 checkpoint。",
+            "錯誤。單一 pool 增加 capacity 與 interruption correlation 風險。",
+            "正確。Durable checkpoint 和 idempotency 讓 job 可在另一 worker 恢復。",
+            "錯誤。Notice/rebalance 是有用訊號，不是可用來承諾完整 recovery window 的保證。",
+            "正確。Diversification 和 fallback capacity 可提高取得 replacement capacity 的機率。"
+          ],
+          "task_keys": ["SAA-4.2"],
+          "source_ids": ["spot-interrupt", "spot-rebalance"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "依 capacity resilience 選 Spot allocation",
+          "prompt": "一個可水平分割的 Spot worker fleet 可使用 12 種 instance types 與 3 個 AZ。業務更重視工作穩定完成而非每秒追逐最低牌價。最適合的方向是什麼？",
+          "choices": [
+            "把 max price 設很高，便可保證 Spot 永不中斷",
+            "固定使用單一最大 instance type，減少 capacity pools",
+            "永遠選 lowest-price 單一 pool，即使該 pool capacity 很少",
+            "明確採用 `capacity-optimized` Spot allocation strategy，並讓多種相容 instance types 與三個 AZ 的 pools 都成為 eligible"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。價格設定不會消除 AWS 回收 capacity 的可能。",
+            "錯誤。單一 type/AZ 會集中 interruption 與 capacity shortage 風險。",
+            "錯誤。最低瞬時價格不代表最低 interruption 或 replacement risk。",
+            "正確。`capacity-optimized` 會從可用 Spot capacity 較深的 pools 配置；instance types 與 AZ 的多樣性負責擴大候選 pools，兩者不能混成不存在的策略名稱。"
+          ],
+          "task_keys": ["SAP-2.6"],
+          "source_ids": ["spot-rebalance", "spot-interrupt", "spot-allocation"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch068-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "跨帳號 commitment governance 與 exam-version boundary",
+          "prompt": "大型 organization 準備集中購買 Savings Plans，同時市場上出現較新的 Savings Plans 產品類型。哪兩項治理做法最合理？（選兩項）",
+          "choices": [
+            "指定 purchase owner、sharing/chargeback 原則，定期檢查 utilization、coverage、planned migrations 與 realized savings",
+            "讓每個帳號獨立購買三年 peak commitment，不建立 inventory",
+            "把 billing discount 當成可跨帳號搬移的 runtime capacity",
+            "看到新產品名稱就假設它一定是 SAP-C02 scored topic，不核對 exam guide 或版本日期",
+            "在書與題庫中分開標示 current service catalog 與 target exam blueprint；例如 Database Savings Plans 可列 current extension，但不冒充已確認的舊版考點"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。Long-lived commitments 需要組織級 ownership、allocation 與持續驗證，否則容易重複或過度購買。",
+            "錯誤。分散採購可能忽略 consolidated eligible usage，並缺少整體 utilization 視圖。",
+            "錯誤。Billing benefit 不是 EC2 capacity，也不能用 sharing 取代 runtime availability design。",
+            "錯誤。服務目錄會更新，認證內容必須依公布 exam guide 與考試版本校準。",
+            "正確。截至 2026-10-01，SAP-C03 尚無公開 exam guide/sample questions；註冊自 2026-10-27 開始，SAP-C02 可考到 2026-11-17。因此 Database Savings Plans 可作 current extension，但不能冒充已確認的 C02/C03 scored content。"
+          ],
+          "task_keys": ["SAP-1.5"],
+          "source_ids": ["sp-types", "sp-purchase", "aws-sap-d1", "sap-cert-update"],
+          "inspiration_ids": ["jay-cost"]
+        }
+      ]
+    },
+    {
+      "chapter": 69,
+      "questions": [
+        {
+          "id": "ch069-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Rightsizing 是 price-performance optimization",
+          "prompt": "一台 memory-intensive EC2 平均 CPU 只有 12%，但 memory 常達 92%，p99 latency 在月末接近 SLO。哪個 rightsizing 原則正確？",
+          "choices": [
+            "立刻縮小兩個 sizes，因為 CPU 低於 20% 就一定 overprovisioned",
+            "同時評估 CPU、memory、network、EBS、tail latency、availability 與 growth，選擇仍符合 SLO 的最低總成本配置",
+            "永遠保留最大 size，因為任何 headroom 都不能被量化",
+            "只比較每小時 list price，不考慮 fleet count 或 license"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。CPU 不是唯一 constraint；縮小可能先造成 memory pressure 或 I/O bottleneck。",
+            "正確。Rightsizing 的目標是符合 workload contract 的 price-performance，而非把某一 metric 壓到最高。",
+            "錯誤。Headroom 可由 peaks、seasonality、scale-out time 與 SLO 量化；無限預留會浪費。",
+            "錯誤。總成本還受數量、license、storage/network 與 scaling behavior 影響。"
+          ],
+          "task_keys": ["SAA-4.2"],
+          "source_ids": ["co-intro", "cw-slo"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q02",
+          "intent": 2,
+          "level": "SAA → SAP",
+          "kind": "single",
+          "tested": "把 Compute Optimizer recommendation 當作候選而非保證",
+          "prompt": "Compute Optimizer 建議把 production instance 從 r7i.4xlarge 改成較小規格，estimated savings 很高但 performance risk 不是 very low。團隊應如何處理？",
+          "choices": [
+            "自動套用所有 recommendations，因為 AWS 已保證 application SLO",
+            "忽略 under-provisioned 或不同 family 建議，因為 cost 可能增加",
+            "只看 estimated monthly savings，不需檢查 software/license compatibility",
+            "把建議視為候選，檢查 metrics/assumptions、business headroom、architecture compatibility，經 canary/load test 後再變更"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。Recommendation 是分析結果，不是 application-specific production guarantee。",
+            "錯誤。Optimization 也包含修正 underprovisioning；有時增加資源才能恢復 performance。",
+            "錯誤。License、architecture、storage/network limits 與 SLO 都會改變實際結果。",
+            "正確。Compute Optimizer 縮小候選空間，最終 acceptance 仍需 workload owners 與測試證據。"
+          ],
+          "task_keys": ["SAA-4.2", "SAP-3.5"],
+          "source_ids": ["co-intro"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "為 EC2 rightsizing 提供 memory metrics",
+          "prompt": "Compute Optimizer 對一批 EC2 沒有可靠 memory evidence，但服務已知可能 memory-bound。哪個補強最合理？",
+          "choices": [
+            "透過 CloudWatch agent 發布支援的 guest memory metrics，或設定 Compute Optimizer 支援的 external metrics ingestion，並驗證 permissions/dimensions/history",
+            "用 EC2 CPUUtilization 精準推算 RAM，因為兩者永遠成固定比例",
+            "只安裝 agent，不授予 PutMetricData 或相關讀取權限",
+            "假設 EC2 hypervisor 預設發布所有 guest OS memory 指標"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Guest memory 不像 CPU 一樣由 EC2 預設完整提供；必須建立可信 telemetry path。",
+            "錯誤。CPU 與 memory demand 可獨立變化，不能互相精準推算。",
+            "錯誤。沒有 permissions 與正確 dimensions，資料不會被有效收集或關聯。",
+            "錯誤。EC2 default metrics 不含一般 guest memory utilization。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["co-mem", "co-ext"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "為 seasonal workload 選 lookback 與 enhanced metrics",
+          "prompt": "月末結算服務每 30 天有兩天 load 增加 8 倍。Compute Optimizer 的預設 14 天 lookback 剛好只涵蓋安靜期並建議大幅縮小。應怎麼做？",
+          "choices": [
+            "直接縮小，因為預設 14 天永遠代表下一個月",
+            "假設更長 lookback 能預知尚未發生的新產品 launch，因此不需 business forecast",
+            "選擇涵蓋月末 peak 的觀測期間，必要時評估 enhanced infrastructure metrics，並把 future events 納入 owner review",
+            "為 organization 每個 resource 無條件啟用所有付費功能，不做優先級"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Quiet window 會漏掉已知週期 peak，造成 underprovisioning。",
+            "錯誤。Historical lookback 不能預測沒有歷史的新 event。",
+            "正確。預設 lookback 是 14 天；Enhanced Infrastructure Metrics 可延長到最多 93 天，足以涵蓋 30 天週期，但尚未發生的 launch 仍須加入 business forecast。",
+            "錯誤。付費分析應優先用在高價值或季節性 workload，並衡量效益。"
+          ],
+          "task_keys": ["SAP-3.5"],
+          "source_ids": ["co-eim", "co-intro"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Bursty instance 的 CPU credits 與 rightsizing",
+          "prompt": "T3 Unlimited instance 平均 CPU 25%，但每天尖峰後 CPUSurplusCreditsCharged 增加、p99 變差。哪個判斷最好？",
+          "choices": [
+            "平均 CPU 低，所以應再縮小一半並忽略 credits",
+            "檢查 CPUCreditBalance／surplus usage、尖峰 duration 與成本；若需求長期超過 baseline，評估較大 burstable 或非 burstable family",
+            "把所有 requests 延後到 credit 恢復，但仍承諾相同 real-time SLO",
+            "CPU credits 只影響 EBS，不影響 processor"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。低日平均可掩蓋連續 peak 與 credit depletion，縮小會更快耗盡。",
+            "正確。Bursty economics 需同時看 credit、surplus charge 與 SLO，持續負載可能更適合固定 baseline。",
+            "錯誤。延後即時流量會改變使用者契約，除非 workload 本來可排程。",
+            "錯誤。Credits 控制 burstable CPU performance。"
+          ],
+          "task_keys": ["SAA-4.2"],
+          "source_ids": ["ec2-credits"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Fleet rightsizing 與 Auto Scaling 的耦合",
+          "prompt": "團隊把 Auto Scaling fleet 的 instance size 減半，但保留相同 min/max count、request-per-target target 與 warmup。結果 scale-out 更頻繁、queue age 上升，總 instance-hours 反而增加。哪個修正最合理？",
+          "choices": [
+            "只比較單台 hourly price，fleet behavior 不屬於 rightsizing",
+            "永久關閉 Auto Scaling，改用固定最小 fleet",
+            "把 warmup 設成零，讓 scale-in 更快",
+            "重新以單台 capacity 校準 min/max/desired、target metric、warmup 與 instance mix，並比較 fleet-level cost 和 SLO"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。較便宜單台可能需要更多台與更多 churn，總成本必須在 fleet 層比較。",
+            "錯誤。固定 fleet 可能失去 elasticity；問題是 policy 與新 capacity unit 未重新校準。",
+            "錯誤。零 warmup 會讓尚未真正貢獻吞吐量的新容量立即進入 aggregate metric，可能加劇 scale-in/scale-out 震盪；只有初始化確實近乎即時時才合理。",
+            "正確。Instance size 改變了每個 capacity unit 的能力，scaling contract 也必須同步重算。"
+          ],
+          "task_keys": ["SAA-3.2", "SAA-4.2"],
+          "source_ids": ["asg-target", "asg-warmup"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch069-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Rightsizing 前檢查 EC2 network 與 EBS ceilings",
+          "prompt": "某 instance CPU/memory 很低，但 NetworkOut 與 EBS throughput 在尖峰都接近該 instance type 上限。團隊想縮小 instance。哪兩項應先驗證？（選兩項）",
+          "choices": [
+            "核對候選 instance 的 network bandwidth、packet rate、EBS bandwidth/IOPS 與 attached-volume limits",
+            "假設同 family 所有 sizes 都有相同 network/EBS performance",
+            "只確認 EBS volume provisioned IOPS；instance-side limit 永遠不會限制",
+            "只在 idle 環境啟動一次，不需 representative load",
+            "以代表性流量 benchmark 候選規格，觀察 throughput、queueing、latency 與 throttling"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。EC2 size 常有不同 I/O envelope；CPU fit 不代表 network/storage fit。",
+            "錯誤。Bandwidth 與 burst/baseline 可能隨 size 變化。",
+            "錯誤。End-to-end throughput 受 volume 與 instance 兩側共同限制。",
+            "錯誤。Idle startup 不會暴露尖峰 I/O bottleneck。",
+            "正確。Benchmark 可驗證文件 limits 在實際 block size、concurrency 與 traffic 下是否符合 SLO。"
+          ],
+          "task_keys": ["SAA-3.2"],
+          "source_ids": ["ebs-types", "ec2-network-bw", "ec2-ebs-perf", "co-intro"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "用 scheduled scaling 應對可預測 peak",
+          "prompt": "每月最後一天 09:00，報表服務會在 5 分鐘內從 20% 升到 95% CPU，動態 scaling 要 12 分鐘才能讓新 instances ready。最合理的 cost/performance 改善是什麼？",
+          "choices": [
+            "全年維持月末 peak capacity，避免設定 scaling",
+            "等 CPU 已到 95% 才 scale out，因為已知 peak 也不應預先動作",
+            "用 scheduled scaling 在 peak 前預先增加 capacity，保留 target tracking 處理變動，完成後再安全 scale in",
+            "在 09:01 先 scale in，降低活動期間成本"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。全年維持月末 peak 能降低啟動風險，卻會長期支付閒置容量；只有 peak 幾乎持續存在或預擴展不可靠時才可能合理。",
+            "錯誤。已知 load 到達後才啟動會因 12 分鐘 warmup 違反 SLO。",
+            "正確。Scheduled action 處理可預測基線變化，dynamic policy 處理實際偏差。",
+            "錯誤。已知 peak 開始後先 scale in 會提高 saturation 與排隊；只有實測證明工作量已提前結束並保留安全 headroom 時，縮容才合理。"
+          ],
+          "task_keys": ["SAA-3.2", "SAA-4.2"],
+          "source_ids": ["asg-scheduled", "asg-target"],
+          "inspiration_ids": ["jay-autoscaling"]
+        },
+        {
+          "id": "ch069-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "以 canary、SLO 與 rollback 驗證 rightsizing",
+          "prompt": "團隊要把 400 台 production instances 換成較小新 family。哪兩項 rollout control 最重要？（選兩項）",
+          "choices": [
+            "一次替換全部 instances，避免新舊配置重疊",
+            "先對代表性 canary slice 使用新 launch template，測 steady/peak traffic 與故障情境",
+            "只要 hourly price 下降，即使 p99 與 error rate 上升也接受",
+            "比較 canary/control 的 latency percentiles、errors、saturation、queue/replica lag 與 cost，超過 gate 時回復前一 launch template",
+            "變更開始前刪除舊 launch template，避免 rollback"
+          ],
+          "answers": [1, 3],
+          "explanations": [
+            "錯誤。Big-bang 擴大 blast radius，也失去同時對照 cohort。",
+            "正確。Canary 讓真實 compatibility/performance 先在有限範圍暴露。",
+            "錯誤。Rightsizing 不能以破壞 SLO 換 headline savings。",
+            "正確。預定 acceptance/rollback evidence 讓 cost 與使用者結果一起決策。",
+            "錯誤。保留已知良好 template 是快速 rollback 的核心。"
+          ],
+          "task_keys": ["SAP-3.3"],
+          "source_ids": ["cw-slo", "co-intro"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch069-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "跨 organization 排序並驗證 optimization opportunities",
+          "prompt": "Cost Optimization Hub 顯示 2,000 個機會，部分與 Compute Optimizer 重疊。哪兩項治理方式最好？（選兩項）",
+          "choices": [
+            "依 owner、estimated savings、effort、risk、recommendation age 與 workload criticality 排序，去除重疊建議",
+            "只按最大 headline savings 自動執行，忽略 owner 與 business context",
+            "把 recommendation accepted 當作 realized savings，不追蹤實際 bill",
+            "先處理所有 untagged resources，不確認它們屬於誰",
+            "變更後以成本、SLO 與資源使用量驗證 realized outcome，未實現節省時找出 commitment、usage 或遷移偏差"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。排序必須同時考慮價值、風險與可執行 ownership，避免兩個服務重複計算同一機會。",
+            "錯誤。Headline savings 是估計，沒有 owner/context 可能破壞 production。",
+            "錯誤。接受動作不是財務結果；需查看實際 usage 和 bill。",
+            "錯誤。先辨識 owner 與 workload contract，才能安全調整。",
+            "正確。Optimization 是 closed loop；只有 after-state 證據才能確認 savings 與 SLO。"
+          ],
+          "task_keys": ["SAP-1.5", "SAP-3.5"],
+          "source_ids": ["cost-hub", "co-intro", "cw-slo"],
+          "inspiration_ids": ["jay-cost"]
+        }
+      ]
+    },
+    {
+      "chapter": 70,
+      "questions": [
+        {
+          "id": "ch070-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "計算每次成功 business operation 的 total cost",
+          "prompt": "團隊比較兩個文件查詢架構，只看 S3 每 GB 月費，忽略 requests、Athena scan、retrieval、replicas、backup 與營運成本。哪個評估方法正確？",
+          "choices": [
+            "只選每 GB 最便宜 storage class，因為其他費用都固定",
+            "刪除 backups 後再比較，避免 recovery cost 干擾",
+            "以每次成功查詢／交易為單位計入 storage、requests、I/O、compute scan、retrieval、transfer、copies 與操作成本，同時保留 latency/durability/RTO/RPO",
+            "只比較服務首頁的起始價格，不用 workload access pattern"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。低 storage 單價可能搭配高 retrieval、request 或 scan cost。",
+            "錯誤。Backup 是 workload recovery contract 的一部分，不能為了算便宜而移除。",
+            "正確。Unit economics 必須綁定成功 business outcome 與必要非功能需求。",
+            "錯誤。實際成本由 object size、frequency、query layout、IO 與 retention 決定。"
+          ],
+          "task_keys": ["SAP-2.6"],
+          "source_ids": ["cost-hub", "aws-sap-d2"],
+          "inspiration_ids": ["jay-cost", "jay-data-lake"]
+        },
+        {
+          "id": "ch070-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "依 access evidence 設計 S3 Lifecycle",
+          "prompt": "合規文件建立後 30 天內常被存取，31–365 天每月可能讀一次，之後需保留七年且可接受小時級 restore。哪個做法最好？",
+          "choices": [
+            "依 object age/size、retrieval latency、minimum duration/charges 與 resilience 要求建立 Lifecycle transitions，並分開處理 current 與 noncurrent versions",
+            "建立後立即全部移到 Deep Archive，並承諾毫秒級讀取",
+            "只 expire current versions，假設 versioned bucket 的 noncurrent versions 也自動消失",
+            "全部永遠放 Standard，因為 Lifecycle 不能套用 prefix 或 tags"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Lifecycle 應反映真實 age/access 與 restore requirement，versioned objects 需明確管理兩種版本。",
+            "錯誤。Deep archival tiers 有 restore latency 與 minimum-duration/retrieval economics，不適合前 30 天高頻讀。",
+            "錯誤。Current 與 noncurrent lifecycle actions 分開設定，不能假設一起刪除。",
+            "錯誤。Lifecycle rules 可用 filters 限定 objects，且能執行 transition/expiration。"
+          ],
+          "task_keys": ["SAA-4.1"],
+          "source_ids": ["s3-lifecycle", "aws-saa-d4"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch070-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "S3 小物件 Lifecycle 的現行預設與 economics",
+          "prompt": "Bucket 每天產生一億個 20 KB objects。團隊假設 current S3 Lifecycle 預設會把所有小物件自動 transition 到任意 colder class，且一定省錢。哪個修正最準確？",
+          "choices": [
+            "正確；object size 不影響 request、monitoring 或 minimum billable economics",
+            "只要把 objects 切得更小，所有 storage classes 都更便宜",
+            "直接強制 transition，不需要估算 request 次數或保存時間",
+            "2024 年 9 月起新建或修改的 Lifecycle configuration 預設不 transition 小於 128 KB 的 objects；舊 configuration 在規則被修改前保留舊行為，且可用 size filter／API header 覆寫，但仍須先算完整成本"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。大量 tiny objects 的 request/monitoring 與 minimum object-size economics 可能主導成本。",
+            "錯誤。更多小 objects 通常增加 object count 與 requests，不保證更省。",
+            "錯誤。Override 技術可行不代表經濟合理，且不同 target class 有不同條件。",
+            "正確。小物件預設有 2024 年 9 月的相容性邊界；修改舊規則可能改變行為，明確 size filter 或 `x-amz-transition-default-minimum-object-size` 可控制預設，但技術可行仍不代表經濟合理。"
+          ],
+          "task_keys": ["SAP-3.5"],
+          "source_ids": ["s3-lifecycle"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch070-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "S3 Intelligent-Tiering 的適用情境與 archive opt-in",
+          "prompt": "一批 5 MB research objects 將保存多年，但團隊無法預測哪些會反覆被讀，且 active tiers 要毫秒存取；若多年未讀可接受手動 restore。哪個選擇合理？",
+          "choices": [
+            "全部使用 One Zone class，即使 durability/resilience requirement 不允許單 AZ",
+            "評估 S3 Intelligent-Tiering，計入 monitoring/automation；若可接受 restore latency，再選擇性啟用 archive access tiers",
+            "把 Intelligent-Tiering 當成 backup，刪除其他 recovery controls",
+            "使用短期 tiny-object workload，並忽略 per-object monitoring economics"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Storage class 也要符合 resilience requirement，不應只因便宜選單 AZ。",
+            "正確。Access pattern 未知且長期保存是適合情境，optional archive tiers 需由 restore latency 決定。",
+            "錯誤。Tiering 是 storage cost/access automation，不是獨立 backup lifecycle。",
+            "錯誤。短命小物件可能由 monitoring/object economics 主導，應另行分析。"
+          ],
+          "task_keys": ["SAA-4.1"],
+          "source_ids": ["s3-it"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch070-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "用 partition、compression 與 columnar format 降低 Athena scan",
+          "prompt": "Athena 每次只查某一天、某 Region 的兩個欄位，但資料以未壓縮 JSON 混在少數年度大檔中。哪個改造最直接降低 bytes scanned？",
+          "choices": [
+            "只把舊 objects 用 S3 Lifecycle 移到較冷 storage class",
+            "把每一 row 拆成 1 KB 獨立 JSON object，增加 object count",
+            "依常用 selective dimensions（如 date/region）partition，壓縮並轉成 Parquet/ORC，只讀需要 columns/partitions",
+            "為 S3 objects 建立 DynamoDB GSI，Athena 便不會掃資料"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Lifecycle 改變 storage class，不會自動改變 query 要讀的資料格式與範圍。",
+            "錯誤。Tiny files 增加 metadata/request overhead，也沒有 column pruning。",
+            "正確。Partition pruning、compression 與 columnar layout 共同降低實際 scanned data。",
+            "錯誤。DynamoDB index 不會替 Athena 自動索引 S3 object contents。"
+          ],
+          "task_keys": ["SAA-4.1"],
+          "source_ids": ["athena-columnar"],
+          "inspiration_ids": ["jay-data-lake"]
+        },
+        {
+          "id": "ch070-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "依 EBS IOPS／throughput／durability 選 gp3 或 io2",
+          "prompt": "一般 web database 需要 6,000 IOPS、250 MiB/s 且希望容量與 performance 可獨立調整，實測不需最高等級 provisioned-IOPS durability。應先評估哪個 volume？",
+          "choices": [
+            "Gp3，依需求獨立配置 size、IOPS 與 throughput，並確認 EC2 instance-side EBS limit",
+            "St1，因為 throughput HDD 最適合 latency-sensitive random OLTP",
+            "只增加 gp2 size，因為 gp3 performance 不能獨立設定",
+            "Provision 100,000 IOPS 的 volume，即使 instance 最多只能交付遠低於此數值"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。Gp3 將容量與 IOPS/throughput 解耦，常適合一般 SSD workload；end-to-end 仍受 instance limit。",
+            "錯誤。St1 適合大型 sequential throughput，不適合高頻 random latency-sensitive OLTP。",
+            "錯誤。Gp3 正是允許獨立配置 performance 的 SSD 類型。",
+            "錯誤。Volume 與 instance 中較低的上限會成為 bottleneck，超配只增加成本。"
+          ],
+          "task_keys": ["SAA-4.1"],
+          "source_ids": ["ebs-types"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch070-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "DynamoDB on-demand 與 provisioned capacity 選擇",
+          "prompt": "新產品 traffic 未知且可能突然成長 20 倍，團隊暫時無可靠 forecast，希望先降低 capacity management。哪個 DynamoDB mode 最合理？",
+          "choices": [
+            "Provisioned capacity 固定成預估平均值，任何 spike 都靠 retry",
+            "選擇 on-demand，因為它保證任何 hot partition 與任意瞬間 jump 都不會 throttle",
+            "只增加 GSI，capacity mode 便不重要",
+            "先使用 on-demand，但在已知 20 倍 launch 前逐步 ramp／預熱以提高 previous peak；取得穩定歷史後再比較 provisioned auto scaling 或 reserved capacity 的成本"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。未知 20 倍 burst 用平均 provisioned capacity 可能很快 throttle。",
+            "錯誤。On-demand 簡化 capacity，但仍有 partition/key design 與 scaling behavior，不能保證任意模式無 throttle。",
+            "錯誤。GSI 會增加另一組容量與 storage 成本，不能取代 mode 選擇。",
+            "正確。On-demand 適合不可預測 demand；其即時擴展準則是可承接前次峰值兩倍，若在約 30 分鐘內突然跳到更高（本題 20 倍），仍可能 throttling。已知 launch 應逐步 ramp 或預先把 previous peak 提高。"
+          ],
+          "task_keys": ["SAA-4.3"],
+          "source_ids": ["ddb-capacity", "ddb-ondemand"],
+          "inspiration_ids": ["jay-dynamodb"]
+        },
+        {
+          "id": "ch070-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "以 access pattern 與 partition key 降低 DynamoDB 成本",
+          "prompt": "DynamoDB table 使用固定 partition key `GLOBAL`，大量 Scan 且有三個從未查詢的 GSIs。哪兩項改造最可能同時改善 performance 與成本？（選兩項）",
+          "choices": [
+            "再加更多 GSIs，為每個欄位建立索引",
+            "依 access patterns 設計高 cardinality、能分散流量的 partition keys，必要時使用 write sharding",
+            "只切換 on-demand，hot key 與 Scan 便自動消失",
+            "保留所有 unused GSIs，因為 index 不會產生 storage/write cost",
+            "以 Query 和適當 key/index 取代 broad Scan，刪除未使用 GSIs 並控制 projection/item size/consistency"
+          ],
+          "answers": [1, 4],
+          "explanations": [
+            "錯誤。每個 GSI 都有 storage 與 write capacity implications，無需求的 index 只增加成本。",
+            "正確。分散 key 可避免單 partition 熱點並讓容量被有效利用。",
+            "錯誤。Capacity mode 不會修正單一 hot key 或不必要 Scan。",
+            "錯誤。Unused GSI 仍保存 projected data 並處理 writes。",
+            "正確。Access-pattern driven Query 與精簡 indexes 可降低讀寫與儲存浪費。"
+          ],
+          "task_keys": ["SAA-3.3", "SAA-4.3"],
+          "source_ids": ["ddb-partitions", "ddb-gsi", "ddb-capacity"],
+          "inspiration_ids": ["jay-dynamodb"]
+        },
+        {
+          "id": "ch070-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "把 backup、replicas 與 idle storage 納入 database TCO",
+          "prompt": "RDS instance 本身 rightsized，但 database 帳單仍高。哪兩項調查最可能找到被忽略的 TCO？（選兩項）",
+          "choices": [
+            "盤點 retention 以外的 retained automated backups、manual snapshots、cross-Region copies 與未使用 read replicas",
+            "刪除所有超過一天的 backups，不檢查 compliance 或 RPO",
+            "假設 read replica 和 cross-Region transfer 都免費",
+            "檢查 overprovisioned storage/IOPS、idle dev instances 與 snapshots，並在刪除前驗證 owner、restore 與 retention requirement",
+            "只看 primary instance hourly rate，不需標籤或 cost allocation"
+          ],
+          "answers": [0, 3],
+          "explanations": [
+            "正確。Detached recovery artifacts、replicas 與 copies 可能長期累積成本。",
+            "錯誤。任意縮短 retention 可能破壞 compliance 與 RPO/PITR。",
+            "錯誤。Replicas 消耗 compute/storage，cross-Region paths 也需依 pricing 計入。",
+            "正確。Rightsizing 必須涵蓋 storage/performance 與生命週期，並保留 recovery contract。",
+            "錯誤。沒有 owner/cost dimensions 難以安全處理與驗證 realized savings。"
+          ],
+          "task_keys": ["SAP-3.5"],
+          "source_ids": ["rds-backup-cost", "rds-pricing", "rds-read", "rds-storage", "wa-rto-rpo"],
+          "inspiration_ids": ["jay-cost"]
+        },
+        {
+          "id": "ch070-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "驗證 storage/database optimization 的真實效果",
+          "prompt": "團隊把 S3 objects transition、Athena 資料轉 Parquet，並調整 DynamoDB capacity。哪兩項 after-state evidence 最重要？（選兩項）",
+          "choices": [
+            "只用工具估計的 forecast savings，無需等待實際 usage",
+            "忽略 transition、retrieval 與重寫資料的一次性費用",
+            "比較 tagged owner 的實際 cost、request/scan/retrieval/consumed-capacity 與每次成功 operation 成本",
+            "只確認 IaC deployment 成功，因為性能與 recovery 會自動正確",
+            "驗證 latency、throttles、data correctness、retention 與 restore path，並把 one-time charges 和 seasonality 納入期間比較"
+          ],
+          "answers": [2, 4],
+          "explanations": [
+            "錯誤。Forecast 是候選價值，不能替代 realized bill。",
+            "錯誤。第一個 billing period 可能被 transition/retrieval/rewrite 費用扭曲。",
+            "正確。這些 usage drivers 能說明 savings 來自何處且是否符合 workload economics。",
+            "錯誤。Control-plane success 不證明 query、database 或 restore 行為。",
+            "正確。Cost change 不能破壞 SLO、correctness 或 recovery；期間也需足以涵蓋代表性 traffic。"
+          ],
+          "task_keys": ["SAP-1.5"],
+          "source_ids": ["cost-hub", "cw-slo", "backup-restore"],
+          "inspiration_ids": ["jay-cost", "jay-data-lake"]
+        }
+      ]
+    },
+    {
+      "chapter": 71,
+      "questions": [
+        {
+          "id": "ch071-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "逐 hop 建立 network cost model",
+          "prompt": "一筆 1 GB payload 從 private EC2 經跨 AZ Transit Gateway、集中式 firewall、NAT Gateway 到 Internet，response 又沿 stateful path 返回。團隊只計一次 NAT data processing。第一個正確動作是什麼？",
+          "choices": [
+            "只比較 EC2 instance price，因為 VPC 內所有流量免費",
+            "畫出正反向 source/destination AZ、TGW、inspection、NAT、Internet/Region 邊界與每段 bytes，再套用現行各服務 pricing",
+            "假設一個 logical request 永遠只產生一項 network charge",
+            "只看 NAT hourly charge，不需看 data volume"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。跨 AZ、TGW、inspection、NAT 與 data transfer 可能各有處理／傳輸費。",
+            "正確。Network cost 跟隨 bytes 經過的實體/邏輯 hops；雙向與 retries 都要納入。",
+            "錯誤。同一 payload 可先後產生 TGW、Network Firewall、NAT、跨 AZ 與 data-transfer 費用；只有路徑完全不經任何計費 hop 時，logical request 才可能接近單一項目。",
+            "錯誤。高流量架構常由 per-GB processing/transfer 而非固定小時費主導。"
+          ],
+          "task_keys": ["SAP-1.5"],
+          "source_ids": ["vpc-pricing", "tgw-pricing", "nfw-pricing", "nat-cost"],
+          "inspiration_ids": []
+        },
+        {
+          "id": "ch071-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "用 S3 gateway endpoint 避免 private S3 traffic 經 NAT",
+          "prompt": "同 Region private subnets 每月透過 NAT Gateway 讀取 PB 級 S3 data。團隊要降低 NAT data processing 且不讓 instances 取得 public IP。哪個設計最合適？",
+          "choices": [
+            "保留 `0.0.0.0/0 -> NAT` 作為唯一 S3 path，只把 NAT instance size 加大",
+            "建立 interface endpoint 但只放在另一 Region，假設所有 S3 traffic 會自動使用",
+            "在 gateway endpoint 上設定 security group，因為 gateway endpoints 必須綁 ENI",
+            "建立 S3 gateway endpoint，關聯需要的 private route tables 與 endpoint policy，並保留 IAM/bucket policy 的資料存取授權"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。這仍讓 PB 級 S3 bytes 經 NAT processing path。",
+            "錯誤。Endpoint scope、DNS 與 Region 必須符合 service path；另一 Region 不會自動接管。",
+            "錯誤。Gateway endpoint 透過 route-table prefix list path，不建立具有 security group 的 endpoint ENIs。",
+            "正確。S3 gateway endpoint 可讓 in-Region VPC traffic 走 endpoint route；network path 與 object authorization 仍是兩層責任。"
+          ],
+          "task_keys": ["SAA-4.4"],
+          "source_ids": ["s3-gwep", "nat-cost"],
+          "inspiration_ids": ["jay-vpce"]
+        },
+        {
+          "id": "ch071-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Interface endpoint 與 NAT 的功能／成本比較",
+          "prompt": "50 個 VPC 每月只呼叫少量 AWS service APIs。團隊提議每個 VPC、每個 AZ 都建立 interface endpoints，聲稱一定比 NAT 便宜。哪兩項評估正確？（選兩項）",
+          "choices": [
+            "比較 endpoint ENI hourly/data processing、AZ 數與 traffic volume，對照 NAT hourly/data processing 及可能的 cross-AZ path",
+            "Interface endpoint 對任何 traffic volume 都一定最便宜，因此不用計算",
+            "S3 gateway endpoint 可取代所有 AWS services 的 interface endpoints",
+            "只建立單一 AZ endpoint，並忽略其他 AZ 到該 ENI 的 availability/cost path",
+            "確認該 service/Region 支援、private DNS、endpoint policy、security groups 與 application DNS 行為"
+          ],
+          "answers": [0, 4],
+          "explanations": [
+            "正確。低流量、多 VPC/AZ 時固定 endpoint cost 可能主導；高流量 NAT processing 則可能主導，需算 break-even。",
+            "錯誤。Interface endpoint 有每 AZ endpoint-hour 與 data processing，NAT 也有 gateway-hour 與 processing；低流量、多 VPC/AZ 時固定 endpoint 成本可能更高，必須計算 break-even。",
+            "錯誤。Gateway endpoint 只支援特定 services，不能泛化到所有 API。",
+            "錯誤。單 AZ endpoint 可能形成 cross-AZ path 與故障邊界，必須明確接受或改善。",
+            "正確。功能適配和 DNS/policy/security 是選型前提，不能只看價格。"
+          ],
+          "task_keys": ["SAP-2.6"],
+          "source_ids": ["vpc-pricing", "nat-cost", "s3-gwep", "vpce-interface"],
+          "inspiration_ids": ["jay-vpce"]
+        },
+        {
+          "id": "ch071-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "設計 zonal NAT 的 local-AZ route",
+          "prompt": "應用分布在三個 AZ，但所有 private subnets 都把 Internet egress 路由到 us-east-1a 的一個 zonal public NAT Gateway。團隊要求失去任一 AZ 時 egress 仍可用並減少不必要跨 AZ bytes。哪個傳統 zonal 設計最符合？",
+          "choices": [
+            "把 NAT Gateway 放到 private subnet，且不給它到 IGW 的 route",
+            "保持單一 NAT；cross-zone load balancing 會自動修改 subnet route tables",
+            "在每個所需 AZ 建立 public NAT Gateway，讓各 private subnet route 到同 AZ NAT，並分別監控與測試 failover",
+            "只在 route table 加上 `0.0.0.0/0 -> IGW`，但不讓 instances 取得 public IPv4／Elastic IP"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。Public NAT 需要位於有 IGW route 的 public subnet，才能提供 Internet egress。",
+            "錯誤。Load balancer cross-zone 不控制 route table 的 NAT next hop。",
+            "正確。Local-AZ NAT path 可避免單一 AZ dependency 與一般不必要跨 AZ hop，代價是多個 hourly gateways。",
+            "錯誤。IGW route 是必要但不足條件；instance 還需要 public IPv4／Elastic IP，且 security controls 必須允許。這也沒有解決 private-subnet 同 AZ NAT 的 resilience 需求。"
+          ],
+          "task_keys": ["SAA-2.2", "SAA-4.4"],
+          "source_ids": ["nat-overview", "nat-cost"],
+          "inspiration_ids": []
+        },
+        {
+          "id": "ch071-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "區分 public 與 private NAT Gateways",
+          "prompt": "團隊同時設計 Internet egress 與跨私有網路 address translation，卻把兩種 NAT Gateway 混為一談。哪個敘述正確描述 public 與 private NAT Gateway？",
+          "choices": [
+            "Private NAT 只要綁 EIP 就能透過 IGW 上 Internet",
+            "Public NAT 使用 Elastic IP 並透過 IGW 提供 outbound Internet path；private NAT 用 private IP 連接 private networks，不能經 IGW 提供 Internet egress",
+            "Public NAT 接受 Internet 主動建立到 private instances 的任意 inbound connections",
+            "兩者都是具 application-layer allow/deny rules 的 managed firewall"
+          ],
+          "answers": [1],
+          "explanations": [
+            "錯誤。Private NAT 不使用 EIP 作 Internet egress；到 IGW 的 traffic 也不會被當成 public NAT path。",
+            "正確。兩者的 connectivity type 與 address/path 不同，private NAT 常用於 TGW/VGW 等 private connectivity。",
+            "錯誤。NAT 支援 private resources 發起連線的 return traffic，不提供 unsolicited inbound Internet mapping。",
+            "錯誤。NAT 做 address translation；security policy 仍由 SG、NACL、Network Firewall 等元件承擔。"
+          ],
+          "task_keys": ["SAA-3.4"],
+          "source_ids": ["nat-overview"],
+          "inspiration_ids": []
+        },
+        {
+          "id": "ch071-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "把 Regional NAT Gateway 當作版本化 current-service extension",
+          "prompt": "2026 年架構更新會評估 Regional NAT Gateway。團隊也在準備以 SAP-C02 為目標的題庫。哪個處理最嚴謹？",
+          "choices": [
+            "把 Regional NAT Gateway 當成現行獨立架構選項，核對 Region availability、route、quota、failure model 與 pricing；題庫則標示為 current extension，除非 exam blueprint 已確認",
+            "假設它只是多個 zonal NAT EIPs 的新名稱，不需看文件",
+            "假設所有舊 SAA-C03/SAP-C02 題目一定會以它為唯一正解",
+            "用它接受 unsolicited inbound Internet connections 到 private instances"
+          ],
+          "answers": [0],
+          "explanations": [
+            "正確。2026-10-01 時 SAP-C03 尚未開放註冊，註冊自 2026-10-27 開始，SAP-C02 可考到 2026-11-17，C03 準備資源也要到 10-27 起發布；因此 current architecture 與已公布 scored blueprint 必須分開標示。",
+            "錯誤。Regional NAT Gateway 有自己的 deployment/routing model，不應視為文字別名。",
+            "錯誤。較新的服務不能自動倒灌到舊版考試假設，必須依目標考試公布的 guide 與日期校準。",
+            "錯誤。NAT 仍主要支援 resources 主動建立的連線，不是 public inbound gateway。"
+          ],
+          "task_keys": ["SAP-1.1", "SAP-3.5"],
+          "source_ids": ["nat-regional", "aws-sap-d1", "sap-cert-update"],
+          "inspiration_ids": []
+        },
+        {
+          "id": "ch071-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "依 HTTP cache contract 正確使用 CloudFront",
+          "prompt": "全球使用者下載版本化的公開軟體套件；objects 很少更新，origin egress 與 latency 高。哪個 CloudFront 設計最合理？",
+          "choices": [
+            "把每位使用者的 authorization token 加入 cache key，即使內容完全相同，以最大化 cache fragmentation",
+            "用 CloudFront 複寫 relational database transactions",
+            "設定長 TTL 但沿用固定 object name 覆寫內容，且永不 invalidation/versioning",
+            "使用版本化 object URLs、精簡 cache key、合適 TTL 與 origin request policy，量測 cache hit rate 並保護 origin"
+          ],
+          "answers": [3],
+          "explanations": [
+            "錯誤。不必要的高 cardinality key 會降低 hit rate；只有影響 response 的值才應納入。",
+            "錯誤。CloudFront 是 HTTP content delivery/cache，不是 database replication。",
+            "錯誤。長 TTL 配覆寫名稱會讓 stale content 難以控制；versioned names 較可預測。",
+            "正確。穩定版本化內容適合 edge cache，cache/origin policies 共同決定 hit rate 與送往 origin 的資訊。"
+          ],
+          "task_keys": ["SAA-4.4"],
+          "source_ids": ["cf-cache"],
+          "inspiration_ids": ["jay-cloudfront"]
+        },
+        {
+          "id": "ch071-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "降低 cross-AZ chat 且維持 fault tolerance",
+          "prompt": "三 AZ EKS microservices 使用 Istio service mesh，每個 request 產生 40 次跨 AZ calls，network cost 與 latency 很高。哪兩項改善不會把系統退化成單 AZ？（選兩項）",
+          "choices": [
+            "把所有 services 永久固定在一個 AZ，並移除其他 AZ capacity",
+            "用 Istio locality load balancing 依 zone 優先選 local endpoints，保留健康檢查與跨 zone failover，並確保每區有足夠 replicas/capacity",
+            "無條件停用 cross-zone behavior，不驗證 target imbalance",
+            "忽略 retry amplification，因為 retries 不產生 bytes",
+            "批次／壓縮高聊天量 payload，減少不必要 calls，並在 AZ failure game day 驗證 routing 與 SLO"
+          ],
+          "answers": [1, 4],
+          "explanations": [
+            "錯誤。這會失去 AZ fault tolerance，可能用較低帳單換更大 outage risk。",
+            "正確。Istio locality load balancing 可根據 zone 優先本地 endpoints，並在本區無健康容量時 fail over；若每區 placement/capacity 不足，偏好本地反而會造成 overload。",
+            "錯誤。Target/capacity 不均時可能造成 overload，必須和 placement 一起設計。",
+            "錯誤。Retries 會增加 call count、bytes 與 downstream load。",
+            "正確。減少 payload/call amplification 是可移植優化，game day 則確認 resilience 未被破壞。"
+          ],
+          "task_keys": ["SAP-2.5", "SAP-2.6"],
+          "source_ids": ["eks-network-cost", "fault-az", "vpc-pricing"],
+          "inspiration_ids": ["jay-ha", "jay-cost"]
+        },
+        {
+          "id": "ch071-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "計算 centralized egress/inspection 的完整 cost 與 blast radius",
+          "prompt": "公司以 TGW 把 100 個 VPC 的 egress 集中到 inspection VPC，再經 Network Firewall 與 NAT。哪個 architecture review 最完整？",
+          "choices": [
+            "只計算一個 NAT 的 hourly charge；集中式一定較便宜",
+            "假設 return path 可走任意路徑，stateful inspection 不需要 symmetry",
+            "計入 TGW、inspection、NAT、endpoint/cross-AZ/data transfer 的雙向 processing，並評估 route symmetry、scale、latency、governance 與集中 blast radius",
+            "只比較 firewall rule 數量，不看 bytes 或 failure boundary"
+          ],
+          "answers": [2],
+          "explanations": [
+            "錯誤。集中式路徑可能串接多種 per-GB charges，固定 gateway 數少不代表總價低。",
+            "錯誤。Stateful inspection 通常需要對稱或受支援的 routing 才能正確關聯 flows。",
+            "正確。Centralization 的治理收益必須和每 hop 成本、capacity、latency 與單點風險一起比較。",
+            "錯誤。Rules 只是安全 configuration，無法代表 traffic economics 或 resilience。"
+          ],
+          "task_keys": ["SAP-1.1", "SAP-2.6"],
+          "source_ids": ["vpc-pricing", "tgw-pricing", "nfw-pricing", "nat-cost", "anfw-arch"],
+          "inspiration_ids": []
+        },
+        {
+          "id": "ch071-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "用 metrics、flow logs、routes 與 cost data 證明 network savings",
+          "prompt": "團隊把大量 S3 traffic 從 NAT 改走 gateway endpoint。哪兩項 before/after evidence 最能證明節省且沒有破壞 connectivity？（選兩項）",
+          "choices": [
+            "關聯 NAT bytes/connection/error metrics、VPC Flow Logs、route/endpoint configuration 與 Cost and Usage data，確認 S3 bytes 的實際路徑改變",
+            "只看 request count，假設每個 request bytes 都相同",
+            "看到 NAT bill 下降就結束，即使費用可能轉移到另一未標記服務",
+            "執行 application data access、policy/permission、AZ failure 與 rollback tests，並比較 total network cost 而非單一 line item",
+            "變更前先刪除舊 route，避免保留 rollback path"
+          ],
+          "answers": [0, 3],
+          "explanations": [
+            "正確。多種 evidence 能把 byte path、configuration 與 bill 對齊，避免只看單一代理 metric。",
+            "錯誤。Object size 與 response volume 差異很大，request count 不能可靠推算 bytes。",
+            "錯誤。費用可能移到 endpoint、cross-AZ 或其他 processing；要看 end-to-end total。",
+            "正確。Cost optimization 仍需驗證 access、security、resilience 與 reversible rollout。",
+            "錯誤。先移除 rollback 會增加 change risk，也不利於 controlled comparison。"
+          ],
+          "task_keys": ["SAP-3.5"],
+          "source_ids": ["nat-metrics", "vpc-flow", "s3-gwep", "cur", "config"],
+          "inspiration_ids": ["jay-vpce"]
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "aws-saa-d2",
+      "title": "SAA-C03 Domain 2: Design Resilient Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain2.html",
+      "kind": "official",
+      "usage": "SAA-C03 resilient architecture task mapping and scope."
+    },
+    {
+      "id": "aws-saa-d3",
+      "title": "SAA-C03 Domain 3: Design High-Performing Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain3.html",
+      "kind": "official",
+      "usage": "SAA-C03 performance task mapping and scope."
+    },
+    {
+      "id": "aws-saa-d4",
+      "title": "SAA-C03 Domain 4: Design Cost-Optimized Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain4.html",
+      "kind": "official",
+      "usage": "SAA-C03 cost optimization task mapping and scope."
+    },
+    {
+      "id": "aws-sap-d1",
+      "title": "SAP-C02 Domain 1: Design for Organizational Complexity",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain1.html",
+      "kind": "official",
+      "usage": "SAP-C02 organizational complexity task mapping and scope."
+    },
+    {
+      "id": "aws-sap-d2",
+      "title": "SAP-C02 Domain 2: Design for New Solutions",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain2.html",
+      "kind": "official",
+      "usage": "SAP-C02 new solution, continuity, performance, and cost task mapping."
+    },
+    {
+      "id": "aws-sap-d3",
+      "title": "SAP-C02 Domain 3: Continuous Improvement for Existing Solutions",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain3.html",
+      "kind": "official",
+      "usage": "SAP-C02 operational, reliability, performance, and cost improvement mapping."
+    },
+    {
+      "id": "gi-az",
+      "title": "AWS Regions and Availability Zones",
+      "url": "https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions-availability-zones.html",
+      "kind": "official",
+      "usage": "Definitions and scope of Regions and Availability Zones."
+    },
+    {
+      "id": "fault-az",
+      "title": "AWS Fault Isolation Boundaries: Availability Zones",
+      "url": "https://docs.aws.amazon.com/whitepapers/latest/aws-fault-isolation-boundaries/availability-zones.html",
+      "kind": "official",
+      "usage": "Availability Zone isolation and multi-AZ dependency analysis."
+    },
+    {
+      "id": "wa-rto-rpo",
+      "title": "REL13-BP01 Define recovery objectives for downtime and data loss",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_planning_for_recovery_objective_defined_recovery.html",
+      "kind": "official",
+      "usage": "RTO, RPO, business impact, and recovery objective definitions."
+    },
+    {
+      "id": "wa-dr",
+      "title": "REL13-BP02 Use defined recovery strategies",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_planning_for_recovery_disaster_recovery.html",
+      "kind": "official",
+      "usage": "Disaster recovery strategy, testing, dependencies, and capacity."
+    },
+    {
+      "id": "dr-options",
+      "title": "Disaster recovery options in the cloud",
+      "url": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html",
+      "kind": "official",
+      "usage": "Backup and restore, pilot light, warm standby, and multi-site patterns."
+    },
+    {
+      "id": "r53-failover",
+      "title": "Amazon Route 53 health checks and DNS failover",
+      "url": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html",
+      "kind": "official",
+      "usage": "Health-checked DNS answers and failover routing behavior."
+    },
+    {
+      "id": "arc-rc",
+      "title": "Amazon Application Recovery Controller routing control",
+      "url": "https://docs.aws.amazon.com/r53recovery/latest/dg/routing-control.html",
+      "kind": "official",
+      "usage": "Pre-provisioned routing controls and safety rules."
+    },
+    {
+      "id": "arc-dataplane",
+      "title": "ARC routing-control data and control planes",
+      "url": "https://docs.aws.amazon.com/r53recovery/latest/dg/data-and-control-planes.html",
+      "kind": "official",
+      "usage": "Highly available data-plane endpoint use during recovery."
+    },
+    {
+      "id": "rds-multiaz",
+      "title": "Amazon RDS Multi-AZ deployments",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html",
+      "kind": "official",
+      "usage": "Managed high availability, standby types, and failover behavior."
+    },
+    {
+      "id": "rds-read",
+      "title": "Working with Amazon RDS read replicas",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.html",
+      "kind": "official",
+      "usage": "Asynchronous replication, read routing, promotion, and lag."
+    },
+    {
+      "id": "backup-restore",
+      "title": "AWS Backup restore testing",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html",
+      "kind": "official",
+      "usage": "Recurring restore test plans, jobs, validation, and evidence."
+    },
+    {
+      "id": "backup-plan-schedule",
+      "title": "AWS Backup plan scheduling and start windows",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/plan-options-and-configuration.html",
+      "kind": "official",
+      "usage": "Backup frequency, start windows, completion windows, and lifecycle configuration."
+    },
+    {
+      "id": "backup-cross-account",
+      "title": "Create cross-account backup copies",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html",
+      "kind": "official",
+      "usage": "Cross-account copy prerequisites, vaults, permissions, encryption, and copy behavior."
+    },
+    {
+      "id": "backup-airgap",
+      "title": "AWS Backup logically air-gapped vault",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/logicallyairgappedvault.html",
+      "kind": "official",
+      "usage": "Backup isolation and recovery account boundary."
+    },
+    {
+      "id": "backup-vault-lock",
+      "title": "AWS Backup Vault Lock",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html",
+      "kind": "official",
+      "usage": "WORM protection, compliance mode, and vault change/delete controls."
+    },
+    {
+      "id": "drs-failback",
+      "title": "AWS Elastic Disaster Recovery recovery and failback",
+      "url": "https://docs.aws.amazon.com/drs/latest/userguide/failback.html",
+      "kind": "official",
+      "usage": "Server recovery and failback lifecycle."
+    },
+    {
+      "id": "drs-concepts",
+      "title": "AWS Elastic Disaster Recovery concepts",
+      "url": "https://docs.aws.amazon.com/drs/latest/userguide/concepts.html",
+      "kind": "official",
+      "usage": "Agent-based continuous block-level replication, staging resources, recovery instances, and protected server workloads."
+    },
+    {
+      "id": "res-hub-policy",
+      "title": "AWS Resilience Hub resiliency policies",
+      "url": "https://docs.aws.amazon.com/resilience-hub/latest/userguide/create-policy.html",
+      "kind": "official",
+      "usage": "Resiliency policy objectives and assessment boundary."
+    },
+    {
+      "id": "fis-intro",
+      "title": "AWS Fault Injection Service concepts and safeguards",
+      "url": "https://docs.aws.amazon.com/fis/latest/userguide/what-is.html",
+      "kind": "official",
+      "usage": "Controlled experiments, targets, stop conditions, and safety."
+    },
+    {
+      "id": "cache-strategies",
+      "title": "ElastiCache caching strategies",
+      "url": "https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/Strategies.html",
+      "kind": "official",
+      "usage": "Cache-aside, write-through, expiration, and caching design."
+    },
+    {
+      "id": "asg-target",
+      "title": "EC2 Auto Scaling target tracking scaling policies",
+      "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html",
+      "kind": "official",
+      "usage": "Target metric selection and proportional scaling behavior."
+    },
+    {
+      "id": "asg-warmup",
+      "title": "EC2 Auto Scaling default instance warmup",
+      "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-default-instance-warmup.html",
+      "kind": "official",
+      "usage": "Warmup effects on metric aggregation and scaling."
+    },
+    {
+      "id": "asg-health",
+      "title": "Health checks for instances in an Auto Scaling group",
+      "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/health-checks-overview.html",
+      "kind": "official",
+      "usage": "EC2, Elastic Load Balancing, and custom health checks plus health-check grace behavior."
+    },
+    {
+      "id": "elb-health",
+      "title": "Health checks for Application Load Balancer target groups",
+      "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html",
+      "kind": "official",
+      "usage": "Target health-check protocol, path, thresholds, initial state, and routing readiness."
+    },
+    {
+      "id": "asg-scheduled",
+      "title": "Scheduled scaling for Amazon EC2 Auto Scaling",
+      "url": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/schedule_time.html",
+      "kind": "official",
+      "usage": "Pre-scaling predictable recurring demand."
+    },
+    {
+      "id": "wa-horizontal",
+      "title": "REL07-BP03 Obtain resources upon detection that more resources are needed",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_adapt_to_changes_in_demand_dynamically_obtain_resources.html",
+      "kind": "official",
+      "usage": "Dynamic horizontal scaling, stateless capacity, readiness, and avoiding single-resource limits."
+    },
+    {
+      "id": "elasticache-metrics",
+      "title": "ElastiCache metrics for Valkey and Redis OSS",
+      "url": "https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/CacheMetrics.Redis.html",
+      "kind": "official",
+      "usage": "CacheHits, CacheMisses, engine CPU, connections, evictions, and replication metrics."
+    },
+    {
+      "id": "rds-metrics",
+      "title": "Amazon CloudWatch metrics for Amazon RDS",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-metrics.html",
+      "kind": "official",
+      "usage": "DatabaseConnections and engine-specific latency, storage, throughput, and replica-lag metrics."
+    },
+    {
+      "id": "sqs-metrics",
+      "title": "Available CloudWatch metrics for Amazon SQS",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-available-cloudwatch-metrics.html",
+      "kind": "official",
+      "usage": "Queue depth, message age, processing, and backlog signals."
+    },
+    {
+      "id": "sqs-standard",
+      "title": "Amazon SQS standard queues",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html",
+      "kind": "official",
+      "usage": "At-least-once delivery and best-effort ordering characteristics."
+    },
+    {
+      "id": "sqs-visibility",
+      "title": "Amazon SQS visibility timeout",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html",
+      "kind": "official",
+      "usage": "In-flight messages, redelivery, ChangeMessageVisibility, and delete-after-processing."
+    },
+    {
+      "id": "sq-intro",
+      "title": "AWS Service Quotas concepts",
+      "url": "https://docs.aws.amazon.com/servicequotas/latest/userguide/intro.html",
+      "kind": "official",
+      "usage": "Quota scope, adjustability, defaults, and applied values."
+    },
+    {
+      "id": "sq-auto",
+      "title": "Service Quotas Automatic Management",
+      "url": "https://docs.aws.amazon.com/servicequotas/latest/userguide/automatic-management.html",
+      "kind": "official",
+      "usage": "Supported quota monitoring and automatic increase boundaries."
+    },
+    {
+      "id": "lambda-conc",
+      "title": "Configuring reserved and provisioned concurrency for AWS Lambda",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html",
+      "kind": "official",
+      "usage": "Reserved concurrency isolation/cap and provisioned concurrency."
+    },
+    {
+      "id": "sdk-retry",
+      "title": "AWS SDK retry behavior",
+      "url": "https://docs.aws.amazon.com/sdkref/latest/guide/feature-retry-behavior.html",
+      "kind": "official",
+      "usage": "Retry modes, backoff, jitter, token buckets, and boundaries."
+    },
+    {
+      "id": "wa-grace",
+      "title": "REL05-BP01 Implement graceful degradation",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_graceful_degradation.html",
+      "kind": "official",
+      "usage": "Load shedding, fallback, and preserving essential functionality."
+    },
+    {
+      "id": "cw-concepts",
+      "title": "Amazon CloudWatch metrics concepts",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html",
+      "kind": "official",
+      "usage": "Metrics, dimensions, statistics, periods, percentiles, and retention."
+    },
+    {
+      "id": "cw-alarm",
+      "title": "Using Amazon CloudWatch alarms",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html",
+      "kind": "official",
+      "usage": "Evaluation periods, datapoints to alarm, and missing data."
+    },
+    {
+      "id": "cw-composite",
+      "title": "Combining alarms with CloudWatch composite alarms",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarm-combining.html",
+      "kind": "official",
+      "usage": "Boolean alarm rules and alert-noise reduction."
+    },
+    {
+      "id": "cw-slo",
+      "title": "CloudWatch Application Signals service level objectives",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-ServiceLevelObjectives.html",
+      "kind": "official",
+      "usage": "SLIs, SLOs, attainment, and error budgets."
+    },
+    {
+      "id": "cw-emf",
+      "title": "CloudWatch embedded metric format",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html",
+      "kind": "official",
+      "usage": "Extracted metrics, dimensions, and cardinality implications."
+    },
+    {
+      "id": "cwl-concepts",
+      "title": "CloudWatch Logs groups and streams",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Working-with-log-groups-and-streams.html",
+      "kind": "official",
+      "usage": "Log groups, streams, retention, query, and subscription boundaries."
+    },
+    {
+      "id": "logs-insights",
+      "title": "Analyze log data with CloudWatch Logs Insights",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html",
+      "kind": "official",
+      "usage": "Interactive log queries and analysis."
+    },
+    {
+      "id": "logs-filter",
+      "title": "Create metrics from log events using filters",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/MonitoringLogData.html",
+      "kind": "official",
+      "usage": "Metric filters for bounded numeric signals from matching events."
+    },
+    {
+      "id": "logs-subscription",
+      "title": "Real-time processing of log data with subscription filters",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html",
+      "kind": "official",
+      "usage": "Continuous delivery of matching log events to supported destinations."
+    },
+    {
+      "id": "cw-xacct",
+      "title": "CloudWatch cross-account observability",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Unified-Cross-Account.html",
+      "kind": "official",
+      "usage": "Monitoring-account and source-account observability linking."
+    },
+    {
+      "id": "cloudtrail-events",
+      "title": "CloudTrail events",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-events.html",
+      "kind": "official",
+      "usage": "Management, data, Insights, and network activity events and the fields used to identify API actors and changes."
+    },
+    {
+      "id": "config",
+      "title": "What is AWS Config?",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html",
+      "kind": "official",
+      "usage": "Resource configuration, history, relationships, and compliance."
+    },
+    {
+      "id": "xray-concepts",
+      "title": "AWS X-Ray concepts",
+      "url": "https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html",
+      "kind": "official",
+      "usage": "Traces, segments, subsegments, service maps, sampling, and annotations."
+    },
+    {
+      "id": "xray-timeline",
+      "title": "X-Ray SDK and daemon support timeline",
+      "url": "https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html",
+      "kind": "official",
+      "usage": "Maintenance-mode date and current end-of-support status."
+    },
+    {
+      "id": "cw-otel",
+      "title": "OpenTelemetry in Amazon CloudWatch",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-OpenTelemetry-Sections.html",
+      "kind": "official",
+      "usage": "OpenTelemetry instrumentation and CloudWatch integrations."
+    },
+    {
+      "id": "xray-sqs",
+      "title": "Tracing Amazon SQS messages with AWS X-Ray",
+      "url": "https://docs.aws.amazon.com/xray/latest/devguide/xray-services-sqs.html",
+      "kind": "official",
+      "usage": "AWSTraceHeader system attributes, producer-to-consumer trace continuity, and asynchronous queue timing."
+    },
+    {
+      "id": "xray-migrate-otel",
+      "title": "Migrate from X-Ray instrumentation to OpenTelemetry instrumentation",
+      "url": "https://docs.aws.amazon.com/xray/latest/devguide/migrate-to-opentelemetry.html",
+      "kind": "official",
+      "usage": "Migration planning for instrumentation, propagation, sampling, resource attributes, collectors, and backends."
+    },
+    {
+      "id": "sp-intro",
+      "title": "What are Savings Plans?",
+      "url": "https://docs.aws.amazon.com/savingsplans/latest/userguide/",
+      "kind": "official",
+      "usage": "Hourly spend commitments, discounts, and Savings Plans scope."
+    },
+    {
+      "id": "sp-types",
+      "title": "Savings Plans types",
+      "url": "https://docs.aws.amazon.com/savingsplans/latest/userguide/plan-types.html",
+      "kind": "official",
+      "usage": "Current Compute, EC2 Instance, SageMaker AI, and Database Savings Plans catalog."
+    },
+    {
+      "id": "sp-apply",
+      "title": "How Savings Plans apply to usage",
+      "url": "https://docs.aws.amazon.com/savingsplans/latest/userguide/sp-applying.html",
+      "kind": "official",
+      "usage": "Eligible usage, application order, and hourly commitment behavior."
+    },
+    {
+      "id": "sp-purchase",
+      "title": "Savings Plans purchase analysis",
+      "url": "https://docs.aws.amazon.com/savingsplans/latest/userguide/sp-purchase-analysis.html",
+      "kind": "official",
+      "usage": "Historical baseline, utilization, coverage, and purchase decisions."
+    },
+    {
+      "id": "sap-cert-update",
+      "title": "AWS Certified Solutions Architect – Professional exam transition",
+      "url": "https://aws.amazon.com/certification/certified-solutions-architect-professional/",
+      "kind": "official",
+      "usage": "SAP-C02 and SAP-C03 registration, availability, retirement, and preparation-resource dates."
+    },
+    {
+      "id": "ec2-ri",
+      "title": "How EC2 Reserved Instance discounts apply",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/apply_ri.html",
+      "kind": "official",
+      "usage": "Regional and zonal RI billing and capacity properties."
+    },
+    {
+      "id": "ec2-ri-types",
+      "title": "Types of Amazon EC2 Reserved Instances",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-market-concepts-buying.html",
+      "kind": "official",
+      "usage": "Standard and Convertible offering classes, Regional and Zonal scope, discounts, and capacity reservation boundaries."
+    },
+    {
+      "id": "ec2-ri-modify",
+      "title": "Modify Amazon EC2 Reserved Instances",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-modifying.html",
+      "kind": "official",
+      "usage": "Permitted Standard and Convertible RI modifications and restrictions."
+    },
+    {
+      "id": "ec2-ri-exchange",
+      "title": "Exchange Convertible Reserved Instances",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-convertible-exchange.html",
+      "kind": "official",
+      "usage": "Convertible RI exchange requirements, value rules, and target configurations."
+    },
+    {
+      "id": "ec2-cr",
+      "title": "EC2 On-Demand Capacity Reservations",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-capacity-reservations.html",
+      "kind": "official",
+      "usage": "Capacity assurance, targeting, and discount interaction."
+    },
+    {
+      "id": "spot-interrupt",
+      "title": "Prepare for Spot Instance interruptions",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/prepare-for-interruptions.html",
+      "kind": "official",
+      "usage": "Interruption-tolerant architecture, notices, and durable progress."
+    },
+    {
+      "id": "spot-rebalance",
+      "title": "EC2 Spot rebalance recommendations",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html",
+      "kind": "official",
+      "usage": "Rebalance signals and proactive replacement behavior."
+    },
+    {
+      "id": "spot-allocation",
+      "title": "EC2 Fleet allocation strategies",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html",
+      "kind": "official",
+      "usage": "Capacity-optimized, price-capacity-optimized, and diversified Spot placement."
+    },
+    {
+      "id": "co-intro",
+      "title": "What is AWS Compute Optimizer?",
+      "url": "https://docs.aws.amazon.com/compute-optimizer/latest/ug/what-is-compute-optimizer.html",
+      "kind": "official",
+      "usage": "Recommendation scope, performance risk, savings, and supported resources."
+    },
+    {
+      "id": "co-eim",
+      "title": "Compute Optimizer enhanced infrastructure metrics",
+      "url": "https://docs.aws.amazon.com/compute-optimizer/latest/ug/enhanced-infrastructure-metrics.html",
+      "kind": "official",
+      "usage": "Extended lookback, activation, and cost boundary."
+    },
+    {
+      "id": "co-mem",
+      "title": "EC2 metrics analyzed by Compute Optimizer",
+      "url": "https://docs.aws.amazon.com/compute-optimizer/latest/ug/ec2-metrics-analyzed.html",
+      "kind": "official",
+      "usage": "EC2 CPU, memory, network, disk, and agent metric requirements."
+    },
+    {
+      "id": "co-ext",
+      "title": "Compute Optimizer external metrics ingestion",
+      "url": "https://docs.aws.amazon.com/compute-optimizer/latest/ug/external-metrics-ingestion.html",
+      "kind": "official",
+      "usage": "Supported external observability provider integration."
+    },
+    {
+      "id": "cost-hub",
+      "title": "AWS Cost Optimization Hub",
+      "url": "https://docs.aws.amazon.com/cost-management/latest/userguide/cost-optimization-hub.html",
+      "kind": "official",
+      "usage": "Organization-wide recommendation aggregation, deduplication, and savings."
+    },
+    {
+      "id": "cur",
+      "title": "What are AWS Cost and Usage Reports?",
+      "url": "https://docs.aws.amazon.com/cur/latest/userguide/what-is-cur.html",
+      "kind": "official",
+      "usage": "Detailed cost and usage line-item evidence for before/after analysis."
+    },
+    {
+      "id": "ec2-credits",
+      "title": "Monitor CPU credits for burstable instances",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-monitoring-cpu-credits.html",
+      "kind": "official",
+      "usage": "CPU credit balance, surplus usage, and charge metrics."
+    },
+    {
+      "id": "s3-lifecycle",
+      "title": "S3 Lifecycle transition considerations",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html",
+      "kind": "official",
+      "usage": "Transition rules, minimum duration, size filters, and current small-object behavior."
+    },
+    {
+      "id": "s3-it",
+      "title": "S3 Intelligent-Tiering",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/intelligent-tiering.html",
+      "kind": "official",
+      "usage": "Automatic access tiers, monitoring charges, small objects, and archive tiers."
+    },
+    {
+      "id": "athena-columnar",
+      "title": "Use columnar storage formats with Athena",
+      "url": "https://docs.aws.amazon.com/athena/latest/ug/columnar-storage.html",
+      "kind": "official",
+      "usage": "Partitioning, compression, Parquet/ORC, and scanned-byte reduction."
+    },
+    {
+      "id": "ddb-capacity",
+      "title": "Evaluate a DynamoDB table capacity mode",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CostOptimization_TableCapacityMode.html",
+      "kind": "official",
+      "usage": "Cost comparison of on-demand and provisioned capacity."
+    },
+    {
+      "id": "ddb-ondemand",
+      "title": "DynamoDB on-demand capacity mode",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/on-demand-capacity-mode.html",
+      "kind": "official",
+      "usage": "On-demand scaling behavior and capacity mode boundaries."
+    },
+    {
+      "id": "ddb-partitions",
+      "title": "DynamoDB partition key design",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html",
+      "kind": "official",
+      "usage": "High-cardinality keys, uniform activity, and write sharding."
+    },
+    {
+      "id": "ddb-gsi",
+      "title": "Global secondary indexes in DynamoDB",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html",
+      "kind": "official",
+      "usage": "Index storage, projected attributes, write propagation, and capacity."
+    },
+    {
+      "id": "ebs-types",
+      "title": "Amazon EBS volume types",
+      "url": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html",
+      "kind": "official",
+      "usage": "SSD/HDD types, IOPS, throughput, durability, and instance limits."
+    },
+    {
+      "id": "ec2-network-bw",
+      "title": "Amazon EC2 instance network bandwidth",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html",
+      "kind": "official",
+      "usage": "Instance baseline/burst network bandwidth and multi-flow considerations."
+    },
+    {
+      "id": "ec2-ebs-perf",
+      "title": "EBS-optimized instance performance",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-optimized.html",
+      "kind": "official",
+      "usage": "Instance-side EBS bandwidth, throughput, IOPS, and shared limits."
+    },
+    {
+      "id": "rds-backup-cost",
+      "title": "RDS backup retention and storage cost",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithAutomatedBackups.Retaining.html",
+      "kind": "official",
+      "usage": "Retained automated backups, snapshots, and storage lifecycle."
+    },
+    {
+      "id": "rds-pricing",
+      "title": "Amazon RDS pricing",
+      "url": "https://aws.amazon.com/rds/pricing/",
+      "kind": "official",
+      "usage": "DB instance, storage, I/O, backup, snapshot, read-replica, and data-transfer pricing dimensions."
+    },
+    {
+      "id": "rds-storage",
+      "title": "Amazon RDS DB instance storage",
+      "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html",
+      "kind": "official",
+      "usage": "RDS storage types, provisioned IOPS, throughput, autoscaling, and storage configuration."
+    },
+    {
+      "id": "nat-overview",
+      "title": "NAT gateway connectivity types",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html",
+      "kind": "official",
+      "usage": "Public/private NAT, Elastic IP, IGW, TGW, and inbound behavior."
+    },
+    {
+      "id": "nat-cost",
+      "title": "NAT gateway cost guidance",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-pricing.html",
+      "kind": "official",
+      "usage": "Data processing, cross-AZ paths, and endpoint cost considerations."
+    },
+    {
+      "id": "nat-metrics",
+      "title": "Monitor NAT gateways with CloudWatch",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway-cloudwatch.html",
+      "kind": "official",
+      "usage": "NAT bytes, packets, connections, errors, and port allocation signals."
+    },
+    {
+      "id": "nat-regional",
+      "title": "Regional NAT gateways",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html",
+      "kind": "official",
+      "usage": "Current Regional NAT Gateway architecture, routing, scale, and availability."
+    },
+    {
+      "id": "s3-gwep",
+      "title": "Gateway endpoints for Amazon S3",
+      "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html",
+      "kind": "official",
+      "usage": "S3 prefix-list routes, endpoint policies, scope, and limitations."
+    },
+    {
+      "id": "vpce-interface",
+      "title": "Configure an interface VPC endpoint",
+      "url": "https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html",
+      "kind": "official",
+      "usage": "Endpoint subnets, ENIs, security groups, private DNS, and policies."
+    },
+    {
+      "id": "vpc-pricing",
+      "title": "Amazon VPC pricing",
+      "url": "https://aws.amazon.com/vpc/pricing/",
+      "kind": "official",
+      "usage": "Current endpoint, NAT, Transit Gateway, and data-processing pricing structure."
+    },
+    {
+      "id": "tgw-pricing",
+      "title": "AWS Transit Gateway pricing",
+      "url": "https://aws.amazon.com/transit-gateway/pricing/",
+      "kind": "official",
+      "usage": "Attachment-hour, data-processing, peering, and network-function processing pricing dimensions."
+    },
+    {
+      "id": "nfw-pricing",
+      "title": "AWS Network Firewall pricing",
+      "url": "https://aws.amazon.com/network-firewall/pricing/",
+      "kind": "official",
+      "usage": "Firewall endpoint-hour, traffic-processing, NAT-related pricing examples, and advanced inspection charges."
+    },
+    {
+      "id": "anfw-arch",
+      "title": "AWS Network Firewall deployment models",
+      "url": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/architectures.html",
+      "kind": "official",
+      "usage": "Centralized inspection, Transit Gateway integration, and symmetric routing."
+    },
+    {
+      "id": "eks-network-cost",
+      "title": "Optimize EKS data-transfer costs",
+      "url": "https://docs.aws.amazon.com/eks/latest/best-practices/cost-opt-networking.html",
+      "kind": "official",
+      "usage": "Cross-AZ traffic measurement, zonal placement, topology-aware routing, and resilience tradeoffs."
+    },
+    {
+      "id": "cf-cache",
+      "title": "CloudFront caching behavior",
+      "url": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/ConfiguringCaching.html",
+      "kind": "official",
+      "usage": "Cache keys, TTLs, cache policies, and origin request behavior."
+    },
+    {
+      "id": "vpc-flow",
+      "title": "VPC Flow Logs",
+      "url": "https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html",
+      "kind": "official",
+      "usage": "IP traffic records and network-path evidence."
+    },
+    {
+      "id": "jay-ha",
+      "title": "AWS High Availability & Fault Tolerance Architecture",
+      "url": "https://jayendrapatil.com/aws-high-availability-fault-tolerance-architecture-certification/",
+      "kind": "community",
+      "usage": "Topic frequency and plausible distractor inspiration only; factual claims validated against official AWS sources."
+    },
+    {
+      "id": "jay-dr",
+      "title": "AWS Disaster Recovery Architecture Strategies",
+      "url": "https://jayendrapatil.com/aws-disaster-recovery-architecture-strategies/",
+      "kind": "community",
+      "usage": "DR comparison and common confusion inspiration only; no question wording copied."
+    },
+    {
+      "id": "jay-mr-aa",
+      "title": "AWS Multi-Region Active-Active Architecture",
+      "url": "https://jayendrapatil.com/aws-multi-region-active-active-architecture/",
+      "kind": "community",
+      "usage": "Multi-Region topic and distractor inspiration only; current facts checked against AWS docs."
+    },
+    {
+      "id": "jay-cache",
+      "title": "AWS Three-Tier Web and Caching Architecture",
+      "url": "https://jayendrapatil.com/aws-three-tier-web-caching-architecture-elasticache-dax-cloudfront/",
+      "kind": "community",
+      "usage": "Caching service comparison inspiration only; no copied question structure."
+    },
+    {
+      "id": "jay-autoscaling",
+      "title": "AWS Auto Scaling and Performance Architecture",
+      "url": "https://jayendrapatil.com/aws-auto-scaling-performance-architecture-policies-predictive-warm-pools/",
+      "kind": "community",
+      "usage": "Scaling policy topic frequency and distractor inspiration only."
+    },
+    {
+      "id": "jay-event-driven",
+      "title": "AWS Event-Driven Serverless Architecture",
+      "url": "https://jayendrapatil.com/aws-event-driven-serverless-architecture/",
+      "kind": "community",
+      "usage": "Queue and asynchronous architecture topic inspiration only."
+    },
+    {
+      "id": "jay-serverless",
+      "title": "AWS Serverless API Architecture",
+      "url": "https://jayendrapatil.com/aws-serverless-api-architecture-api-gateway-lambda/",
+      "kind": "community",
+      "usage": "Lambda concurrency and serverless overload topic inspiration only."
+    },
+    {
+      "id": "jay-cloudwatch",
+      "title": "Amazon CloudWatch – Metrics, Alarms & Dashboards",
+      "url": "https://jayendrapatil.com/aws-cloudwatch-overview/",
+      "kind": "community",
+      "usage": "Observability topic organization inspiration only; service behavior validated against AWS docs."
+    },
+    {
+      "id": "jay-xray",
+      "title": "AWS X-Ray",
+      "url": "https://jayendrapatil.com/aws-x-ray/",
+      "kind": "community",
+      "usage": "Tracing topic and common confusion inspiration only; timeline facts use official AWS sources."
+    },
+    {
+      "id": "jay-cost",
+      "title": "AWS Cost Optimization Architecture – Savings Plans, Spot, Right-Sizing & Storage Tiering",
+      "url": "https://jayendrapatil.com/aws-cost-optimization-architecture-strategies/",
+      "kind": "community",
+      "usage": "Cost pattern coverage and distractor inspiration only."
+    },
+    {
+      "id": "jay-data-lake",
+      "title": "AWS Data Lake & Analytics Architecture – Ingestion, Storage, Processing & Visualization",
+      "url": "https://jayendrapatil.com/aws-data-lake-analytics-architecture/",
+      "kind": "community",
+      "usage": "Athena and data-layout topic inspiration only."
+    },
+    {
+      "id": "jay-dynamodb",
+      "title": "DynamoDB Advanced – Streams, Global Tables, TTL & Capacity Patterns",
+      "url": "https://jayendrapatil.com/aws-dynamodb-advanced-streams-global-tables-ttl-capacity/",
+      "kind": "community",
+      "usage": "DynamoDB key, capacity, and distractor inspiration only."
+    },
+    {
+      "id": "jay-vpce",
+      "title": "AWS VPC Endpoints – Gateway & Interface Endpoints",
+      "url": "https://jayendrapatil.com/aws-vpc-endpoints/",
+      "kind": "community",
+      "usage": "Endpoint comparison and distractor inspiration only."
+    },
+    {
+      "id": "jay-cloudfront",
+      "title": "Global Accelerator vs CloudFront",
+      "url": "https://jayendrapatil.com/aws-global-accelerator-vs-cloudfront/",
+      "kind": "community",
+      "usage": "CloudFront contract and adjacent-service confusion inspiration only."
+    }
+  ]
+}

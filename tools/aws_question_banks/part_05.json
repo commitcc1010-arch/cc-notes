@@ -1,0 +1,3635 @@
+{
+  "part": 5,
+  "author_agent": "P05-A",
+  "chapters": [
+    {
+      "chapter": 52,
+      "questions": [
+        {
+          "id": "ch052-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "SQS Standard 與 FIFO 選型",
+          "prompt": "一家圖片網站在促銷時每秒會送入數萬個縮圖工作。每張圖片彼此獨立，偶爾重複處理可以接受，需求是盡量提高吞吐量並讓 worker 自行擴縮。應選擇哪一項？",
+          "choices": [
+            "使用 SQS Standard queue，並讓 consumer 以圖片工作 ID 實作冪等處理",
+            "使用單一 MessageGroupId 的 SQS FIFO queue，藉此取得最高平行度",
+            "使用 SNS topic，讓 worker 之後再回頭拉取尚未處理的通知",
+            "使用 Kinesis Data Streams，因為所有非同步工作都必須能回播"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。工作互不依賴且優先追求吞吐量，Standard queue 是合適的 work buffer；因為可能重複投遞，consumer 仍要冪等。",
+            "錯誤。FIFO 的單一 message group 會把工作序列化；只有業務真的要求同一實體有序時才值得使用 FIFO。",
+            "錯誤。SNS 是 push fan-out，不是讓一群 worker 競爭拉取並保存 backlog 的工作佇列。",
+            "錯誤。Kinesis 適合保留、分割及供多個獨立 consumer 回播的事件流；題目沒有這些需求。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-fifo",
+            "aws-saa-d2"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features",
+            "jay-event-driven",
+            "aws-saa-sample"
+          ]
+        },
+        {
+          "id": "ch052-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Visibility timeout 與長工作",
+          "prompt": "SQS worker 通常 4 分鐘完成工作，但少數工作需要 10 分鐘。現在 visibility timeout 為 5 分鐘，監控顯示長工作常被兩個 worker 同時執行。最適合的修正是什麼？",
+          "choices": [
+            "把 message retention 改成 10 分鐘，讓 SQS 延後重新投遞",
+            "將初始 visibility 設在正常處理範圍，長工作定期呼叫 ChangeMessageVisibility，且只在結果提交後 DeleteMessage",
+            "worker 收到 message 後立即 DeleteMessage，再開始執行工作",
+            "讓 producer 增加 DelaySeconds，取代 consumer 的 visibility timeout"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Retention 控制 message 最久保存多久，不控制已被接收的 message 何時再次可見。",
+            "正確。Visibility 必須覆蓋處理時間；無法預知的長工作可使用 receipt handle 延長，完成 durable side effect 後才刪除。",
+            "錯誤。先刪除等於在 durable side effect 完成前確認成功；worker 若隨後故障，SQS 已無法重新投遞，工作便會永久遺失。",
+            "錯誤。DelaySeconds 隱藏新送入的 message；visibility timeout 才管理已被 consumer 接收的 message。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "sqs-visibility"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch052-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "DLQ redrive 與營運處置",
+          "prompt": "一個訂單 queue 偶爾收到格式錯誤的 poison message。團隊必須避免它們無限消耗 worker，並在修正 parser 後安全重處理。應採取哪兩項措施？（選兩項）",
+          "choices": [
+            "把 DLQ 當作永久稽核檔案庫，不再設 retention 或處理 owner",
+            "對所有錯誤都把 maxReceiveCount 設成 1，避免任何重試",
+            "在 source queue 設 RedrivePolicy 與經測試的 maxReceiveCount，並替 DLQ 建立告警",
+            "收到 DLQ message 後立刻自動無限 redrive，不必先判斷根因",
+            "修正根因後使用受控 redrive，並確保 consumer 對重複處理具冪等性"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。DLQ 是失敗隔離與復原工作區，不是沒有生命週期、owner 與查詢能力的永久 archive。",
+            "錯誤。一次暫時性失敗就進 DLQ 通常過於激進；maxReceiveCount 應配合可恢復錯誤與重試時間設計。",
+            "正確。RedrivePolicy 控制移入 DLQ 的門檻，告警則確保失敗不會安靜累積。",
+            "錯誤。未修根因就持續 redrive 會再次製造 backlog 與失敗風暴。",
+            "正確。Redrive 會重新觸發處理，因此要先修正原因、控制速率並保護 side effect 不被重做。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "sqs-dlq",
+            "sqs-metrics"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch052-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Source queue 與 DLQ retention",
+          "prompt": "Standard source queue retention 是 4 天，DLQ retention 也是 4 天。某 message 在 source queue 已停留 3 天後才被移入 DLQ。團隊通常要兩天才能完成調查。最重要的修改是什麼？",
+          "choices": [
+            "把 visibility timeout 設成 2 天，避免 DLQ message 過期",
+            "改成 FIFO queue，因為 FIFO message 永遠不會過期",
+            "停用 redrive policy，讓 message 留在 source queue",
+            "把 DLQ retention 設得比 source queue 更長，以涵蓋原始 enqueue 時間與調查窗口"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Visibility 只在 message 被接收後暫時隱藏，不能延長 retention。",
+            "錯誤。FIFO message 也受 retention 約束；queue 類型不是永久保存機制。",
+            "錯誤。這會讓 poison message 繼續干擾主要處理流程。",
+            "正確。Standard message 移入 DLQ 時保留原始 enqueue timestamp，因此 DLQ retention 應長於 source 並涵蓋復原時間。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "sqs-dlq",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch052-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Long polling 與 empty receives",
+          "prompt": "一個低流量 queue 的 EC2 consumer 每秒 short poll，多數 ReceiveMessage 都是空回應，造成不必要的 API 成本。需求是不改變 message 處理語意。應如何改善？",
+          "choices": [
+            "設定 ReceiveMessageWaitTimeSeconds，例如 20 秒，並讓 client HTTP timeout 大於等待時間",
+            "把 visibility timeout 設成 20 秒",
+            "把 MessageRetentionPeriod 設成 20 秒",
+            "縮短輪詢間隔到 100 毫秒，增加命中機率"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Long polling 等待 message 出現，可減少空回應與 false-empty；HTTP timeout 必須留足等待時間。",
+            "錯誤。Visibility 影響已接收 message 的再投遞，不會減少 queue 為空時的 polling。",
+            "錯誤。Retention 只決定未刪除 message 的保存期限。",
+            "錯誤。更頻繁 short poll 會增加 API、網路與 CPU 成本。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-long-poll"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch052-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "FIFO message group 與去重邊界",
+          "prompt": "付款工作要求同一 customer 的操作依序處理，但不同 customer 可平行；producer 也可能在 timeout 後重送同一命令。哪兩項設計正確？（選兩項）",
+          "choices": [
+            "所有 message 都使用固定 MessageGroupId，保證全域順序並維持最大平行度",
+            "使用 customer_id 作為 MessageGroupId，讓每位 customer 形成自己的 ordering lane",
+            "使用 Standard queue，再靠 message attribute 排序即可得到 FIFO 行為",
+            "對同一邏輯命令的 producer retry 重用穩定的 MessageDeduplicationId，但 consumer 仍需業務冪等",
+            "依賴 content-based dedup 永久阻止任何相同付款內容再次發生"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。單一 group 會把所有 customer 串成一條序列，吞吐量反而受限。",
+            "正確。FIFO 僅保證 group 內順序，多個 customer group 可並行。",
+            "錯誤。Standard queue 是 best-effort ordering，consumer 排序不能補回已並行執行的 side effect。",
+            "正確。穩定 dedup ID 可抑制窗口內的重複 send，但窗口之外與 consumer retry 仍要靠業務冪等。",
+            "錯誤。FIFO dedup 有時間與作用範圍，不是永久 business deduplication。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-fifo",
+            "aws-wa-idempotent"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch052-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Lambda SQS partial batch response",
+          "prompt": "Lambda 每次從 SQS 取得 10 筆，其中 1 筆格式錯誤。現在 function 丟出例外，結果另外 9 筆成功資料也會反覆出現。如何減少不必要的重做？",
+          "choices": [
+            "收到 batch 時先刪除全部 10 筆，再逐筆處理",
+            "將 queue retention 設為 0，讓失敗資料立刻消失",
+            "啟用 partial batch response，回報失敗 item identifiers，並讓逐筆 side effect 冪等",
+            "停用 Lambda retry，任何失敗 batch 都直接捨棄"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。先刪除會讓 function crash 時遺失尚未完成的工作。",
+            "錯誤。Retention 不是 batch 成功確認機制，而且 SQS retention 也不能設為 0。",
+            "正確。Partial batch response 只讓失敗 records 再次可見；冪等性仍保護已提交但 acknowledgement 不確定的情況。",
+            "錯誤。直接丟棄會讓暫時性與永久性錯誤都失去復原機會；應以 partial response、DLQ 與告警隔離失敗，同時保留受控重處理路徑。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "lambda-sqs"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven",
+            "aws-sap-sample"
+          ]
+        },
+        {
+          "id": "ch052-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "SQS backlog 診斷",
+          "prompt": "促銷部署後，ApproximateAgeOfOldestMessage 持續上升，但 consumer EC2 CPU 只有 25%。下一個最有效的調查動作是什麼？",
+          "choices": [
+            "依 EC2 CPU 目標值立即把 consumer fleet 加倍，但暫不檢查 worker 等待時間與下游容量",
+            "只檢查 NumberOfMessagesNotVisible，看到 in-flight 偏高便延長 visibility timeout",
+            "先降低 visibility timeout 以增加 redelivery，期待更多 worker 能加速處理",
+            "比較 arrival 與 completion rate，並檢查 visible/in-flight、consumer error/throttle 與 downstream latency"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。CPU 型擴縮適合 CPU-bound worker；若執行緒正等待資料庫或外部 API，直接加倍 consumer 可能放大下游壓力而未縮短 queue age。",
+            "錯誤。In-flight 偏高可提示工作時間或 visibility 設定問題，但只延長 visibility 不能判斷 arrival rate、完成率、錯誤或下游 throttling。",
+            "錯誤。縮短 visibility 只在需要更快接手失聯 worker 時可能合理；本題未先確認失聯，提早 redelivery 反而會製造重複工作並壓垮下游。",
+            "正確。低 CPU 可能表示 worker 卡在 I/O、被 throttle 或有大量 in-flight；queue age 與端到端速率能定位真正瓶頸。"
+          ],
+          "task_keys": [
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "sqs-metrics",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch052-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Cross-account SQS 與 SSE-KMS",
+          "prompt": "Account B 的 application role 必須把 message 寫入 Account A 的 SSE-KMS SQS queue，且不得向 Internet 任意 principal 開放。哪兩項是必要的授權層？（選兩項）",
+          "choices": [
+            "在 queue resource policy 精確允許 Account B role 執行 SendMessage，並可加 TLS、source 或 organization 條件",
+            "把 queue policy 設為 Principal:\"*\"，因為 queue URL 很難猜",
+            "只在 Account A 建立一個 IAM user policy；它會自動授權 Account B role",
+            "只開啟 SSE-KMS；加密會自動授予跨帳號 SendMessage",
+            "讓 producer identity 有 SQS 呼叫權限，並依所選 customer-managed KMS key 配置所需 key permissions"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。跨帳號 resource 必須明確信任外部 principal，並限制 action、resource 與條件。",
+            "錯誤。Queue URL 不是安全邊界；公開 principal 會擴大未授權發送風險。",
+            "錯誤。資源擁有帳號不能只靠本帳號 identity policy 替另一帳號 principal 完成雙方授權。",
+            "錯誤。Encryption 與 authorization 是不同邊界，SSE 不會自動允許 SQS 或 KMS 操作。",
+            "正確。外部 role 的 identity permission 與 queue/key resource trust 必須共同滿足；KMS 權限依 key 類型與 API 行為設定。"
+          ],
+          "task_keys": [
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "sqs-policy",
+            "sqs-sse"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch052-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "SQS CloudFormation 設定審查",
+          "prompt": "一個 CloudFormation template 的 source queue 設定 VisibilityTimeout: 30、ReceiveMessageWaitTimeSeconds: 0、MessageRetentionPeriod: 1209600；worker p99 需 4 分鐘，DLQ retention 為 1 天。哪一項審查結論最正確？",
+          "choices": [
+            "只要把 DelaySeconds 設成 240，就能取代 visibility timeout 與 DLQ",
+            "maxReceiveCount 應設在 DLQ，source queue 不需要 RedrivePolicy",
+            "提高 visibility 或由 worker 延長、啟用 long polling，並讓 DLQ retention 長於 source queue 的復原需求",
+            "現有設定完整；message retention 14 天會自動避免重複處理"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Delay 控制新 message 首次可見時間，不能保護正在處理的工作或隔離 poison message。",
+            "錯誤。RedrivePolicy 與 maxReceiveCount 設在 source queue，指向已建立的 DLQ。",
+            "正確。30 秒遠短於 4 分鐘處理時間，short poll 增加空請求，而 1 天 DLQ retention 可能不足以保留從 source 移入的失敗資料。",
+            "錯誤。Retention 不提供 processing lock，也不會消除 at-least-once delivery。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "sqs-visibility",
+            "sqs-dlq",
+            "sqs-long-poll",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 53,
+      "questions": [
+        {
+          "id": "ch053-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "SNS、EventBridge、SQS 與 Kinesis 選型",
+          "prompt": "訂單事件需要依內容路由到不同 AWS 與 SaaS targets；producer 不應知道 consumers，且日後要能 archive/replay。哪個核心服務最符合？",
+          "choices": [
+            "SNS，因為任何 JSON message 都應用 topic 傳送",
+            "EventBridge event bus 與 rules",
+            "單一 SQS queue，讓所有 consumer 都從同一 backlog 取得每個事件副本",
+            "Kinesis，因為所有多 consumer 系統都必須使用 shard"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。SNS 適合直接 push fan-out，但複雜 content routing、SaaS integration 與 archive/replay 更符合 EventBridge。",
+            "正確。Event pattern 讓 producer 發布 facts，由 rules 決定 targets，archive 可支援日後 replay。",
+            "錯誤。一個 SQS message 通常由一個 competing consumer 處理；每個 consumer 都要副本時需不同 queue。",
+            "錯誤。Kinesis 適合 retained ordered stream；題目沒有 per-partition ordering 或高吞吐 stream 要求。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "eventbridge-patterns",
+            "eventbridge-archive",
+            "aws-saa-d2"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-sns-eventbridge",
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch053-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "SNS 至 SQS durable fan-out",
+          "prompt": "OrderPlaced 必須同時交給庫存、通知和分析三個團隊；每個團隊處理速度不同，且任一團隊故障不能阻塞其他團隊。應採用哪個架構？",
+          "choices": [
+            "producer 依序同步呼叫三個 API",
+            "三組 worker 共用一個 SQS queue",
+            "SNS topic 訂閱三個獨立 SQS queues，各自配置 consumer、retry 與 DLQ",
+            "SNS 直接寄送 email 給三個服務帳號"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。同步串接會把最慢或失敗的 subscriber 反向傳給 producer。",
+            "錯誤。共用 queue 會分攤工作，而不是讓三個 domain 都取得同一事件。",
+            "正確。SNS 複製事件，各 queue 保存自己的 backlog 並形成獨立 failure boundary。",
+            "錯誤。Email 適合人類通知，不是可靠的 machine-processing queue。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "sns-sqs-fanout"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven",
+            "jay-sqs-sns-eventbridge"
+          ]
+        },
+        {
+          "id": "ch053-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "SNS filter 與 EventBridge pattern",
+          "prompt": "團隊要在傳送前過濾事件，減少不相關 deliveries。哪兩項設定與服務配對正確？（選兩項）",
+          "choices": [
+            "SNS subscription filter policy 可依 message attributes，或設定為依 message body 篩選",
+            "SQS visibility timeout 可依 JSON 欄位拒絕 message",
+            "EventBridge event pattern 可比對 event envelope 與 detail 中的欄位",
+            "EventBridge input transformer 是 authorization filter",
+            "字串 \"300\" 與數字 300 在所有 filter 中必然等價"
+          ],
+          "answers": [
+            0,
+            2
+          ],
+          "explanations": [
+            "正確。SNS filter policy 的 scope 可針對 attributes 或 body，需按實際 message shape 設計。",
+            "錯誤。Visibility 管理接收後的暫時隱藏，不做內容篩選。",
+            "正確。EventBridge pattern 依 event JSON 結構匹配 source、detail-type、detail 等。",
+            "錯誤。Input transformer 改變送往 target 的內容，不取代 rule matching 或權限。",
+            "錯誤。Filter 有型別與結構語意，應用真實事件測試 numeric/string matching。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sns-filter",
+            "eventbridge-patterns"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-sns-eventbridge"
+          ]
+        },
+        {
+          "id": "ch053-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Target retry 與 DLQ",
+          "prompt": "EventBridge rule 已成功匹配事件，但 HTTP target 持續失敗。團隊要限制重試時間並保存最終無法投遞的事件。應怎麼做？",
+          "choices": [
+            "在 target 設 RetryPolicy 與 SQS DLQ，並授予 EventBridge 向 DLQ 發送的權限",
+            "把 event bus archive 當作 target DLQ；兩者語意完全相同",
+            "設定 SNS delivery policy，因為它會控制 EventBridge target",
+            "設定 SQS visibility timeout，但不建立 queue"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Target retry policy 控制最大 event age/attempts，DLQ 保存耗盡重試後的投遞失敗。",
+            "錯誤。Archive 用於歷史事件 replay；target DLQ 用於特定投遞失敗，營運流程不同。",
+            "錯誤。SNS delivery policy 只影響 SNS endpoint delivery。",
+            "錯誤。Visibility 是既有 SQS queue 的屬性，不能控制 EventBridge target retry。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "eventbridge-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch053-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "EventBridge archive 與 stream replay 邊界",
+          "prompt": "稽核平台要求每個 customer 的事件保持順序，保存 30 天，五個 consumer 可各自維護 offset 並反覆 replay。最合適的核心資料通道是什麼？",
+          "choices": [
+            "SNS FIFO topic 啟用 30 天 archive，讓各 subscription 依時間窗發起 replay",
+            "EventBridge archive，因為它是 partitioned ordered log",
+            "Kinesis Data Streams，以 customer_id 分割並設定足夠 retention",
+            "SQS DLQ，將所有成功事件也存入其中"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。SNS FIFO 已支援最長 365 天的 archive 與 subscription replay，適合依時間窗重送；但它不提供 Kinesis 式持續維護的 per-consumer offset、shard processing 與任意位置串流消費語意。",
+            "錯誤。EventBridge archive 能 replay，但不是提供每-key ordered partitions 與獨立 offsets 的 stream。",
+            "正確。Kinesis 提供 retention、partition-key ordering 與多個獨立 consumers。",
+            "錯誤。DLQ 適合隔離耗盡重試的失敗投遞；若拿它保存所有成功事件，既沒有正常串流的 offset，也混淆主要資料通道與復原工作區。"
+          ],
+          "task_keys": [
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "eventbridge-archive",
+            "kinesis-concepts",
+            "sns-fifo-replay"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch053-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "SNS FIFO 端到端順序",
+          "prompt": "交易事件要 fan out 給兩個 queue，且每個 account 內必須按順序處理。哪兩項是端到端 FIFO 設計必要條件？（選兩項）",
+          "choices": [
+            "SNS Standard topic 搭配 SQS FIFO queues 即可保證 publisher order",
+            "使用 SNS FIFO topic 並訂閱 SQS FIFO queues",
+            "所有 account 共用一個 message group，才能提高平行度",
+            "使用 account_id 作 MessageGroupId，並設計穩定 deduplication identity",
+            "將 Lambda email subscription 加到 FIFO topic，便取得相同 FIFO 語意"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Standard topic 不提供 FIFO topic 的 ordering/deduplication contract。",
+            "正確。SNS FIFO 的支援 fan-out 路徑以相容的 SQS FIFO subscriptions 為核心。",
+            "錯誤。單一 MessageGroupId 會把所有 accounts 序列化成同一 ordering lane；只有真的要求全域順序時才值得犧牲跨帳號平行度。",
+            "正確。Group 定義順序範圍，dedup identity 處理 producer 重送；consumer 仍需冪等。",
+            "錯誤。非 SQS endpoint 並不自動取得相同的 FIFO queue processing contract。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sns-fifo",
+            "sqs-fifo"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-sns-eventbridge"
+          ]
+        },
+        {
+          "id": "ch053-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Cross-account EventBridge 授權",
+          "prompt": "中央 event bus 位於 shared-services account，應用帳號只能送入特定 source 的事件。哪個授權設計最適合？",
+          "choices": [
+            "讓 rule pattern 充當 authorization；只要不匹配就算安全",
+            "只修改 target Lambda execution role",
+            "對整個 organization 開放 events:*，事後再查 logs",
+            "event-bus resource policy 信任指定帳號/organization，加上 sender identity permission 與必要 target invocation permissions"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Pattern 決定 routing，不是阻止未授權 PutEvents 的安全邊界。",
+            "錯誤。Target role 不授權 sender 寫入 event bus。",
+            "錯誤。過寬 action 與無 source 限制違反 least privilege。",
+            "正確。Cross-account publication 與 target invocation 是分離的授權邊界，兩者都要明確設定。"
+          ],
+          "task_keys": [
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "eventbridge-cross-account"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch053-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "EventBridge delivery 診斷",
+          "prompt": "Producer 的 PutEvents 回報成功，rule 的 matched-events 指標也增加，但 target Lambda 完全沒有 invocation。第一輪應查什麼？",
+          "choices": [
+            "target invocation/failed-invocation 指標、Lambda resource policy、rule target role、throttling 與 DLQ 權限",
+            "用 archive replay 重送同一批事件，暫不檢查 target 權限或 FailedInvocations",
+            "回頭檢查 producer 的 PutEvents IAM 與 event pattern，忽略已增加的 TriggeredRules 指標",
+            "先提高 Lambda reserved concurrency，未確認 Throttles、Invocations 或 resource-based policy"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Event 已進 bus 且 rule 已匹配，故障範圍縮小到 target invocation、permission、throttle、retry/DLQ。",
+            "錯誤。Replay 適合根因修復後補送歷史事件；在 target 權限或投遞路徑尚未確認前重播，只會再次產生失敗並擴大待處理量。",
+            "錯誤。若 TriggeredRules 沒有增加，才應優先查 pattern 與事件欄位；本題已證明 rule 匹配，故應把範圍縮到 target invocation。",
+            "錯誤。Reserved concurrency 適合已觀察到 Lambda throttling 時保留容量；本題 invocation 為零，仍須先查 EventBridge 指標與 Lambda resource policy。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "eventbridge-patterns",
+            "eventbridge-retry",
+            "eventbridge-metrics",
+            "eventbridge-resource-policy",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch053-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Event contract 演進",
+          "prompt": "數十個團隊消費 OrderStatusChanged。Producer 要新增欄位，未來也可能有破壞性語意變更。哪兩項能降低演進風險？（選兩項）",
+          "choices": [
+            "維持穩定 source/detail-type，新增向後相容欄位，要求 consumer 忽略未知欄位",
+            "直接重新命名現有欄位，因為 EventBridge 不強制 schema",
+            "把每個 consumer 名稱寫入事件，讓 producer 控制執行順序",
+            "用 free-form message 讓各 consumer 自行猜測語意",
+            "對破壞性變更使用明確的新 event version/type，並在遷移期同時觀測新舊 consumers"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Additive contract 與 tolerant readers 讓既有 consumers 不因未知欄位失敗。",
+            "錯誤。Schemaless transport 不代表沒有 consumer contract；改名會破壞舊程式。",
+            "錯誤。事件應描述已發生的 fact，不應把所有 downstream orchestration 耦合回 producer。",
+            "錯誤。缺少明確 schema/version 會讓錯誤延後到 runtime。",
+            "正確。Breaking semantics 應有可辨識版本與可觀測的 phased migration。"
+          ],
+          "task_keys": [
+            "SAP-4.4"
+          ],
+          "source_ids": [
+            "eventbridge-patterns",
+            "aws-sap-d4"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch053-q10",
+          "intent": 10,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "EventBridge rule JSON 審查",
+          "prompt": "實際事件為 {\"source\":\"com.shop.orders\",\"detail-type\":\"OrderStatusChanged\",\"detail\":{\"status\":\"PAID\"}}。哪個 pattern 能只選出已付款事件？",
+          "choices": [
+            "{\"status\":[\"PAID\"],\"source\":[\"com.shop.orders\"]}",
+            "{\"source\":[\"com.shop.orders\"],\"detail-type\":[\"OrderStatusChanged\"],\"detail\":{\"status\":[\"PAID\"]}}",
+            "{\"source\":\"com.shop.orders\",\"detail\":{\"status\":\"PAID\"}}",
+            "{\"detail\":{\"status\":[{\"exists\":false}]}}"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。status 位於 detail，不在 event root。",
+            "正確。Pattern 的陣列與巢狀結構對應實際 event envelope。",
+            "錯誤。EventBridge pattern 的一般值使用陣列表示可接受值，且此寫法也省略 detail-type 限制。",
+            "錯誤。exists:false 會選出沒有 status 的事件，與需求相反。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "eventbridge-patterns"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-sns-eventbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 54,
+      "questions": [
+        {
+          "id": "ch054-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Kinesis Data Streams 適用邊界",
+          "prompt": "遙測資料要保存 7 天，三個 applications 各自從同一資料流讀取、維護進度並可回播；同一 device 的事件要有序。應選哪項？",
+          "choices": [
+            "一個 SQS queue，讓三個 consumer group 都取得每筆 message",
+            "Amazon Data Firehose，讓三個任意程式維護各自 offset",
+            "Kinesis Data Streams，以 device_id 作 partition key",
+            "SNS topic，依 subscription 回讀過去 7 天"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。一個 queue 是 competing-consumer work distribution，不會自然為三個應用保留獨立 replay 位置。",
+            "錯誤。Firehose 是 managed delivery 到目的地，不是一般 consumer offset/replay platform。",
+            "正確。Kinesis 提供 retained stream、多 consumer 與 partition-key ordering。",
+            "錯誤。SNS 不保存可供 subscriber 任意回讀的 7 天 log。"
+          ],
+          "task_keys": [
+            "SAA-3.5"
+          ],
+          "source_ids": [
+            "kinesis-concepts",
+            "aws-saa-d3"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose",
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch054-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Partition key 與 hot shard",
+          "prompt": "所有 events 目前都以 tenant 作 partition key，但單一大型 tenant 佔 80% 流量，造成一個 shard throttling。每位 user 內仍須有序。最佳修改為何？",
+          "choices": [
+            "每筆 event 產生完全隨機 key，忽略 user ordering",
+            "改用 event timestamp，因為時間一定平均",
+            "增加 consumer 數量；producer throttling 會自動消失",
+            "改用 user_id 作 partition key，讓需排序的最小 business scope 分散到多個 shards"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。隨機 key 可分散寫入，但破壞同一 user 的順序需求。",
+            "錯誤。時間可能讓 burst 集中，且不保留 entity order。",
+            "錯誤。Consumer scaling 不增加 shard producer write capacity。",
+            "正確。Partition key 同時決定資料分布與 ordering scope，應選最小需要順序的高基數 key。"
+          ],
+          "task_keys": [
+            "SAA-3.5"
+          ],
+          "source_ids": [
+            "kinesis-concepts"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Provisioned shard 容量估算",
+          "prompt": "團隊要估算 provisioned stream 的 shard 數。哪兩項資訊不可省略？（選兩項）",
+          "choices": [
+            "預估每秒 records/bytes、record size 與尖峰 headroom",
+            "只用每日保存 GB，因為 shard 數只由 storage 決定",
+            "Enhanced fan-out consumer 數會直接增加 producer write capacity",
+            "部署更多 KCL workers 會自動建立 shards",
+            "Consumer read demand、shared/EFO 模式，以及 partition-key skew/hot keys"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Provisioned sizing 必須同時符合每-shard record 與 byte write limits，並保留尖峰空間。",
+            "錯誤。Retention storage 與每秒 ingest/read capacity 是不同維度。",
+            "錯誤。EFO 隔離 read throughput，不改變 producer write quota。",
+            "錯誤。Workers 消費既有 shards，不負責 resharding。",
+            "正確。讀取方式、consumer 數及不均勻 key 可能比平均吞吐更早形成瓶頸。"
+          ],
+          "task_keys": [
+            "SAA-3.5"
+          ],
+          "source_ids": [
+            "kinesis-quotas",
+            "kinesis-efo"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "On-demand 與 provisioned mode",
+          "prompt": "新產品流量高度不可預測，團隊沒有可靠 shard forecast，並優先降低容量管理工作。哪個選擇最合理？",
+          "choices": [
+            "Provisioned mode 並永遠固定一個 shard",
+            "On-demand capacity mode，同時仍設計分散的 partition keys 並監控 throttling",
+            "Enhanced fan-out，因為它是 producer capacity mode",
+            "Firehose，因為它能讓自訂 consumers 任意 replay"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Provisioned mode 固定單 shard 適合穩定且可預測的小流量；本題流量不可預測，固定容量容易在尖峰 throttling，並增加人工調整負擔。",
+            "正確。On-demand 減少 shard planning，但不消除 key skew、quota、成本與監控責任。",
+            "錯誤。EFO 是 consumer read 選項，不是 stream write capacity mode。",
+            "錯誤。Firehose 不是可供任意 consumer replay 的 retained stream。"
+          ],
+          "task_keys": [
+            "SAA-3.5"
+          ],
+          "source_ids": [
+            "kinesis-quotas"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Enhanced fan-out",
+          "prompt": "四個 Kinesis consumers 使用 shared polling 後互相競爭 read throughput，其中 fraud consumer 要低延遲且不能受 analytics consumer 影響。應採用什麼？",
+          "choices": [
+            "增加 producer retries",
+            "將所有 consumers 改成同一 KCL application name",
+            "為需要隔離的 consumer 註冊 enhanced fan-out consumer",
+            "增加 stream retention"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Producer retry 不改善 consumers 共享讀取容量。",
+            "錯誤。同一 application name 代表共同分攤 shards，不是每個應用各自取得完整 stream。",
+            "正確。EFO 以專屬 per-shard read throughput 與 push delivery 隔離 registered consumers。",
+            "錯誤。Retention 延長 replay window，不增加即時 read throughput。"
+          ],
+          "task_keys": [
+            "SAA-3.5"
+          ],
+          "source_ids": [
+            "kinesis-efo"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "PutRecords partial failure",
+          "prompt": "PutRecords 回傳 HTTP 200，但部分 entries 含 error code；同一 account 的更新必須嚴格有序，且重送不得重複 side effect。哪兩項處理正確？（選兩項）",
+          "choices": [
+            "視 HTTP 200 為整批成功，忽略 entry results",
+            "對每個 account 序列化使用 PutRecord；後續寫入帶入前一筆成功回傳的 SequenceNumberForOrdering，失敗時不放行該 account 的後續事件",
+            "只重試 PutRecords 的失敗 entries；只要 partition key 相同，就假設原始批次順序一定保留",
+            "讓 downstream 依穩定 event identity 實作冪等處理",
+            "每次 retry 改用 random partition key，以提高吞吐且仍保序"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。PutRecords 允許 partial success，必須逐 entry 檢查。",
+            "正確。PutRecords 沒有 SequenceNumberForOrdering；需要嚴格 producer order 時，可按 ordering key 序列化 PutRecord，並用前一 sequence number 約束下一筆寫入。",
+            "錯誤。只重試失敗項目雖減少重複，但批次可能部分成功；若後一筆先成功、前一筆後補，僅保留 partition key 仍無法恢復原始嚴格順序。",
+            "正確。Producer timeout/partial retry 仍可能重複，consumer side effect 必須冪等。",
+            "錯誤。Random key 會把同一 account 分散到不同 shards，失去 ordering scope；它只適合事件彼此獨立、吞吐優先且不要求 per-account 順序的情境。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "kinesis-concepts",
+            "aws-wa-retry",
+            "kinesis-putrecords",
+            "kinesis-putrecord-ordering",
+            "kinesis-duplicates",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Iterator age 診斷",
+          "prompt": "IncomingBytes 穩定，但 IteratorAgeMilliseconds 只在其中一個 shard 快速上升。最佳第一個推論與動作是什麼？",
+          "choices": [
+            "可能是 hot shard 或該 shard consumer/downstream 卡住；按 shard 檢查 throttles、errors、processing latency 與 key distribution",
+            "立即 reshard 增加 shards，尚未檢查該 shard 的 consumer error、downstream latency 或 partition-key 分布",
+            "先提高 retention，替修復爭取 replay 時間，並把它視為降低 iterator age 的直接方法",
+            "把 KCL workers 增加到 active shard 數的數倍，假設同一 shard 可被多個 workers 同時有序處理"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。單 shard lag 指向分布或該 shard processing path，需按維度定位後才決定 reshard/consumer 修正。",
+            "錯誤。Reshard 適合已證實 write hot shard 或需要更多 shard capacity 的情境；若是單一 consumer 或下游卡住，先擴 shard 會改變拓撲卻未修根因。",
+            "錯誤。延長 retention 可保住較長 recovery window，但不會直接降低 iterator age；consumer service rate 仍必須追上該 shard 的資料。",
+            "錯誤。增加 workers 適合尚有未分派 shards 時；KCL 同一 application 在同一時間仍由一個 lease owner 處理一個 shard，不能藉此提高該 shard 平行度。"
+          ],
+          "task_keys": [
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "kinesis-monitoring",
+            "kcl-concepts",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Retention 與 consumer replay",
+          "prompt": "Consumer bug 平均要 18 小時才會被發現，修復與 replay 最多再需 12 小時。Stream 目前只保存 24 小時。最穩健的改進為何？",
+          "choices": [
+            "只增加 checkpoint 頻率；checkpoint 包含所有 payload 備份",
+            "維持 24 小時，因為 Kinesis retention 永久有效",
+            "把 replay records 改用 random key",
+            "將 retention 設到超過偵測加修復窗口，並保留獨立 checkpoints 與 downstream idempotency"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Checkpoint 是消費位置，不是 records 的備份。",
+            "錯誤。Kinesis 只允許 consumer 讀取 retention window 內的 records；超過保存期限後資料不可再 replay，因此 24 小時無法覆蓋 30 小時復原窗口。",
+            "錯誤。改 key 會破壞原 ordering scope，且不能恢復已過期資料。",
+            "正確。Recovery window 必須小於 retention；replay 會再執行 side effects，需冪等保護。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "kinesis-retention",
+            "kinesis-concepts",
+            "kcl-concepts",
+            "kinesis-duplicates",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "KCL leases 與 checkpoints",
+          "prompt": "一個 KCL application 有 8 個 active shards，團隊打算啟動 40 個 workers 並在處理前 checkpoint。哪兩項審查意見正確？（選兩項）",
+          "choices": [
+            "同一 KCL application 的有效 shard-level 平行度受 active shards 限制，額外 workers 可能閒置",
+            "40 workers 會讓每個 shard 的 ordered throughput 增加五倍",
+            "所有不同 applications 應共用同一 checkpoint，避免重複讀取",
+            "處理前 checkpoint 可保證 worker crash 後資料不遺失",
+            "應在必要 side effect durable commit 後 checkpoint，並讓處理可安全重放"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。KCL 透過 leases 將 shards 分派給 workers；一個 shard 不會因更多 workers 而無限並行。",
+            "錯誤。Shard capacity 與 order boundary 仍存在。",
+            "錯誤。不同 consumer applications 需要獨立進度。",
+            "錯誤。先 checkpoint 再 crash 可能跳過尚未完成的 record。",
+            "正確。先提交結果再 checkpoint 並接受可能 replay，是較安全的 at-least-once 處理順序。"
+          ],
+          "task_keys": [
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "kinesis-concepts",
+            "kcl-concepts",
+            "kinesis-duplicates"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose"
+          ]
+        },
+        {
+          "id": "ch054-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "三 consumer stream 架構審查",
+          "prompt": "架構使用 constant partition key，把全部交易寫到單 shard；三個低延遲 consumer 共用 polling，且沒有 iterator-age alarm。哪項改造最完整？",
+          "choices": [
+            "保留 constant key，只增加 Firehose destination",
+            "把所有 records 送進一個 SQS queue，讓三個 consumer 都取得完整副本",
+            "依交易所需 ordering scope 選高基數 key，重新評估 mode/shards，必要時用 EFO，並監控 write throttles 與 iterator age",
+            "只把 retention 從一天提高到七天"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Firehose 不會移除原 stream 的 hot shard 或 consumer contention。",
+            "錯誤。一個 SQS queue 採 competing-consumer 模型，同一 message 通常只由其中一個應用處理；三個獨立應用都要副本時需 fan-out 到不同 queues。",
+            "正確。此方案同時修正 partitioning、capacity、consumer isolation 與可觀測性。",
+            "錯誤。Retention 改善 recovery window，但不修復 throughput 與 lag。"
+          ],
+          "task_keys": [
+            "SAA-3.5",
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "kinesis-quotas",
+            "kinesis-efo",
+            "kinesis-monitoring"
+          ],
+          "inspiration_ids": [
+            "jay-kinesis-firehose",
+            "jay-event-driven"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 55,
+      "questions": [
+        {
+          "id": "ch055-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Standard 與 Express workflow",
+          "prompt": "貸款流程會平行查核資料，等待人工核准最長 72 小時，且稽核員需要完整 execution history。應選哪種 Step Functions workflow？",
+          "choices": [
+            "Express，因為所有 workflow 都應優先選最高吞吐",
+            "Lambda 持續執行並 sleep 72 小時",
+            "EventBridge Scheduler 單獨保存所有 branch state",
+            "Standard Workflow"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Express 適合高量短流程，不適合多日 callback 與所述 durable audit history。",
+            "錯誤。Lambda 有執行時間限制，且 sleep 會浪費資源。",
+            "錯誤。Scheduler 能觸發時間事件，但不是保存完整多步 state machine。",
+            "正確。Standard 支援長執行、durable state、callback 與 execution history。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "stepfunctions-types"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Service integration patterns",
+          "prompt": "Workflow 要提交 AWS Batch job，等 job 完成後再進下一步；另一個步驟要等外部人工系統回覆。正確配對是什麼？",
+          "choices": [
+            "Batch 使用 Run a Job (.sync)，人工系統使用 Wait for Callback with task token",
+            "兩者都只使用 Request Response，因為 API 接受就代表工作完成",
+            "兩者都用 Wait state 猜測完成時間",
+            "在 Lambda 內輪詢兩者直到完成"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。.sync 追蹤支援的 job，task token 則讓外部 actor 明確完成 callback。",
+            "錯誤。Request Response 只代表 API request 已完成，不代表非同步 job 完成。",
+            "錯誤。Wait state 只讓 workflow 暫停指定時間，無法證明 Batch job 或人工系統已成功；它只適合明確的時間延遲，不是 completion signal。",
+            "錯誤。長時間 polling 增加程式與執行成本，並隱藏 orchestration state。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "stepfunctions-integrations",
+            "stepfunctions-callback"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Payment retry safety",
+          "prompt": "Payment Task 可能收到 throttling 或 validation error。哪兩項設計能避免重複扣款與無效重試？（選兩項）",
+          "choices": [
+            "對 States.ALL 無限 retry",
+            "只對暫時性 service/throttle errors 做 bounded backoff retry",
+            "每次 retry 產生新的 payment operation ID",
+            "讓 payment API 使用穩定 idempotency key",
+            "把 validation error 當成網路 timeout"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。States.ALL 無限 retry 會把 validation、permission 或程式錯誤也持續重送，形成 retry storm，並可能重複執行非冪等付款。",
+            "正確。Retry 應只涵蓋可恢復的 service、throttle 或暫時網路錯誤，並以 MaxAttempts、backoff 與 workflow deadline 限制總負載。",
+            "錯誤。每次 retry 產生新 operation ID 會讓付款系統把同一 logical payment 視為新交易，破壞 idempotency 並造成重複扣款。",
+            "正確。Workflow durability 不等於 side effect exactly once，穩定 key 才能安全重放。",
+            "錯誤。Validation 通常需改變 request，而不是原樣重試。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "stepfunctions-errors",
+            "aws-wa-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Retry/Catch 規則順序",
+          "prompt": "State 的 Catchers 先放 States.ALL，後面才放自訂 PaymentDeclined。會發生什麼問題？",
+          "choices": [
+            "沒有問題，Step Functions 會自動挑最精確規則",
+            "Catch 一定在 Retry 前執行",
+            "廣泛 matcher 先攔截錯誤，使後面的特定處理無法到達；States.ALL 應置後",
+            "States.ALL 只能匹配 timeout"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Catchers 依陣列順序掃描並使用第一個匹配項；把 States.ALL 放最前面會吃掉後面的特定錯誤處理，因此廣泛 matcher 應放最後。",
+            "錯誤。若錯誤符合 retrier，Step Functions 先依 Retry 處理，耗盡後才進 Catch。",
+            "正確。Specific-before-general 才能保留業務錯誤的專用路徑。",
+            "錯誤。States.ALL 是廣泛 wildcard，但仍有文件所述例外與放置規則。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "stepfunctions-errors"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Parallel 與 Map",
+          "prompt": "流程需對固定的信用、身分、制裁三項查核同時執行；之後另一步要處理 S3 中數十萬筆獨立 records。最佳組合是什麼？",
+          "choices": [
+            "固定三項用 Parallel；大型 collection 評估 Map/Distributed Map 與 failure tolerance",
+            "兩者都用 Choice，Choice 會平行執行",
+            "一個 Lambda 建立無限制 threads",
+            "在每項之間放 Wait state"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Parallel 適合固定 branches，Map 類型處理 collection 並提供受控 concurrency。",
+            "錯誤。Choice 選路徑，不代表同時執行所有 branches。",
+            "錯誤。自製無界 fan-out 缺少 backpressure、history 與 failure policy。",
+            "錯誤。Wait state 只延遲後續 transition，不會建立 branches 或逐筆迭代；它適合節流或等待時間點，不適合固定或大量工作的平行處理。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "stepfunctions-integrations",
+            "stepfunctions-map"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Secure human approval",
+          "prompt": "高額退款 workflow 會把含 task token 的人工核准連結寄給主管，等待最長 24 小時；核准結果必須可稽核且不能被轉寄者或重播請求濫用。哪兩項控制最重要？（選兩項）",
+          "choices": [
+            "把 task token 完整寫入所有公開 application logs",
+            "驗證 approver identity/authorization，並把決策綁定正確 request context",
+            "只要 SNS 顯示 email delivered 就視為 approved",
+            "設定 timeout/heartbeat 或逾期路徑，並防止 token replay、保存決策證據",
+            "所有人共用同一永久 task token"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Token 能完成等待中的 task，應視為敏感 capability。",
+            "正確。系統須驗證目前 approver 身分、角色與案件範圍；單純持有可轉寄連結，不應自動等於有權核准特定退款。",
+            "錯誤。Email delivery receipt 只證明郵件傳遞，不代表授權主管已檢視案件並作出不可否認的業務核准。",
+            "正確。Timeout 或 heartbeat 建立等待上限，一次性 token 與決策紀錄則避免 replay，並提供事後稽核及逾期復原路徑。",
+            "錯誤。Token 應與特定 task execution 綁定。"
+          ],
+          "task_keys": [
+            "SAP-2.3",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "stepfunctions-callback",
+            "stepfunctions-logging"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Saga compensation",
+          "prompt": "庫存已保留、付款已完成，但建立物流失敗。Step Functions Catch 是否能自動 rollback 所有已提交服務？",
+          "choices": [
+            "可以，Standard Workflow 等同跨服務 ACID transaction",
+            "不可以；需明確呼叫可重試、冪等的 refund/release 等 semantic compensations",
+            "可以，只要刪除 execution history",
+            "不可以，所以應保持跨服務 database locks 72 小時"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Workflow state durability 不會回滾外部已提交資料。",
+            "正確。Saga compensation 是新的業務操作，也可能失敗並需監控。",
+            "錯誤。刪除 history 不改變外部 side effects。",
+            "錯誤。長時間 distributed locks 不適合獨立服務與人工流程。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-saga",
+            "stepfunctions-errors"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Workflow failure diagnosis",
+          "prompt": "Execution 停在 callback Task 數小時，外部系統聲稱已呼叫 API。最有效的第一輪診斷是什麼？",
+          "choices": [
+            "使用外部系統保存的 task token 立即重送 SendTaskSuccess，未先確認 execution 是否仍等待同一 token",
+            "先延長 callback Task timeout 並 redrive execution，暫不檢查 token、API 回應與 IAM 拒絕",
+            "檢查 execution history/logs、token 對應、SendTaskSuccess/Failure 權限、heartbeat/timeout 與外部回應",
+            "啟動一個替代 execution 接管案件，讓原 execution 繼續等待到 timeout"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。若 token 已過期、屬於別的 execution 或先前 callback 已成功，盲目重送只會再次失敗；僅在確認 execution 仍等待且前次結果未被接受時才適合重試。",
+            "錯誤。延長 timeout 可用於已知外部工作確實需要更久的情境，但無法說明 callback 是否送出、token 是否相符或 SendTaskSuccess 是否被拒絕。",
+            "正確。這些證據能區分 callback 未送、token 錯誤、權限拒絕與逾時。",
+            "錯誤。替代 execution 只適合舊流程已安全終止且 side effects 可去重或補償時；並行保留兩條流程會造成重複核准或重複業務效果。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "stepfunctions-logging",
+            "stepfunctions-callback",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Execution role 與敏感資料",
+          "prompt": "State machine 會呼叫限定的 Lambda、DynamoDB table 並記錄 logs。哪兩項安全設計正確？（選兩項）",
+          "choices": [
+            "Execution role 只允許實際使用的 actions/resources",
+            "所有 state machine 一律 AdministratorAccess",
+            "執行開始後完全使用 caller 權限，不需要 execution role",
+            "把 database password 直接寫入 ASL Parameters",
+            "避免在 state input/output/logs 傳遞 secrets 與巨大 documents，改傳 reference 並限制 log access"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Service integrations 由 execution role 執行，應 least privilege。",
+            "錯誤。過寬權限擴大 workflow definition 或 input 被濫用的 blast radius。",
+            "錯誤。Execution role 是 workflow 呼叫 AWS services 的主要身份。",
+            "錯誤。Definition 與 history 可能暴露長期 credential。",
+            "正確。Reference pattern 降低 payload limits、敏感資料與 logging 風險。"
+          ],
+          "task_keys": [
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "stepfunctions-integrations",
+            "stepfunctions-logging"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch055-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "ASL 綜合審查",
+          "prompt": "一個多日 Standard workflow 的 payment Task 對 States.ALL 重試 99 次，沒有 TimeoutSeconds；callback Task 沒有 timeout，compensation 也沒有 idempotency key。最正確的審查結論是什麼？",
+          "choices": [
+            "Standard 會自動保證每個外部 side effect exactly once",
+            "只需改成 Express 即可",
+            "Succeed state 能證明所有外部資料已提交一次",
+            "限制 transient retries、加入 task/callback timeout，並讓 payment 與 compensation 冪等且可觀測"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Standard 的 workflow execution 語意不等於第三方付款 exactly once。",
+            "錯誤。Express 不適合多日 callback，且不修正 side-effect semantics。",
+            "錯誤。Succeed 只代表 state machine 走到該 state。",
+            "正確。限制 transient retries 與 task/callback timeout 可約束時間和負載；付款及補償的穩定 idempotency key 與觀測證據則避免重複業務效果。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "stepfunctions-types",
+            "stepfunctions-errors",
+            "stepfunctions-callback",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 56,
+      "questions": [
+        {
+          "id": "ch056-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Retryable error classification",
+          "prompt": "Checkout client 會遇到 connection reset、429、偶發 503、400 validation error 與 403 AccessDenied。哪種 retry policy 最合理？",
+          "choices": [
+            "僅對 transient connection、throttling 與合適 5xx 做 bounded retry；non-idempotent call 要有穩定 token",
+            "所有 4xx 與 5xx 都原樣重試",
+            "429 永遠不可重試",
+            "付款 retry 每次都換新的 idempotency token"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Connection reset、throttling 與部分 5xx 通常具暫時性；是否重試仍須同時考量 operation 冪等性、attempt 上限與 caller deadline。",
+            "錯誤。Validation/auth failure 通常需修正輸入或權限。",
+            "錯誤。429 通常代表目前超過服務速率或容量，不是永久性 payload 錯誤；依服務指引退避、加入 jitter 並降低 offered load 後通常可有限重試。",
+            "錯誤。新 token 會把同一 logical payment 變成新操作。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "sdk-retry",
+            "aws-pg-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "End-to-end deadline budget",
+          "prompt": "API 對使用者的總 deadline 是 3 秒，會呼叫兩個 downstream services。哪個 timeout 設計正確？",
+          "choices": [
+            "每層都設 30 秒，避免過早 timeout",
+            "從 3 秒總 budget 分配 connect/request timeout、有限 attempts 與上游收尾時間，並傳遞剩餘 deadline",
+            "只設 request timeout，不需 connect/TLS timeout",
+            "每次 retry 都重新取得完整 3 秒"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。下游 timeout 超過 caller deadline 會留下無用在途工作。",
+            "正確。Deadline budgeting 防止內層超時與重試超過使用者可等待時間。",
+            "錯誤。Request timeout 只涵蓋部分等待；DNS、TCP connect、TLS handshake 與 retry backoff 都會消耗同一端到端 budget，必須一起納入。",
+            "錯誤。重啟 deadline 可讓總 latency 無界增長。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-wa-retry",
+            "aws-pg-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Backoff 與 jitter",
+          "prompt": "數十萬 clients 在相同時間收到 503。哪兩項最能避免同步 retry storm？（選兩項）",
+          "choices": [
+            "立即連續 retry 三次",
+            "使用 capped exponential backoff",
+            "所有 clients 使用完全相同 deterministic schedule",
+            "固定每秒 retry 且無截止",
+            "加入 jitter 並限制 attempts/總 deadline"
+          ],
+          "answers": [
+            1,
+            4
+          ],
+          "explanations": [
+            "錯誤。所有 clients 立即連續 retry 會在服務最脆弱時疊加原始流量，造成 synchronized retry storm，並延長服務恢復時間。",
+            "正確。Capped exponential backoff 逐次拉長等待並限制最大間隔，能降低 retry rate；仍須搭配 jitter 與總 deadline 避免同步。",
+            "錯誤。即使採 exponential backoff，所有 clients 使用相同 deterministic schedule 仍會在相同時間醒來，形成週期性流量波峰。",
+            "錯誤。無截止與固定間隔會讓 clients 在服務尚未恢復時持續施壓。",
+            "正確。Jitter 分散 clients，bounded budget 限制總 amplification。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-pg-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Retry ownership",
+          "prompt": "Client、API、service mesh、SDK 和 database driver 各自設定 3 次 attempts；一次 user request 最壞會放大成大量 database calls。最佳修正是什麼？",
+          "choices": [
+            "保留所有 retries，因為每層只有三次",
+            "只允許 database 永久重試",
+            "隱藏 attempt metrics，避免告警",
+            "指定有語意知識的一層負責 bounded retry，縮減其他層並計算總 amplification"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。多層 retries 會相乘，把單一 user request 放大成大量下游 calls。",
+            "錯誤。Database layer 不一定知道整體 operation 是否可安全重放。",
+            "錯誤。隱藏 attempt metrics 會讓團隊只看到 user request rate，卻看不到多層 retries 的放大倍數；應以 correlation ID 與 per-layer attempts 量測。",
+            "正確。集中或嚴格界定 retry ownership 才能管理 failure budget。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-wa-retry",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "SDK standard 與 adaptive mode",
+          "prompt": "一個 process 以同一 AWS SDK client 存取許多彼此獨立的 DynamoDB tables。團隊想啟用 adaptive retry，又不希望某一張表被 throttling 時拖慢其他表。哪項評估與處置最正確？",
+          "choices": [
+            "保留單一 shared client 即可；adaptive 只延遲 retry attempt，永遠不會延遲第一次請求",
+            "改用 standard mode 可避免跨表的 adaptive rate-limit coupling，但也不再取得 adaptive 對初次請求速率的動態調節",
+            "若要 adaptive，應按 DynamoDB Region 與 table 等 throttling scope 隔離 clients；否則一張表的 throttle 可能延遲其他表",
+            "為每個 API operation 建立新 client；如此一定能避免 coupling，且 connection pooling 成本可忽略"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Adaptive mode 的 request-rate token bucket 可能延遲第一次 attempt；共用 client 時，某個 throttled resource 可能影響同 client 的其他請求。",
+            "錯誤。Standard mode 確實是不願按資源隔離 clients 時的合理替代，但題目要求啟用 adaptive；它不能滿足動態限制初次請求速率的需求。",
+            "正確。Adaptive 假設 client 對應服務實際 throttling 維度；DynamoDB 應至少按 Region 與 table 隔離，避免無關資源共享 request-rate token bucket。",
+            "錯誤。按 throttling scope 重用 client 才能兼顧隔離與連線池；每次 operation 新建 client 會增加連線與資源成本，也不是必要條件。"
+          ],
+          "task_keys": [
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "sdk-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "SDK retry mode 與 server-directed backoff",
+          "prompt": "團隊同時評估 AWS SDK 的 standard/adaptive retry mode，以及 AWS SDK for Python v1 的節流回應；其中一個 response 帶有 x-amz-retry-after。哪兩項敘述正確？（選兩項）",
+          "choices": [
+            "Adaptive mode 適合讓所有不同 throttling resources 共用同一 client，並保證第一次 request 永不被延遲",
+            "一般 workload 優先使用 standard；若採 adaptive，應按服務的 throttling resource 維度隔離 clients，並接受它可能延遲第一次 attempt",
+            "AWS SDK for Python v1 把一般 HTTP Retry-After 與 x-amz-retry-after 都解讀為秒數，且任何字串值都有效",
+            "AWS SDK for Python v1 的 standard strategy 將 x-amz-retry-after 解讀為毫秒整數，無效值會忽略，並把有效提示納入受上限約束的 backoff 計算",
+            "提高 read timeout 就等同遵守 server-directed retry timing，因此不必限制 attempts、總 deadline 或 offered load"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Adaptive 的 request-rate token bucket 可能延遲第一次 attempt；若無關資源共用 client，一個 resource 的 throttling 還可能拖慢其他請求。",
+            "正確。Standard 適合多數 workload；adaptive 需要依 Region、table、bucket 等實際 throttling 維度建立 clients，否則會產生非預期的跨資源耦合。",
+            "錯誤。該 SDK 明確忽略一般 Retry-After header；x-amz-retry-after 必須是表示毫秒的非負整數，負值或無效字串不參與計算。",
+            "正確。有效的 x-amz-retry-after 會與計算出的 backoff 比較後納入延遲，並受文件所述上限控制；這是 server-directed timing，不是 request timeout。",
+            "錯誤。Read timeout 控制單次 request 等待，不能取代 retry delay、bounded attempts、caller deadline 或 admission control；忽略這些限制仍會造成 retry amplification。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "sdk-retry",
+            "aws-wa-retry",
+            "sdk-retry-modes",
+            "sdk-python-retry-header"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Queue-based retry",
+          "prompt": "產生縮圖失敗時不必立即回覆完成，工作可在數分鐘後重試。哪個設計最適合？",
+          "choices": [
+            "讓同步 request 永久等待",
+            "用 retention 決定每次 retry 間隔",
+            "送入 SQS，配置 visibility/redrive/DLQ、最大工作年齡與冪等 consumer",
+            "讓 poison message 無限 redrive"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。讓同步 request 持續等待會占住 connection、thread 與 caller deadline；只有工作必須立即完成且延遲可控時，才適合維持同步契約。",
+            "錯誤。Retention 是保存上限，不是 retry schedule。",
+            "正確。Queue 將 immediate retry 轉成受控 eventual completion。",
+            "錯誤。Poison message 無限 redrive 會反覆消耗 worker 與下游容量，並阻礙健康工作；應設定最大接收次數、DLQ、告警與修復後受控重送。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-visibility",
+            "sqs-dlq"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch056-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Circuit breaker 與 retry",
+          "prompt": "Recommendation dependency 持續故障。哪個組合能避免 retries 成為第二個放大器？",
+          "choices": [
+            "Open breaker 時仍進行完整 retries",
+            "以 breaker 讓 non-idempotent call 自動安全",
+            "每次 process restart 都無條件視為健康",
+            "短暫故障用 bounded retries；持續失敗時 breaker open，half-open 少量 probe 並提供安全 fallback"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Breaker open 的目的就是在持續故障時快速拒絕大部分呼叫；若仍做完整 retries，會繞過隔離效果並繼續壓迫 dependency。",
+            "錯誤。Breaker 不改變 operation semantics。",
+            "錯誤。這可能在 fleet restart 時形成 probe storm。",
+            "正確。Bounded retries 處理少量暫時錯誤，breaker 則隔離持續故障；half-open 限量探測與安全 fallback 防止恢復時再次形成流量尖峰。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-pg-circuit",
+            "aws-wa-retry",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Retry amplification diagnosis",
+          "prompt": "部署後 user request rate 不變，但 downstream TPS 增加四倍。哪兩項證據最能驗證 retry amplification？（選兩項）",
+          "choices": [
+            "把 original requests 與 per-layer attempts 以 correlation ID 對照",
+            "只看 successful user responses",
+            "直接把 max attempts 再提高",
+            "假定所有新增 TPS 都來自新使用者",
+            "檢查 timeout/throttle、retry quota、attempt count 與 latency percentiles"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Original-to-attempt ratio 直接量化放大倍數與來源層。",
+            "錯誤。Successful user responses 只呈現最終結果，無法揭露中間失敗、timeout 與 retry attempts，因此不能計算 original-to-attempt amplification。",
+            "錯誤。未定位重試來源前提高 max attempts 會增加 downstream TPS，可能把暫時性問題推成容量故障；應先量測再調整 budget。",
+            "錯誤。題目已指出 business request rate 沒有變化，因此新增 TPS 更可能來自內部 attempts；仍須用 correlation 與 attempt metrics 驗證。",
+            "正確。這些 signals 能連結錯誤類型、重試行為與 downstream load。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "sdk-retry",
+            "aws-wa-retry",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch056-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "SDK retry configuration review",
+          "prompt": "Checkout 必須在 2 秒內回覆付款授權結果，但 SDK 設為 max_attempts=10、read_timeout=5 秒，且 CreatePayment 每次自動產生新 token。審查結論是什麼？",
+          "choices": [
+            "保留十次 attempts，只把每次 read_timeout 降到 1 秒；其餘 backoff 不需納入總 deadline",
+            "改用 adaptive retry 即可自動保證整個付款呼叫在 2 秒內結束",
+            "應從 caller deadline 重設 connect/read timeout 與 attempts，並重用同一 logical payment token、記錄 attempts",
+            "把付款改送 SQS 並立即回成功；不需把 API contract 改為 pending 或提供查詢狀態"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。單次 timeout 降低仍未計算最多十次 attempt、connect 時間與 backoff；只有完整 worst-case 小於 caller deadline 時才安全。",
+            "錯誤。Adaptive mode 可調節重試與初次請求速率，但不承諾符合應用的 2 秒 deadline；呼叫端仍須配置 timeout 與 attempt budget。",
+            "正確。Worst-case duration 必須落在 deadline 內，token 需代表同一 logical operation。",
+            "錯誤。SQS 適合業務允許 eventual completion 的工作；題目要求立即付款結果，若改成 queue 必須明確回 pending、提供狀態與 reconciliation，而不能先宣稱成功。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "sdk-retry",
+            "aws-pg-retry"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 57,
+      "questions": [
+        {
+          "id": "ch057-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Stable idempotency key",
+          "prompt": "Client 在 CreatePayment timeout 後重送。哪個 idempotency key 設計最安全？",
+          "choices": [
+            "每次 attempt 產生新 UUID",
+            "使用每個 proxy hop 產生的 request ID",
+            "使用目前 timestamp",
+            "Client 對同一 logical payment 重用 key，server 以 tenant/operation scope 並驗證 payload 一致性"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。每次 attempt 產生新 UUID 只識別傳輸嘗試，server 無法把 timeout 後的重送連回同一 logical payment，因此可能再次扣款。",
+            "錯誤。Hop ID 代表傳輸 attempt，不代表 business operation。",
+            "錯誤。Timestamp 會隨 retry 改變，無法穩定代表同一 business operation；在高併發或時鐘精度不足時也可能碰撞不同付款。",
+            "正確。穩定且 scoped key 才能辨識同一操作，payload hash 可阻止 key 被誤用。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "lambda-idempotency",
+            "aws-wa-idempotent"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Atomic operation claim",
+          "prompt": "兩個相同 payment requests 同時到達。如何確保只有一個 caller 執行 charge？",
+          "choices": [
+            "先 eventually-consistent read，再各自 unconditional put",
+            "charge 完成後才寫 idempotency record",
+            "用 DynamoDB conditional put 原子建立 IN_PROGRESS；失敗的 caller 依狀態等待或 replay",
+            "以 process memory set 去重所有 instances"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Read-then-write 有 race window。",
+            "錯誤。先執行 charge、事後才寫 idempotency record 仍有競爭窗口；兩個 callers 都可能在任何一方留下 durable claim 前完成扣款。",
+            "正確。Conditional expression 將 claim 變成單一原子決策。",
+            "錯誤。Instance-local memory 不共享且重啟會遺失。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "dynamodb-conditions",
+            "lambda-idempotency"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Result replay",
+          "prompt": "第一次 payment 已成功但 response 遺失。相同 key 再到達時，哪兩項行為正確？（選兩項）",
+          "choices": [
+            "看到 duplicate 一律回 generic error",
+            "再次 charge，因為 client 沒看到 response",
+            "持久化 COMPLETED 狀態與 payment/result reference",
+            "成功後立即刪除 idempotency record",
+            "在 key 與 payload 相容時回傳相同 logical outcome，不重做 side effect"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。對 duplicate 一律回 generic error 會讓 caller 無法判斷原付款是否成功，可能觸發人工重試或建立新交易，擴大不確定性。",
+            "錯誤。Response loss 不代表 side effect 未提交。",
+            "正確。持久化 COMPLETED 與原 payment/result reference，才能讓後續相同 key 重播同一 logical outcome，而不再次執行付款 side effect。",
+            "錯誤。成功後立即刪除 idempotency record 會在 response 遺失或延遲 retry 到達時失去既有 outcome，讓 server 再次執行付款。",
+            "正確。Idempotency 的目的就是讓多次 attempts 對應同一 business result。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "lambda-idempotency"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Stale IN_PROGRESS recovery",
+          "prompt": "Worker charge 後 crash，record 留在 IN_PROGRESS。簡單刪除 record 有何風險，應如何處理？",
+          "choices": [
+            "沒有風險，IN_PROGRESS 證明 charge 未發生",
+            "建立 bounded lease/expiry，並向 payment system reconcile 後才決定 replay 或標記完成",
+            "永遠等待，不需告警",
+            "把所有 IN_PROGRESS 定時改為 COMPLETED"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Crash 可能發生在 external commit 後。",
+            "正確。不確定 outcome 必須查 authoritative side effect，不能靠本地狀態猜測。",
+            "錯誤。永久卡住會讓合法 request 無法完成，也沒有可操作的 recovery deadline。",
+            "錯誤。把所有逾期 IN_PROGRESS 直接改成 COMPLETED 會把未真正 charge 的交易偽裝成成功；必須先向 authoritative payment system reconcile outcome。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "lambda-idempotency",
+            "dynamodb-conditions",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "FIFO dedup 與 business idempotency",
+          "prompt": "團隊宣稱 SQS FIFO 已保證 payment exactly once，因此 consumer 不需 idempotency。最正確的反駁是什麼？",
+          "choices": [
+            "FIFO dedup 只抑制其窗口/範圍內的重複 sends；redelivery、晚到重發及其他 channel 仍可能重做 side effect",
+            "FIFO 完全不提供 ordering",
+            "Standard queue 才提供永久 dedup",
+            "提高 retention 就能取得 exactly-once charge"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Transport dedup 不等於端到端 external effect exactly once。",
+            "錯誤。FIFO 提供 message-group ordering。",
+            "錯誤。Standard 不提供 FIFO dedup contract。",
+            "錯誤。Retention 與 deduplication 是不同功能。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-fifo",
+            "aws-wa-idempotent"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch057-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Idempotent SQS Lambda consumer",
+          "prompt": "Lambda 消費 SQS order events。哪兩項能在 crash/retry 下保護資料？（選兩項）",
+          "choices": [
+            "使用 Lambda invocation ID 作永久 business identity",
+            "用 stable order-event identity 做 conditional claim/write",
+            "開始處理前把整批標成成功",
+            "durable side effect 完成後才回報成功，並使用 partial batch failures",
+            "假設 visibility timeout 消除 duplicates"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Lambda invocation ID 隨每次 delivery attempt 改變，不能代表穩定的 order event；用它去重會讓同一 business event 每次都看似全新。",
+            "正確。Business identity 跨 delivery attempts 保持穩定。",
+            "錯誤。在 durable side effect 完成前把整批回報成功，Lambda 或 worker 隨後 crash 時，SQS 不會再投遞尚未完成的 records，造成資料遺失。",
+            "正確。先 commit 再 ack，加上 partial response 可安全縮小 retry 範圍。",
+            "錯誤。Visibility 到期正是可能 redelivery 的來源。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "lambda-sqs",
+            "lambda-idempotency"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "DynamoDB transaction boundary",
+          "prompt": "Idempotency record 與 order ledger 都在 DynamoDB，必須一起成功；付款則在外部 processor。哪個設計正確？",
+          "choices": [
+            "DynamoDB transaction 可原子更新兩個 DynamoDB items；外部付款仍需 idempotency/reconciliation",
+            "Transaction 能一起 commit 第三方 payment",
+            "用兩個無關 Lambda 分別寫，效果等同 transaction",
+            "DynamoDB Streams 可阻止初始 duplicate charge"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。TransactWriteItems 的原子範圍是受支援的 DynamoDB items，不包含外部系統。",
+            "錯誤。Managed database transaction 無法跨第三方 API。",
+            "錯誤。分開 async writes 有 partial failure gap。",
+            "錯誤。Streams 發生在 table change 後，且也需處理重複。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "dynamodb-transactions",
+            "dynamodb-conditions"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Idempotency TTL",
+          "prompt": "合法 retries 最長可能在 48 小時後到達。團隊把 idempotency TTL 設為 5 分鐘，並期待 DynamoDB 在秒級準時刪除。問題是什麼？",
+          "choices": [
+            "把 TTL 精確設為 48 小時，並假設 expiry 時刻一到 record 就立刻消失",
+            "完全移除 TTL、永久保留所有 idempotency records，不評估資料成長與法規需求",
+            "只把 dedup key 放在 48 小時 TTL 的 cache；cache miss 時直接重做付款",
+            "Retention 太短會讓晚 retry 重做；TTL deletion 非即時，application 仍應判斷 expiry"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。48 小時可作 retention 基線，但 DynamoDB TTL 是背景刪除，通常在過期後數日內完成；應用仍須讀取 expiry 並按規則判斷。",
+            "錯誤。永久保存可降低晚 retry 重做風險，卻造成無界儲存、隱私與清理成本；只有法規要求永久稽核且另有生命週期治理時才合理。",
+            "錯誤。Cache 可減少熱門 duplicate 的讀取成本，但 eviction、故障或重啟後會遺失去重證據；付款 identity 仍需要 durable authority。",
+            "正確。Record retention 應涵蓋 replay horizon，且不能把非同步刪除當精準 scheduler。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "lambda-idempotency",
+            "dynamodb-conditions",
+            "dynamodb-ttl",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch057-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Duplicate charge diagnosis",
+          "prompt": "改用 FIFO 後仍出現 duplicate charges。哪兩項最值得追查？（選兩項）",
+          "choices": [
+            "Producer 是否對同一 logical operation 重用 dedup/idempotency identity",
+            "把 FIFO throughput mode 調高",
+            "把 message retention 調高",
+            "改回 Standard queue",
+            "Visibility/redelivery、consumer retries，以及 charge commit 與 idempotency record 的先後邊界"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Identity 改變會讓 queue 與 application 都無法認出 duplicate。",
+            "錯誤。Throughput mode 不解決 side-effect identity。",
+            "錯誤。Message retention 只決定 SQS 保存未刪除訊息的期限，不會辨識 logical payment，也無法阻止 consumer 在 redelivery 時再次 charge。",
+            "錯誤。Standard 只會弱化 ordering/dedup guarantees。",
+            "正確。Crash window 與 acknowledgment uncertainty 是 duplicate effect 的核心來源。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "sqs-fifo",
+            "lambda-idempotency",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch057-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Idempotency state machine review",
+          "prompt": "一個 payment API 必須承受 concurrent duplicate requests、charge 後 crash、48 小時內的晚到 retry，並對成功重送回傳同一結果。哪個 state machine 最完整？",
+          "choices": [
+            "收到 request 後 charge，成功才記 key",
+            "每次 attempt 由 server 產生新 key",
+            "只用短期 process cache SET",
+            "stable scoped key+payload hash；conditional IN_PROGRESS claim；lease/reconcile；COMPLETED result replay；合理 expiry 與 metrics"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Crash-before-record 會重複 side effect。",
+            "錯誤。每次 attempt 使用新 key，server 就無法辨識它們其實是同一 logical operation。",
+            "錯誤。Cache-only 需先證明 durability/atomicity，且重啟可能遺失。",
+            "正確。它涵蓋 concurrency、crash uncertainty、response replay、expiry 與 operations。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "lambda-idempotency",
+            "dynamodb-conditions",
+            "dynamodb-transactions",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 58,
+      "questions": [
+        {
+          "id": "ch058-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Transactional outbox invariant",
+          "prompt": "Outbox publisher 已成功把 OrderConfirmed 交給 EventBridge bus，但在把 outbox row 標記為 sent 前 crash；重啟後同一 row 會再次發布。哪個設計最能防止重複發布造成第二次扣庫存？",
+          "choices": [
+            "為 outbox row 保留穩定 event_id；publisher 可安全重送同一 identity，consumer 以 durable dedup 或 conditional state transition 冪等套用",
+            "在呼叫 PutEvents 前先把 row 標成 sent，避免重啟後再次看到它",
+            "每次 publisher attempt 產生新的 event_id，讓 EventBridge 能分辨每次傳送",
+            "依賴 EventBridge classic rule delivery 自動把所有重複發布轉成 exactly-once side effect"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Bus acceptance 與本地 sent 標記無法原子提交，因此重複發布是可預期的；穩定 identity 與 consumer 冪等把多次 delivery 收斂成一次業務效果。",
+            "錯誤。先標 sent 可避免 duplicate，卻在 PutEvents 失敗或 process 隨後 crash 時造成永久漏發；只有 durable handoff 已完成後才能更新進度。",
+            "錯誤。每次產生新 identity 會讓 downstream 無法判定這是同一 logical event，反而把 publisher retry 變成兩個合法庫存扣減。",
+            "錯誤。Classic EventBridge rule delivery 不替外部 side effect 提供全域 exactly-once；即使 transport 有 dedup 範圍，consumer 仍須保護超窗或跨路徑重複。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-outbox",
+            "aws-wa-idempotent",
+            "eventbridge-putevents"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Outbox record schema",
+          "prompt": "Order service 的 outbox publisher 可能重試，consumer 需要按同一 order 的版本處理，團隊也要追蹤尚未發布的資料。哪個 outbox schema 最能支援 dedup、ordering、schema evolution 與營運追蹤？",
+          "choices": [
+            "只有 free-form payload",
+            "只有 publication timestamp",
+            "每個 aggregate 只保留一列並覆寫舊事件",
+            "immutable event_id、aggregate_id/sequence、type/version、payload/reference、created_at 與 publication/checkpoint 狀態"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。只有 free-form payload 缺少 immutable event identity、schema version、aggregate sequence 與 publication state，publisher 和 consumer 都難以安全重放或診斷。",
+            "錯誤。Timestamp 不能可靠代表唯一 identity 或跨 host ordering。",
+            "錯誤。每個 aggregate 只保留一列並覆寫舊事件，會遺失中間 transitions 與稽核歷史；它只適合作目前狀態快照，不是完整 outbox log。",
+            "正確。這些欄位讓 publisher 與 consumers 能重放、去重及診斷。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-outbox"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q03",
+          "intent": 3,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "DynamoDB Streams outbox publication",
+          "prompt": "團隊以 DynamoDB transaction 寫 order 與 outbox item，再由 Streams Lambda 發布事件。哪兩項仍然必要？（選兩項）",
+          "choices": [
+            "Publish 前立即刪除 outbox evidence",
+            "以 stable event ID 發布並讓 consumer 冪等",
+            "假設 Streams 保證 downstream side effect exactly once",
+            "只有 eventually-consistent full scan 才能讀 outbox",
+            "檢查 PutEvents 的 FailedEntryCount 與逐 entry 結果，只重試失敗項；成功被 event bus 接受後才把 outbox 標記 handed_off，並另行配置 target retry/DLQ"
+          ],
+          "answers": [
+            1,
+            4
+          ],
+          "explanations": [
+            "錯誤。先刪除會在 publish failure 時失去復原依據。",
+            "正確。Change stream 與 publish retry 都可能產生 duplicate delivery。",
+            "錯誤。Transport delivery 不保證外部 effect exactly once。",
+            "錯誤。Streams/CDC 正是避免只靠 full scan 的方式。",
+            "正確。HTTP 200 仍可能包含失敗 entries；event ID 只證明 bus ingestion，不代表每個 target 完成。Publisher 在 bus acceptance 後記 durable handoff，target retry/DLQ 與 consumer 冪等則是後續邊界。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-outbox",
+            "dynamodb-transactions",
+            "eventbridge-putevents",
+            "lambda-ddb-partial"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Saga orchestration 與 choreography",
+          "prompt": "訂單流程有 12 個 participants、人工例外與複雜 compensation，團隊最重視中央可見性與明確 timeout。較合適的起點是什麼？",
+          "choices": [
+            "純 SNS fan-out，會自動知道補償順序",
+            "Orchestrated saga，例如 Step Functions 明確保存 sequence、timeout 與 compensation",
+            "Choreography，因為它完全沒有 coupling",
+            "跨所有 database 維持單一 transaction"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。SNS fan-out 只負責複製訊息，不會自動保存 participant sequence、timeout、補償順序與整體 outcome；簡單獨立通知才適合純 fan-out。",
+            "正確。需求偏向集中協調與可觀測流程；仍需避免 orchestrator 承擔 domain logic。",
+            "錯誤。Choreography 耦合在 event contracts，participant 增多後追蹤更難。",
+            "錯誤。獨立服務通常無法共享長時間 ACID transaction。"
+          ],
+          "task_keys": [
+            "SAP-4.4"
+          ],
+          "source_ids": [
+            "aws-pg-saga",
+            "stepfunctions-integrations"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Semantic compensation",
+          "prompt": "商業規則要求缺貨訂單必須取消並退回已收款項；Payment 已 capture，但 inventory reservation 後來失敗。Saga 的首選 compensation 應如何設計？",
+          "choices": [
+            "執行新的、冪等且可觀測的 refund 操作，並為 refund failure 設 retry/escalation",
+            "若只是 authorization 尚未 capture，呼叫 void authorization；直接把同一操作套用到本題已 capture 的付款",
+            "把訂單改成 backorder 並保留款項，未取得客戶同意也不變更對外承諾",
+            "只把案件送人工客服，沒有自動 refund retry、冪等 key 或 escalation deadline"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Compensation 是業務語意上的反向行動，不是時間倒轉。",
+            "錯誤。Void authorization 適合款項尚未 capture 的不同狀態；本題已收款，必須依 payment provider 支援的 refund 語意建立新反向交易。",
+            "錯誤。Backorder 在客戶接受延期且商業契約允許保留款項時可能合理；本題明定缺貨必須取消退款，不能暗中改寫承諾。",
+            "錯誤。人工處理適合自動 refund 重試耗盡或狀態無法判定時的 escalation；若完全沒有自動、冪等且有期限的首選路徑，會擴大延遲與營運風險。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-saga"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Irreversible action ordering",
+          "prompt": "流程包含 reserve inventory、authorize payment、ship physical goods。哪兩項能降低不可逆失敗？（選兩項）",
+          "choices": [
+            "先 ship，再嘗試 payment",
+            "先做可釋放的 reservation/authorization，將 shipment 放在後段",
+            "為每次 shipment retry 產生新 identity",
+            "為無法自動補償的結果建立人工 reconciliation/escalation",
+            "跨服務持鎖直到客戶簽收"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。最難補償的實體出貨不應最先執行，否則前置檢查失敗時只能人工追回。",
+            "正確。先完成可釋放或會到期的 inventory reservation 與 payment authorization，能在前置條件失敗時安全撤銷，並把不可逆 shipment 延後。",
+            "錯誤。Shipment retry 每次產生新 identity 會讓倉儲系統把同一訂單視為新出貨；應重用穩定 shipment key 並查詢既有 outcome。",
+            "正確。物理世界 action 需要明確 exception path。",
+            "錯誤。跨服務長時間持鎖既難以實作，也會阻塞其他交易並降低整體可用性。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-saga"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Aggregate event order",
+          "prompt": "Outbox publisher 可能重複發布，且同一 order 的 v12 有時先於 v11 到達。Consumer 應如何保護狀態？",
+          "choices": [
+            "依牆鐘 timestamp 排序所有 hosts",
+            "相信 classic EventBridge rule delivery，或 Custom Event Bus FIFO，能跨所有 publishers 與 event groups 提供 global ordering",
+            "用 event_id 去重、aggregate sequence/version 與 conditional state transition 拒絕或暫存 stale/out-of-order event",
+            "只依 event type 去重"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Clock skew 使 timestamp 不適合作唯一 ordering authority。",
+            "錯誤。Classic rule delivery 沒有 global-order contract；Custom Event Bus FIFO 也只在同一 publisher account 的 event group 內排序，不能跨 accounts 或 groups 建立全域順序。",
+            "正確。Stable identity 與 aggregate version 明確表達 domain order；即使使用 FIFO transport，consumer 仍能拒絕 stale version 並處理超出 dedup window 的重複。",
+            "錯誤。同 type 的不同合法 transitions 會被誤刪。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-pg-outbox",
+            "sqs-fifo",
+            "eventbridge-custom-fifo",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Stuck saga diagnosis",
+          "prompt": "Saga 顯示 payment 成功但 shipment 未建立。最佳診斷路徑是什麼？",
+          "choices": [
+            "用 saga/order ID 串聯 execution history、outbox backlog、delivery、participant state、retry 與 compensation，再依 authoritative records reconcile",
+            "先把 shipment DLQ 全部 redrive，未確認原 shipment side effect、event identity 或 consumer 冪等狀態",
+            "立即執行 payment compensation，未查 shipment 是否其實已建立但 acknowledgement 遺失",
+            "啟動新的 saga execution 接管同一 order，讓原 execution 繼續 retry"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。跨邊界 correlation 能找出卡在 durable state、publication、delivery 或 participant 的哪一站。",
+            "錯誤。若已確認只有可重試 delivery failure 且 consumer 冪等，受控 redrive 才合理；未先定位就整批重送可能重複出貨並掩蓋真正卡點。",
+            "錯誤。若 authoritative shipment 狀態證明不可恢復，refund 才可能是正確補償；在 outcome 不確定時先退款，可能形成已出貨又退款的新錯誤。",
+            "錯誤。替代 execution 只適合原流程已終止、ownership 已轉移且所有 side effects 可去重的復原程序；雙 execution 會競爭並重做步驟。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-pg-saga",
+            "aws-pg-outbox",
+            "stepfunctions-logging",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q09",
+          "intent": 9,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Eventual consistency UX",
+          "prompt": "Order workflow 可能數分鐘才收斂。哪兩項使用者與營運設計正確？（選兩項）",
+          "choices": [
+            "對外呈現 pending/confirmed/failed 狀態與 status endpoint/callback",
+            "一律立即顯示 confirmed",
+            "以一個 global lock 阻止所有 orders",
+            "宣稱非同步架構零不一致",
+            "定義 convergence SLO、超時告警與 reconciliation job"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Pending state 誠實表達尚未完成的 distributed work。",
+            "錯誤。在 workflow 尚未收斂時立即顯示 confirmed，會把 provisional state 誤當最終承諾；只有必要 invariants 已 durable commit 時才可宣告完成。",
+            "錯誤。全域鎖會把所有獨立 orders 序列化，破壞水平擴展與故障隔離。",
+            "錯誤。非同步架構會自然產生暫時不一致與不確定狀態；正確做法是公開 pending、定義收斂 SLO，並提供 timeout 與 reconciliation。",
+            "正確。SLO 與 reconciliation 讓 eventual consistency 可營運。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-pg-saga"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch058-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Saga/outbox migration",
+          "prompt": "團隊要把會扣款、保留庫存與出貨的同步 monolith 漸進改為 saga/outbox；遷移期間不得讓舊、新路徑同時擁有同一 side effect。哪個 rollout 最安全？",
+          "choices": [
+            "先讓舊、新 saga 同時對 production payment 與 shipment 寫入，再用月底報表刪除重複結果",
+            "先 dual-publish 到新 consumers，讓新路徑可自由執行 side effects；若出錯再依 database timestamp 猜測 ownership",
+            "保留舊路徑為 side-effect owner，但 shadow 路徑仍呼叫真實付款，只要求 payment token 每次不同以便比較",
+            "先建立 stable identities/versioned contracts；dual-publish 只送 disabled、compare-only 或已證明冪等的 shadow consumers，由舊路徑獨占 side effects；再 canary 轉移 ownership、reconcile 指標並保留 rollback"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。兩條路徑同時擁有真實 side effects 會重複扣款或出貨；只有完全隔離的測試環境才適合同時執行。",
+            "錯誤。Dual-publish 可用於驗證 contract 與讀模型，但在 ownership 未定義前開放寫入會造成競爭；timestamp 也不能取代明確 fencing 或狀態轉移。",
+            "錯誤。非變動 shadow 可比較決策，但呼叫真實付款已是 side effect；不同 token 反而會把同一交易視為兩次合法操作。",
+            "正確。Shadow 階段不改變 production state，且每一遷移階段只有一條路徑擁有 side effects；canary、reconciliation、lag/duplicate/compensation 指標與 rollback 共同提供可逆證據。"
+          ],
+          "task_keys": [
+            "SAP-4.4"
+          ],
+          "source_ids": [
+            "aws-sap-d4",
+            "aws-pg-saga",
+            "aws-pg-outbox"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 59,
+      "questions": [
+        {
+          "id": "ch059-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Failure control selection",
+          "prompt": "推薦服務變慢後占滿 checkout thread pool。哪項描述最正確？",
+          "choices": [
+            "Timeout 限等待；bounded retry 處理短暫錯誤；breaker 停止持續失敗呼叫；bulkhead 隔離 pool；backpressure/load shedding 限制進入工作",
+            "只靠 ALB health check 可完成所有控制",
+            "無限 retry 可提高 availability",
+            "擴大 caller fleet 可修復完全失效 downstream"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。五種機制處理不同 failure stage，需組合而非混稱。",
+            "錯誤。Target health 不管理 caller resource pools 與 optional dependency fallback。",
+            "錯誤。無限 retry 會把每次失敗轉成持續新增的下游流量，耗盡 thread、connection 與 capacity；重試必須受 deadline、attempt 和 quota 限制。",
+            "錯誤。更多 callers 可能讓 downstream 更快崩潰。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-pg-circuit",
+            "aws-wa-retry",
+            "aws-cell-architecture",
+            "aws-wa-failfast"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Circuit breaker states",
+          "prompt": "下游服務偶爾短暫錯誤，也可能持續失效；caller 必須在故障期停止大部分呼叫，並在稍後謹慎驗證恢復。哪個 breaker state transition 設計合理？",
+          "choices": [
+            "單一 error 後永久 open",
+            "Closed 依窗口 error/slow-call threshold open；等待後 half-open 僅少量 probes；成功 close、失敗 reopen",
+            "Half-open 立即送全部 production load",
+            "每個 request 都清除 failure history"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。單一瞬時錯誤不足以判定 dependency 長期失效；永久 open 會在服務恢復後仍拒絕流量，應以窗口 threshold 與 half-open probe 判斷。",
+            "正確。窗口、冷卻與有限探測共同避免 oscillation 與 recovery stampede。",
+            "錯誤。Half-open 階段應只允許少量 probe 驗證服務；未證實恢復便送入全部 production load，可能立刻重現原故障與 recovery stampede。",
+            "錯誤。Breaker 需要跨 requests 觀察 failure rate。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-pg-circuit",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Business-safe fallback",
+          "prompt": "Recommendation 與 payment authorization 同時故障。哪兩項 fallback 正確？（選兩項）",
+          "choices": [
+            "Payment 未執行仍回 success",
+            "Recommendations 回 cached/default 並標記降級",
+            "長期使用過期 authorization 決策",
+            "Payment fail closed，或以明確 pending/queue+reconciliation 契約處理",
+            "因 recommendations 失敗而讓全部 checkout 必然失敗"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Payment authorization 尚未執行卻回 success，會對使用者做出不存在的財務承諾；critical payment invariant 應 fail closed 或明確回 pending。",
+            "正確。Recommendations 是 optional read path，可回受控 cached/default 結果並標記降級；這能保留 checkout 核心功能而不偽造付款結果。",
+            "錯誤。過期 authorization 可能已撤銷或超出風險窗口，不能無限沿用；只有有明確 freshness、風險上限與業務批准時才可短暫快取。",
+            "正確。Critical invariant 必須保持真實結果或明確 pending。",
+            "錯誤。Optional dependency 不應擴大 blast radius。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-pg-circuit"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "互動驗證與批次匯出的資源隔離",
+          "prompt": "同一服務同時處理需在 200 ms 內完成的使用者 authentication，以及可延後數小時的 nightly audit export。兩者共用 RDS connection pool 與對外 HTTP client pool；export burst 會占滿連線，使 authentication timeout，但主機 CPU 與 RDS CPU 都未飽和。哪項改造最合適？",
+          "choices": [
+            "擴大單一共享 RDS/HTTP pool，並只依主機 CPU 增加 service tasks，不限制 export concurrency",
+            "在共享 pool 前加入 export priority queue，但允許 batch requests 取得全部 database 與 HTTP connections",
+            "為 authentication 與 export 建立獨立且有上限的 RDS/HTTP client pools，替 authentication 保留容量，並以 queue、rate limit 或 worker concurrency 約束 export",
+            "在 authentication 與 export 外圍共用一個 global circuit breaker；任一 workload 變慢時同時停止兩者"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。更大的共享 pool 或更多 tasks 仍允許 export 吃完連線，還可能超過 RDS 與外部服務的安全容量；只有下游確有餘裕且另有 per-workload cap 時才適合擴容。",
+            "錯誤。Priority queue 只能決定等待順序，不能搶回已被 batch 工作占用的 connections；若 export concurrency 已受限，priority 才能進一步改善排程。",
+            "正確。獨立 bounded pools 建立 bulkhead，reserved authentication capacity 保護低延遲 SLO；export queue 與 concurrency cap 則把可延後工作留在自己的資源預算內。",
+            "錯誤。Global breaker 會把 export 壓力擴散到仍可服務的 authentication；breaker 應按 dependency 或 workload failure boundary 設置，而不是把兩者綁成共同故障域。"
+          ],
+          "task_keys": [
+            "SAA-3.2"
+          ],
+          "source_ids": [
+            "aws-pg-circuit",
+            "aws-cell-architecture"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Lambda reserved concurrency",
+          "prompt": "非關鍵報表 Lambda 的 burst 會耗盡 account concurrency 並壓垮 database，使付款 Lambda 無法執行。應如何隔離？",
+          "choices": [
+            "所有 functions 都設成 account 最大 reserved concurrency",
+            "只增加 database timeout",
+            "假設 serverless 自動提供無限 concurrency",
+            "限制報表 concurrency、為關鍵 function 保留容量，並配置 throttle 後的 queue/retry/DLQ 行為"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Reserved concurrency 的總量受 account 配額，不能每個都取最大。",
+            "錯誤。Timeout 不限制連線數與 invocation burst。",
+            "錯誤。Lambda 有 concurrency quotas，下游容量更有限。",
+            "正確。Reserved concurrency 同時可保留與限制，形成 blast-radius control。"
+          ],
+          "task_keys": [
+            "SAA-3.2"
+          ],
+          "source_ids": [
+            "lambda-concurrency"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Bounded async backlog",
+          "prompt": "促銷 queue 的工作超過 15 分鐘就沒有商業價值。哪兩項設計正確？（選兩項）",
+          "choices": [
+            "Retention 設無限",
+            "以 ApproximateAgeOfOldestMessage 與 arrival/service rate 擴縮及告警",
+            "只監控 queue depth",
+            "對過期工作 load shed/expire，保留 DLQ 或 reconciliation evidence",
+            "永遠先處理已過 deadline 的舊工作"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。SQS retention 有上限，且無限 backlog 只延後失敗。",
+            "正確。Age 比單純 depth 更直接反映 deadline risk。",
+            "錯誤。相同 depth 在不同 processing rate 下意義不同。",
+            "正確。超過商業 deadline 的工作應 load shed 或 expire，避免占用仍可服務新工作的 capacity；DLQ 或 reconciliation evidence 則保留稽核與補償依據。",
+            "錯誤。無條件先處理已失去價值的工作，會消耗 capacity 並讓仍可達成的新工作也逾期。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-metrics",
+            "sqs-retention",
+            "aws-wa-failfast"
+          ],
+          "inspiration_ids": [
+            "jay-sqs-features"
+          ]
+        },
+        {
+          "id": "ch059-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Synchronous admission control",
+          "prompt": "API downstream database 最多安全處理 200 concurrent requests。尖峰突然到 2000。最佳保護是什麼？",
+          "choices": [
+            "入口設 concurrency/rate limit，飽和時回明確 retryable response，clients 使用 backoff/jitter",
+            "全部接受到 unbounded memory queue",
+            "提高 API timeout",
+            "尚未 admission 就先回 200 success"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。早期 admission control 保護 database 並使 overload 行為可預期。",
+            "錯誤。Memory queue 最終耗盡且 requests 過期。",
+            "錯誤。提高 API timeout 不會增加 database 可安全處理的 concurrency，反而讓更多 requests 占住 threads、connections 與 memory，延後 overload 顯現。",
+            "錯誤。在 admission 與 durable acceptance 尚未完成前回 200 success，會讓 client 誤認工作已承諾執行；應明確拒絕或先 durable enqueue 再回 accepted。"
+          ],
+          "task_keys": [
+            "SAP-2.5"
+          ],
+          "source_ids": [
+            "aws-wa-retry",
+            "aws-pg-retry",
+            "aws-wa-failfast"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Cascading latency diagnosis",
+          "prompt": "API p99 暴增但 CPU 30%。哪組 signals 最能發現 I/O wait 型 cascading failure？",
+          "choices": [
+            "先依 host CPU 與 memory 自動 scale out；若節點資源沒有飽和，仍不檢查 request 等待與下游",
+            "只檢查 database CPU、connections 與 slow queries，忽略 caller pools、queue age、retries 與其他 dependencies",
+            "統一降低所有 downstream timeout，未依 caller deadline、正常 latency 與 dependency criticality 分配 budget",
+            "thread/connection pool saturation、in-flight、queue age、downstream latency/errors、retry attempts、breaker/rejection state"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Scale out 適合已證實 CPU 或單機容量不足的情境；I/O wait 時 CPU 可偏低，更多 callers 反而可能增加下游連線與重試壓力。",
+            "錯誤。資料庫指標適合已懷疑 DB 是瓶頸時深入確認，但只看 DB 會漏掉 caller pool 耗盡、其他依賴或 retry amplification 的完整因果鏈。",
+            "錯誤。較短 timeout 能 fail fast，但一體適用可能誤殺正常慢請求；應從端到端 deadline 分配每個 attempt，並搭配 pool、breaker 與 admission signals。",
+            "正確。這些 signals 沿著排隊、等待、重試與隔離狀態定位故障。"
+          ],
+          "task_keys": [
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "aws-pg-circuit",
+            "sqs-metrics",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Noisy tenant isolation",
+          "prompt": "一個大型 tenant 可耗盡所有 workers，讓其他 tenants 超過 SLO。哪兩項治理合理？（選兩項）",
+          "choices": [
+            "建立 per-tenant quota/concurrency/queue 或 cell isolation",
+            "只看所有 tenants 的平均 TPS",
+            "所有 tenants 共用單一 FIFO MessageGroupId",
+            "Premium tenant 可無限使用同一 database pool",
+            "保留 global safety limit，並以公平排程/tenant metrics 防止共享資源耗盡"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Tenant-scoped limits 將 noisy-neighbor impact 限制在明確邊界。",
+            "錯誤。所有 tenants 的平均 TPS 會把大型 tenant 的尖峰攤平，無法顯示誰耗盡 workers；應觀察 per-tenant throughput、age、reject 與 concurrency。",
+            "錯誤。所有 tenants 共用一個 FIFO MessageGroupId 會把整體工作序列化，降低吞吐且仍無法依 tenant 分配 capacity；需要順序時應按 tenant 分組。",
+            "錯誤。Premium entitlement 可配置較高 quota，但不能無上限使用共同 database pool；仍須保留 global safety limit，避免單一租戶擊穿 shared bottleneck。",
+            "正確。局部公平之外仍需保護整體 system capacity。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-sap-d2",
+            "lambda-concurrency",
+            "aws-cell-architecture",
+            "sqs-fair-queues"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch059-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Resilient call path review",
+          "prompt": "Checkout 的 optional dependency 會 timeout、暫時 throttling 或持續失效，且 caller thread pool 不可被它耗盡。哪條 call path 最完整地控制這個 dependency？",
+          "choices": [
+            "Client deadline→bounded retry+jitter→per-dependency pool→breaker→attempt timeout→安全 fallback，並量測 attempts/rejections/saturation/business success",
+            "只用 ELB target health",
+            "Retry 不受 deadline 限制",
+            "Breaker 前放 unbounded queue"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。它限制時間、流量與 failure domain，並留下業務證據。",
+            "錯誤。Health check 不控制 client pools/retries/fallback。",
+            "錯誤。Retry 超過 caller deadline 後仍執行，只會產生使用者已不再等待的無效工作。",
+            "錯誤。Unbounded queue 只是延後 overload。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-pg-circuit",
+            "aws-wa-retry",
+            "aws-pg-retry",
+            "aws-sap-d3",
+            "aws-cell-architecture",
+            "aws-wa-failfast"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 60,
+      "questions": [
+        {
+          "id": "ch060-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Hidden instance-local state",
+          "prompt": "Web fleet 以 Auto Scaling 增加 instances，但 session、uploads 與 job status 都只存在 local memory/disk。如何提高可替換性？",
+          "choices": [
+            "把 durable sessions/status/artifacts 移到合適 shared durable stores，只保留可丟棄 cache/temp local",
+            "啟用 stickiness 後宣稱 stateless",
+            "每次 scale-out 手動複製所有 local disks",
+            "所有 authoritative state 留在 process memory"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Stateless compute 的重點是任一 instance 可被替換，而 durable state 有明確 owner。",
+            "錯誤。Stickiness 只維持 affinity，不複寫 state。",
+            "錯誤。每次 scale-out 手動複製 local disks 需要處理並行寫入、傳輸延遲與失敗重試，仍有一致性 gap；只有不可變 image 才適合複製。",
+            "錯誤。Process memory 隨 instance crash、deployment 或 scale-in 消失，不能保存 authoritative state；它只適合可重建 cache 與短暫計算資料。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-wa-stateless"
+          ],
+          "inspiration_ids": [
+            "jay-architecting"
+          ]
+        },
+        {
+          "id": "ch060-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Sync versus async contract",
+          "prompt": "報表通常需 10 分鐘產生，使用者不需保持連線。最佳 API contract 是什麼？",
+          "choices": [
+            "HTTP connection 保持 10 分鐘",
+            "Durably accept job 後回 202 與 operation ID/status URL，完成時可 callback/notify",
+            "所有付款也改成不回結果的 async",
+            "在工作尚未入 queue 前回 success"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。長連線易受 proxy/client timeout 且占用資源。",
+            "正確。它明確把 contract 從立即結果改成 eventual completion。",
+            "錯誤。需要立即確認的 invariants 不應盲目 async。",
+            "錯誤。必須先 durable acceptance，否則 response 後工作可能遺失。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "aws-saa-d2",
+            "aws-wa-idempotent",
+            "aws-async-api"
+          ],
+          "inspiration_ids": [
+            "jay-architecting"
+          ]
+        },
+        {
+          "id": "ch060-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Complete asynchronous job API",
+          "prompt": "設計一個通常需 10 分鐘、client 可能因 timeout 重送且完成後要下載大型檔案的報表 API。哪兩項是完整架構必要部分？（選兩項）",
+          "choices": [
+            "POST 以 idempotency key durable 建 job，回 202、job ID 與 status URL",
+            "回傳某台 worker hostname 供日後查詢",
+            "只把 status 放在 SQS message 內",
+            "讓 API process 持續活到報表完成",
+            "Queue+workers 處理；durable status store 記狀態；結果放 object storage；poll/callback 通知"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。Stable job identity 使 client retry 不會重複建立工作。",
+            "錯誤。Worker hostname 只識別暫時 compute instance，scale-in 或 crash 後便失效；查詢 authority 應是 durable job/status store 與穩定 job ID。",
+            "錯誤。Queue 不適合作 queryable status database。",
+            "錯誤。讓 API process 活到 worker 完成仍是長同步等待，無法解除 connection 與 instance lifecycle 的耦合。",
+            "正確。它分離 work buffer、state owner、result storage 與 completion channel。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-visibility",
+            "aws-wa-idempotent",
+            "aws-async-api"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch060-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "State ownership",
+          "prompt": "報表平台同時需要保存可查詢的 job status、不可變的大型輸出、短暫 cache、workflow progress 與待處理 messages。哪個 state placement 最合理？",
+          "choices": [
+            "SQS 作任意查詢的 job status database",
+            "ElastiCache 作唯一 payment ledger",
+            "大型 report binary 放在 Step Functions input",
+            "Transactional truth 在 database、large immutable result 在 S3、workflow progress 在 workflow/state store、messages 在 queue"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Queue 以 delivery/ack 為主，不提供一般 status query model。",
+            "錯誤。Cache eviction/failure 不適合作唯一財務 authority。",
+            "錯誤。Workflow payload/history 有大小與敏感資料成本。",
+            "正確。每種 store 對應其 durability、access pattern 與 lifecycle。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-wa-stateless",
+            "stepfunctions-types",
+            "stepfunctions-quotas"
+          ],
+          "inspiration_ids": [
+            "jay-architecting"
+          ]
+        },
+        {
+          "id": "ch060-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Sticky sessions boundary",
+          "prompt": "ALB stickiness 是否等同 session high availability？",
+          "choices": [
+            "是，ALB 會複寫 instance memory",
+            "否；stickiness 只維持 affinity，外部化 session 才讓其他 healthy instance 接手",
+            "是，DNS TTL 會保存 session",
+            "是，Auto Scaling 會搬移 process memory"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Load balancer 不複寫 application memory。",
+            "正確。Instance 故障或 scale-in 時 affinity 無法挽救 local-only session。",
+            "錯誤。DNS cache 與 session storage 無關。",
+            "錯誤。Auto Scaling 替換 instances，不搬移 runtime state。"
+          ],
+          "task_keys": [
+            "SAA-2.2"
+          ],
+          "source_ids": [
+            "aws-wa-stateless"
+          ],
+          "inspiration_ids": [
+            "jay-architecting"
+          ]
+        },
+        {
+          "id": "ch060-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "SQS versus Step Functions",
+          "prompt": "團隊正在拆分一個 10 分鐘報表流程：入口需要吸收 burst，而某些報表又包含 branching、callback 與 compensation。哪兩項服務選擇正確？（選兩項）",
+          "choices": [
+            "SQS 適合獨立 jobs 的 buffering、retry 與 backpressure",
+            "EventBridge archive 是一般 competing-consumer work queue",
+            "一個 Lambda loop 最適合保存數日 workflow state",
+            "Step Functions 適合 branching、callbacks、timeouts 與 compensation；需要 buffer 時可與 SQS 組合",
+            "Step Functions 的唯一用途是增加 SQS throughput"
+          ],
+          "answers": [
+            0,
+            3
+          ],
+          "explanations": [
+            "正確。Queue 解耦 producer/worker 的時間與容量。",
+            "錯誤。Archive 用於 event replay，不是工作 ack queue。",
+            "錯誤。Lambda execution environment 可隨時被替換，且不應靠單一 process memory 保存數日 workflow progress；短暫單步計算才適合 function-local state。",
+            "正確。Workflow 與 queue 解決不同 contract，可共同使用。",
+            "錯誤。Step Functions 管 orchestration state，不是 queue capacity feature。"
+          ],
+          "task_keys": [
+            "SAA-2.1"
+          ],
+          "source_ids": [
+            "sqs-visibility",
+            "stepfunctions-integrations"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch060-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Immediate consistency boundary",
+          "prompt": "Checkout 包含 payment authorization、inventory invariant、email 與 analytics。什麼應留在立即確認路徑？",
+          "choices": [
+            "先告知付款成功，再非同步決定是否授權",
+            "Email 與 analytics 必須完成才可回 checkout",
+            "Payment/inventory 的必要 invariant；email/analytics 可在 durable acceptance 後 async",
+            "全部改 eventual 且不呈現 pending"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。在 authorization 尚未完成前宣稱付款成功，會做出尚未成立且可能無法兌現的財務承諾。",
+            "錯誤。非關鍵工作會拉長 latency 並擴大 failure coupling。",
+            "正確。Caller 需要知道的 correctness boundary 保持同步/transactional，獨立 side effects 解耦。",
+            "錯誤。Eventual state 必須在 user contract 中明示。"
+          ],
+          "task_keys": [
+            "SAP-2.4"
+          ],
+          "source_ids": [
+            "aws-pg-saga",
+            "aws-wa-idempotent"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch060-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Duplicate async submission",
+          "prompt": "Client 沒收到 202 而重送，worker 也可能在完成結果後、ack 前 crash。如何避免兩份 report 與錯誤狀態？",
+          "choices": [
+            "每次 retry 建新 job ID",
+            "依賴 visibility timeout 去重",
+            "stable creation key、durable job identity/status、idempotent worker，結果與進度 durable 後才 ack",
+            "結果寫入前先標 completed"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Client 每次 retry 建立新 job ID，server 無法把遺失 202 後的重送連回原工作，會同時產生兩份 report 與競爭狀態。",
+            "錯誤。Visibility timeout 只暫時隱藏已接收 message，逾時或 acknowledgement 不確定時仍會 redeliver；它不提供 business-level deduplication。",
+            "正確。Submission 與 processing 兩個重複邊界都被保護。",
+            "錯誤。在 report object durable 寫入前先標 completed，status reader 可能取得不存在或未完成的 result；應先提交 artifact，再以條件式狀態轉移發布完成。"
+          ],
+          "task_keys": [
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "lambda-idempotency",
+            "sqs-visibility",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch060-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "Accepted but never completed diagnosis",
+          "prompt": "API 的 202 rate 正常，但大量 jobs 永遠 pending。哪兩項最有效？（選兩項）",
+          "choices": [
+            "用 job ID 追蹤 acceptance→queue→receive/in-flight→downstream→result write→status transition→notification",
+            "先把 worker concurrency 加倍，未確認 database/service quota、throttling、in-flight 與 poison jobs",
+            "提高 queue retention，保住較長調查與 redrive 窗口，但不追蹤 job 狀態轉移",
+            "只抽樣已完成 jobs 的 successful traces，以降低 observability 成本",
+            "對 job age/state-transition latency、queue age、worker errors、DLQ 建立告警"
+          ],
+          "answers": [
+            0,
+            4
+          ],
+          "explanations": [
+            "正確。這條 causal path 能定位工作在哪一站消失或卡住。",
+            "錯誤。若證據顯示 worker capacity 不足且下游仍有餘裕，增加 concurrency 才合理；未先定位就擴大並行可能加劇 throttling 或失敗重試。",
+            "錯誤。延長 retention 能保存 recovery window，適合調查需要更久時使用；但它不會指出 job 卡在哪個 state，也不會修復遺漏的 transition。",
+            "錯誤。成功 trace 可驗證正常路徑，卻會系統性漏掉永遠 pending 的工作；應以 job ID 與 age-based sampling 保留失敗和未完成路徑。",
+            "正確。跨階段 age/error signals 能在使用者投訴前發現 stuck jobs。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "sqs-metrics",
+            "stepfunctions-logging",
+            "aws-sap-d3"
+          ],
+          "inspiration_ids": [
+            "jay-event-driven"
+          ]
+        },
+        {
+          "id": "ch060-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Stateful monolith migration",
+          "prompt": "如何把 sticky-session monolith 漸進改為可水平擴展架構？",
+          "choices": [
+            "先停用 stickiness，再處理 state loss",
+            "所有同步路徑一次改成 events",
+            "把所有 state 放同一 NFS，不評估 locks/throughput",
+            "盤點 state owner，逐步外部化 sessions/files/jobs，導入 idempotent APIs 與必要 async boundary，canary stateless instances，failover 測試後移除 stickiness"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。現有 requests 會立即失去 local sessions。",
+            "錯誤。Big-bang 會同時改變 consistency 與 failure semantics。",
+            "錯誤。共享 filesystem 不是所有 state 的通用答案。",
+            "正確。先理解 state，再以可逆步驟遷移並用 failure test 證明。"
+          ],
+          "task_keys": [
+            "SAP-4.3"
+          ],
+          "source_ids": [
+            "aws-sap-d4",
+            "aws-wa-stateless",
+            "aws-wa-idempotent"
+          ],
+          "inspiration_ids": [
+            "jay-architecting"
+          ]
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "aws-saa-sample",
+      "title": "AWS Certified Solutions Architect - Associate (SAA-C03) Sample Exam Questions",
+      "url": "https://d1.awsstatic.com/training-and-certification/docs-sa-assoc/AWS-Certified-Solutions-Architect-Associate_Sample-Questions.pdf",
+      "kind": "official",
+      "usage": "Scenario and multiple-choice style calibration only; no wording copied."
+    },
+    {
+      "id": "aws-sap-sample",
+      "title": "AWS Certified Solutions Architect - Professional (SAP-C02) Sample Exam Questions",
+      "url": "https://d1.awsstatic.com/training-and-certification/docs-sa-pro/AWS-Certified-Solutions-Architect-Professional_Sample-Questions.pdf",
+      "kind": "official",
+      "usage": "Professional-level constraint and response-style calibration only; no wording copied."
+    },
+    {
+      "id": "aws-saa-d2",
+      "title": "SAA-C03 Domain 2: Design Resilient Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain2.html",
+      "kind": "official",
+      "usage": "SAA task and resilience scope."
+    },
+    {
+      "id": "aws-saa-d3",
+      "title": "SAA-C03 Domain 3: Design High-Performing Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain3.html",
+      "kind": "official",
+      "usage": "Streaming and performance scope."
+    },
+    {
+      "id": "aws-sap-d2",
+      "title": "SAP-C02 Domain 2: Design for New Solutions",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain2.html",
+      "kind": "official",
+      "usage": "SAP design task scope."
+    },
+    {
+      "id": "aws-sap-d3",
+      "title": "SAP-C02 Domain 3: Continuous Improvement for Existing Solutions",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain3.html",
+      "kind": "official",
+      "usage": "SAP task 3.1–3.4 scope and mapping validation."
+    },
+    {
+      "id": "aws-sap-d4",
+      "title": "SAP-C02 Domain 4: Accelerate Workload Migration and Modernization",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain4.html",
+      "kind": "official",
+      "usage": "Migration and modernization task scope."
+    },
+    {
+      "id": "sqs-visibility",
+      "title": "Amazon SQS visibility timeout",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html",
+      "kind": "official",
+      "usage": "Receive, hide, extend and redeliver semantics."
+    },
+    {
+      "id": "sqs-dlq",
+      "title": "Using dead-letter queues in Amazon SQS",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-dead-letter-queues.html",
+      "kind": "official",
+      "usage": "Redrive, retention and DLQ behavior."
+    },
+    {
+      "id": "sqs-fifo",
+      "title": "Exactly-once processing in Amazon SQS FIFO queues",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues-exactly-once-processing.html",
+      "kind": "official",
+      "usage": "FIFO ordering and deduplication scope."
+    },
+    {
+      "id": "sqs-long-poll",
+      "title": "Amazon SQS short and long polling",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html",
+      "kind": "official",
+      "usage": "Long-poll behavior and wait time."
+    },
+    {
+      "id": "sqs-metrics",
+      "title": "Available CloudWatch metrics for Amazon SQS",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-available-cloudwatch-metrics.html",
+      "kind": "official",
+      "usage": "Backlog, age and failure diagnosis."
+    },
+    {
+      "id": "sqs-retention",
+      "title": "Amazon SQS message quotas",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-messages.html",
+      "kind": "official",
+      "usage": "Message retention boundaries."
+    },
+    {
+      "id": "sqs-policy",
+      "title": "Least-privilege policies for encrypted Amazon SQS queues",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-least-privilege-policy.html",
+      "kind": "official",
+      "usage": "Queue resource policy design."
+    },
+    {
+      "id": "sqs-sse",
+      "title": "Configuring server-side encryption for Amazon SQS",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-configure-sse-existing-queue.html",
+      "kind": "official",
+      "usage": "SQS encryption and KMS authorization."
+    },
+    {
+      "id": "lambda-sqs",
+      "title": "Using Lambda with Amazon SQS",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html",
+      "kind": "official",
+      "usage": "Event source mapping and partial batch behavior."
+    },
+    {
+      "id": "sns-sqs-fanout",
+      "title": "Fanout Amazon SNS notifications to Amazon SQS queues",
+      "url": "https://docs.aws.amazon.com/sns/latest/dg/sns-sqs-as-subscriber.html",
+      "kind": "official",
+      "usage": "Durable fan-out architecture."
+    },
+    {
+      "id": "sns-filter",
+      "title": "Amazon SNS subscription filter policies",
+      "url": "https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html",
+      "kind": "official",
+      "usage": "Attribute/body filtering."
+    },
+    {
+      "id": "sns-fifo",
+      "title": "Amazon SNS FIFO topics",
+      "url": "https://docs.aws.amazon.com/sns/latest/dg/sns-fifo-topics.html",
+      "kind": "official",
+      "usage": "Ordered SNS-to-SQS fan-out."
+    },
+    {
+      "id": "sns-fifo-replay",
+      "title": "Amazon SNS FIFO topic message archiving and replay",
+      "url": "https://docs.aws.amazon.com/sns/latest/dg/fifo-message-archiving-replay.html",
+      "kind": "official",
+      "usage": "Current SNS FIFO archive duration, subscription replay and replay-policy boundaries."
+    },
+    {
+      "id": "eventbridge-patterns",
+      "title": "Amazon EventBridge event patterns",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html",
+      "kind": "official",
+      "usage": "Content matching and rule shape."
+    },
+    {
+      "id": "eventbridge-retry",
+      "title": "Event retry policy and dead-letter queues",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-retry-policy.html",
+      "kind": "official",
+      "usage": "Target retries and DLQs."
+    },
+    {
+      "id": "eventbridge-archive",
+      "title": "Archiving and replaying Amazon EventBridge events",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-archive-event.html",
+      "kind": "official",
+      "usage": "Archive/replay boundary."
+    },
+    {
+      "id": "eventbridge-cross-account",
+      "title": "Sending and receiving Amazon EventBridge events between AWS accounts",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cross-account.html",
+      "kind": "official",
+      "usage": "Cross-account bus authorization."
+    },
+    {
+      "id": "eventbridge-metrics",
+      "title": "Monitoring Amazon EventBridge",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-monitoring.html",
+      "kind": "official",
+      "usage": "TriggeredRules, Invocations, FailedInvocations, throttling and DLQ diagnosis."
+    },
+    {
+      "id": "eventbridge-resource-policy",
+      "title": "Using resource-based policies for Amazon EventBridge",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-use-resource-based.html",
+      "kind": "official",
+      "usage": "Lambda and other target invocation permission boundaries."
+    },
+    {
+      "id": "eventbridge-putevents",
+      "title": "PutEvents API reference",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutEvents.html",
+      "kind": "official",
+      "usage": "Per-entry ingestion results, FailedEntryCount and retry boundaries."
+    },
+    {
+      "id": "eventbridge-custom-fifo",
+      "title": "Ordering and deduplication in AWS Custom Event Bus",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-custom-bus-ordering.html",
+      "kind": "official",
+      "usage": "FIFO ordering scope by event group and publisher account, and deduplication scope."
+    },
+    {
+      "id": "kinesis-concepts",
+      "title": "Amazon Kinesis Data Streams terminology and concepts",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/key-concepts.html",
+      "kind": "official",
+      "usage": "Partitions, ordering, consumers and checkpoints."
+    },
+    {
+      "id": "kinesis-quotas",
+      "title": "Amazon Kinesis Data Streams quotas and limits",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html",
+      "kind": "official",
+      "usage": "Capacity reasoning."
+    },
+    {
+      "id": "kinesis-efo",
+      "title": "Developing consumers with enhanced fan-out",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/enhanced-consumers.html",
+      "kind": "official",
+      "usage": "Consumer throughput isolation."
+    },
+    {
+      "id": "kinesis-retention",
+      "title": "Changing the Kinesis Data Streams retention period",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/kinesis-extended-retention.html",
+      "kind": "official",
+      "usage": "Replay window."
+    },
+    {
+      "id": "kinesis-monitoring",
+      "title": "Monitoring Kinesis Data Streams",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/monitoring-with-cloudwatch.html",
+      "kind": "official",
+      "usage": "Iterator age and throttle diagnosis."
+    },
+    {
+      "id": "kinesis-putrecords",
+      "title": "PutRecords API reference",
+      "url": "https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html",
+      "kind": "official",
+      "usage": "Partial-success response semantics and lack of ordering guarantees for batch writes."
+    },
+    {
+      "id": "kinesis-putrecord-ordering",
+      "title": "Adding data to a stream with PutRecord",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/developing-producers-with-sdk.html",
+      "kind": "official",
+      "usage": "SequenceNumberForOrdering and strict producer-order design."
+    },
+    {
+      "id": "kcl-concepts",
+      "title": "Kinesis Client Library concepts",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/kcl-concepts.html",
+      "kind": "official",
+      "usage": "Lease ownership, worker-to-shard assignment and checkpoints."
+    },
+    {
+      "id": "kinesis-duplicates",
+      "title": "Handling duplicate Kinesis Data Streams records",
+      "url": "https://docs.aws.amazon.com/streams/latest/dev/kinesis-record-processor-duplicates.html",
+      "kind": "official",
+      "usage": "Producer and consumer duplicate boundaries and idempotent processing."
+    },
+    {
+      "id": "stepfunctions-types",
+      "title": "Standard and Express Workflows",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/choosing-workflow-type.html",
+      "kind": "official",
+      "usage": "Workflow-type semantics."
+    },
+    {
+      "id": "stepfunctions-errors",
+      "title": "Handling errors in Step Functions workflows",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/concepts-error-handling.html",
+      "kind": "official",
+      "usage": "Retry, Catch and ordering."
+    },
+    {
+      "id": "stepfunctions-callback",
+      "title": "Callback with task token",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token",
+      "kind": "official",
+      "usage": "External and human callbacks."
+    },
+    {
+      "id": "stepfunctions-integrations",
+      "title": "Integrating services with Step Functions",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/integrate-services.html",
+      "kind": "official",
+      "usage": "Integration patterns and execution roles."
+    },
+    {
+      "id": "stepfunctions-logging",
+      "title": "Logging Step Functions executions",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/cw-logs.html",
+      "kind": "official",
+      "usage": "Execution evidence and sensitive data."
+    },
+    {
+      "id": "stepfunctions-map",
+      "title": "Using Map state in Step Functions",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/state-map.html",
+      "kind": "official",
+      "usage": "Inline and Distributed Map modes, concurrency and data-source boundaries."
+    },
+    {
+      "id": "stepfunctions-quotas",
+      "title": "AWS Step Functions service quotas",
+      "url": "https://docs.aws.amazon.com/step-functions/latest/dg/service-quotas.html",
+      "kind": "official",
+      "usage": "Execution input/output and task-state payload-size constraints."
+    },
+    {
+      "id": "sdk-retry",
+      "title": "AWS SDK retry behavior",
+      "url": "https://docs.aws.amazon.com/sdkref/latest/guide/feature-retry-behavior.html",
+      "kind": "official",
+      "usage": "Standard/adaptive retry modes and token buckets."
+    },
+    {
+      "id": "aws-wa-retry",
+      "title": "REL05-BP03 Control and limit retry calls",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_limit_retries.html",
+      "kind": "official",
+      "usage": "Retry ownership and amplification."
+    },
+    {
+      "id": "aws-wa-failfast",
+      "title": "REL05-BP04 Fail fast and limit queues",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_fail_fast.html",
+      "kind": "official",
+      "usage": "Bounded queues, admission control, throttling and load-shedding guidance."
+    },
+    {
+      "id": "aws-cell-architecture",
+      "title": "Reducing the Scope of Impact with Cell-Based Architecture",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/reducing-scope-of-impact-with-cell-based-architecture.html",
+      "kind": "official",
+      "usage": "Cell, bulkhead, tenant partitioning and bounded blast-radius guidance."
+    },
+    {
+      "id": "aws-pg-retry",
+      "title": "Retry with backoff pattern",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/retry-backoff.html",
+      "kind": "official",
+      "usage": "Timeout, backoff and jitter."
+    },
+    {
+      "id": "aws-pg-circuit",
+      "title": "Circuit breaker pattern",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/circuit-breaker.html",
+      "kind": "official",
+      "usage": "Breaker states and fallbacks."
+    },
+    {
+      "id": "aws-pg-saga",
+      "title": "Saga orchestration pattern",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/saga-orchestration.html",
+      "kind": "official",
+      "usage": "Distributed compensation and convergence."
+    },
+    {
+      "id": "aws-pg-outbox",
+      "title": "Transactional outbox pattern",
+      "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html",
+      "kind": "official",
+      "usage": "Dual-write elimination and publisher recovery."
+    },
+    {
+      "id": "dynamodb-conditions",
+      "title": "DynamoDB condition expressions",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html",
+      "kind": "official",
+      "usage": "Atomic idempotency claims."
+    },
+    {
+      "id": "dynamodb-transactions",
+      "title": "DynamoDB transactions",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transactions.html",
+      "kind": "official",
+      "usage": "Atomic multi-item state changes."
+    },
+    {
+      "id": "dynamodb-ttl",
+      "title": "Using time to live in DynamoDB",
+      "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html",
+      "kind": "official",
+      "usage": "Asynchronous TTL deletion and application-side expiry checks."
+    },
+    {
+      "id": "lambda-ddb-partial",
+      "title": "Using AWS Lambda with Amazon DynamoDB",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html",
+      "kind": "official",
+      "usage": "DynamoDB Streams event-source retries, checkpoints and partial batch responses."
+    },
+    {
+      "id": "lambda-idempotency",
+      "title": "AWS Lambda Powertools idempotency utility",
+      "url": "https://docs.powertools.aws.dev/lambda/python/latest/utilities/idempotency/",
+      "kind": "official",
+      "usage": "Idempotency state and response replay."
+    },
+    {
+      "id": "lambda-concurrency",
+      "title": "Configuring reserved concurrency for Lambda",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html",
+      "kind": "official",
+      "usage": "Concurrency isolation."
+    },
+    {
+      "id": "sqs-fair-queues",
+      "title": "Amazon SQS fair queues",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-fair-queues.html",
+      "kind": "official",
+      "usage": "Noisy-neighbor mitigation with tenant-aware fair scheduling."
+    },
+    {
+      "id": "sdk-retry-modes",
+      "title": "AWS SDK retry behavior — choosing a retry mode",
+      "url": "https://docs.aws.amazon.com/sdkref/latest/guide/feature-retry-behavior.html#choosing-a-retry-mode",
+      "kind": "official",
+      "usage": "Standard versus adaptive mode, first-attempt delay and client-pooling requirements."
+    },
+    {
+      "id": "sdk-python-retry-header",
+      "title": "AWS SDK for Python v1 retries — backoff header",
+      "url": "https://docs.aws.amazon.com/sdk-for-python/v1/guide/config-retries.html#backoff-header",
+      "kind": "official",
+      "usage": "Exact x-amz-retry-after units, validation and bounded backoff behavior."
+    },
+    {
+      "id": "aws-async-api",
+      "title": "Managing asynchronous workloads with a REST API",
+      "url": "https://aws.amazon.com/blogs/architecture/managing-asynchronous-workflows-with-a-rest-api/",
+      "kind": "official",
+      "usage": "Durable asynchronous request acceptance, job identity, status retrieval and callback patterns."
+    },
+    {
+      "id": "aws-wa-idempotent",
+      "title": "REL04-BP04 Make all responses idempotent",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_prevent_interaction_failure_idempotent.html",
+      "kind": "official",
+      "usage": "Idempotent request and response design."
+    },
+    {
+      "id": "aws-wa-stateless",
+      "title": "REL05-BP06 Make systems stateless where possible",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_stateless.html",
+      "kind": "official",
+      "usage": "State placement and replaceable compute."
+    },
+    {
+      "id": "jay-sqs-features",
+      "title": "Amazon SQS Features",
+      "url": "https://jayendrapatil.com/amazon-sqs-features/",
+      "kind": "community",
+      "usage": "Community topic emphasis and common traps only; no wording copied."
+    },
+    {
+      "id": "jay-sqs-sns-eventbridge",
+      "title": "AWS SQS vs SNS vs EventBridge",
+      "url": "https://jayendrapatil.com/aws-sqs-vs-sns-vs-eventbridge/",
+      "kind": "community",
+      "usage": "Service-comparison emphasis only; no questions copied."
+    },
+    {
+      "id": "jay-kinesis-firehose",
+      "title": "AWS Kinesis Data Streams vs Amazon Data Firehose",
+      "url": "https://jayendrapatil.com/aws-kinesis-data-streams-vs-kinesis-firehose/",
+      "kind": "community",
+      "usage": "Community comparison topics only; current facts verified against AWS docs."
+    },
+    {
+      "id": "jay-event-driven",
+      "title": "AWS Event-Driven Serverless Architecture",
+      "url": "https://jayendrapatil.com/aws-event-driven-serverless-architecture/",
+      "kind": "community",
+      "usage": "Pattern coverage and plausible misconceptions only; no wording copied."
+    },
+    {
+      "id": "jay-architecting",
+      "title": "AWS Solutions Architect Associate Study Guide",
+      "url": "https://jayendrapatil.com/aws-certified-solutions-architect-associate-saa-c03-exam-learning-path/",
+      "kind": "community",
+      "usage": "Exam-topic coverage calibration only."
+    }
+  ]
+}

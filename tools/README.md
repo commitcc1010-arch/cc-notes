@@ -60,6 +60,42 @@ trade-offs、AI Shift、業界 practices 與 guardrails、domain expert lens。�
 `check_swe_sre_ai_book.py` 會逐章驗證這些欄位、可見正文深度、內部連結與離線
 自包含性。EPUB builder 會把 337 個 `<details>` 全部改為常駐展開內容。
 
+`AWS Solutions Architect/` 是《AWS Solutions Architect 雙證全攻略》的可重建
+Markdown 來源，版本基線為 2026-10-01，涵蓋 SAA-C03、目前已發布的 SAP-C02，
+並另外追蹤已公告但尚未開放註冊的 SAP-C03 transition：
+
+```bash
+PYTHONPATH=tools ./.venv-epub/bin/python tools/build_aws_architect_book.py
+PYTHONPATH=tools ./.venv-epub/bin/python tools/check_aws_architect_book.py
+./.venv-epub/bin/python tools/build_epub.py aws-solutions-architect-saa-sap.html
+./.venv-epub/bin/python tools/check_epub.py epub/aws-solutions-architect-saa-sap.epub
+epubcheck epub/aws-solutions-architect-saa-sap.epub
+```
+
+全書有 116 個主章節、464 張零背景概念卡、1,496 個章內新名詞定義、180 個具名
+component、2,460 組逐設定操作解析、32 組真正可映射到 AWS API／IaC 的
+config／policy examples（不以通用review checklist冒充服務設定）、
+1,160 題經獨立命題與審核的章內逐選項解析、696 組章內 Follow-up
+Q&A、171 項官方 in-scope Service Atlas，以及 160 題原創逐選項解析模擬考
+（20 Diagnostic、65 SAA、75 SAP）。116 章都先以不重複的真實場景開場，再把
+request、data 或 failure path畫成一張可從頭讀到底的全圖；正文以科普式敘事介紹每個
+角色為何出現、接手什麼責任，以及需求如何讓答案翻轉。零背景名詞、component profiles
+與逐項設定手冊放在三個按需查閱區，避免第一次閱讀被圖卡牆打斷；第二次複習再使用
+config、decision matrix、十題考題、trade-offs、跨雲pattern與六組深入問答。
+第12章另以完整VPC拓撲、三張具體route tables、入站／NAT出站／database private path
+與CloudFormation節錄，示範如何從全圖一路讀到實際設定。
+
+專用品質閘門會驗證 1–116 章連續性、全部 34 個官方 exam task、SAA/SAP mock task
+coverage、每章至少 18,000 字元可見內容、每章四段且至少 85 字元的故事開場、116 個
+開場不得重複、故事與全圖必須早於名詞／設定工具箱、每個 component 的
+purpose/mechanism/config/choose/replace contract、每章至少四個新名詞定義、每項設定
+的四段操作說明與高頻設定語意、每章十題且 1,160 個題幹不重複、每個選項都有具體
+解析、通用假config必須為零、真實設定範例至少25組、
+IAM/S3/Peering DNS/CloudFront/ALB 核心 policy 與參數、
+171 項服務、內部連結、離線資產、原始 Markdown 與生成器可重複性。EPUB builder
+會把章內問答、1,160 個章內考題答案、160 個模擬題答案、Service Atlas
+自測和章內工具箱的 `<details>` 全部轉成常駐展開內容。
+
 `CSAPP_系統思維學習手冊.html` 的深化內容由可重複執行的 enrichment layer
 產生。它保留原始章節，再逐章加入 context、component contract、先備概念卡、
 Big Picture、完整機制、可執行實驗、錯誤模型、來源與詳細問答：

@@ -1,0 +1,521 @@
+url,status,candidate_chapters,note
+https://jayendrapatil.com/solr-facet-distinct-count/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/solr-tomcat-utf-8-encoding/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/solr-clean-up-index/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/solr-sort-feature/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/chaining-solr-copyfield/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/ibm-bluemix-introduction/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/lets-talk-about/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/breaking-into-data-analytics-tips-and-strategies-for-aspiring-data-analysts/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/choosing-the-right-data-science-specialization-where-to-focus-your-skills/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/black-friday-cyber-monday-deals/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/vpc-network-access-analyzer/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-dynamodb-backup-and-restore/,topic-candidate,7 9 47 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/dynamodb-auto-scaling/,topic-candidate,7 34 47 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/dynamodb-table-classes/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-serverless-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-storage-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-container-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-sqs-vs-sns-vs-eventbridge/,topic-candidate,52 53,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lambda-vs-fargate-vs-app-runner/,topic-candidate,3 36 37 38 40 89 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudfront-vs-global-accelerator-2/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-transit-gateway-vs-vpc-peering-vs-privatelink/,topic-candidate,4 11 12 13 14 15,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-kms-vs-cloudhsm-vs-secrets-manager-vs-parameter-store/,topic-candidate,18 27 28,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudwatch-vs-cloudtrail-vs-config/,topic-candidate,66 67 76 78 81 90 113,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-step-functions-vs-eventbridge/,topic-candidate,53 55 58 95,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-gateway-endpoints/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-waf-vs-shield-vs-firewall-manager/,topic-candidate,29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudfront-security/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-ami/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sns-simple-notification-service/,topic-candidate,53,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-rds-best-practices/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-simple-storage-service-s3-overview/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-security-identity-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-route-53/,topic-candidate,5 16 20,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-best-practices/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lambda/,topic-candidate,3 36 37 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-redshift/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-inspector/,topic-candidate,30 76 81,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-backup/,topic-candidate,9 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-disaster-recovery-whitepaper/,topic-candidate,9 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-organizations/,topic-candidate,25 79 100,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-macie/,topic-candidate,30 76 81,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-security-hub/,topic-candidate,30 76 81,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-api-gateway/,topic-candidate,3 36 37 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudtrail/,topic-candidate,66 76 78 81 90,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-eventbridge/,topic-candidate,53,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elasticache-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-systems-manager-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-trusted-advisor-categories/,topic-candidate,66 76 78 81 90,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-fsx-for-windows/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-secrets-manager/,topic-candidate,18 28,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-cognito/,topic-candidate,3 36 37 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudformation-best-practices-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-emr-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-storage-gateway/,topic-candidate,44,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-snow-family/,topic-candidate,44,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-datasync/,topic-candidate,44,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-transfer-family/,topic-candidate,44,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-network-firewall-vs-gateway-load-balancer/,topic-candidate,18 29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-emr-best-practices/,topic-candidate,39,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-vs-dynamodb/,topic-candidate,7 45 46 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-s3-static-website-hosting/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudwatch-agent/,topic-candidate,66 67 113,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb-best-practices/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-application-auto-scaling/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-instance-purchasing-option/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-enhanced-networking/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-image-builder/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-ebs-storage/,topic-candidate,3 6 32 33 34 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-single-sign-on-sso/,topic-candidate,23 24 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lambda-functions/,topic-candidate,3 36 37 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-security/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-db-maintenance-upgrades/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iam-access-management/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-monitoring-notification/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-network-connectivity-options/,topic-candidate,12 15 19 20 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-troubleshooting/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-ebs-monitoring/,topic-candidate,3 6 32 33 34 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-storage/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloud-migration-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-relational-database-service-rds/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-route-53-resolver/,topic-candidate,5 16 20,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-object-lock/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-subresources/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/ebs-multi-attach/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/cloudwatch-monitoring-supported-aws-services/,topic-candidate,66 67 113,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-permisions/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-q-business/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-support-plans/,topic-candidate,68 69 70 71 78 85 115,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-identity-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-organizations-service-control-policies-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-redshift-best-practices/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-compute-optimizer/,topic-candidate,68 69 70 71 85 115,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-quicksight/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-resource-access-manager-ram/,topic-candidate,25 26 79,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-service-catalog/,topic-candidate,25 26 79,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-x-ray/,topic-candidate,66 67 113,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-storage-content-delivery-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-resource-based-policies/,topic-candidate,22 26,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-simple-email-service-ses/,topic-candidate,53,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-content-delivery-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-automated-backups/,topic-candidate,9 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-migration-hub/,topic-candidate,86 87 88 101 116,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-application-discovery-service/,topic-candidate,86 87 88 101 116,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-storage-options-ebs-instance-store/,topic-candidate,6 33 43 44 71,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elasticsearch/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-storage-options-cloudfront-elasticache/,topic-candidate,6 7 17 43 44 48 71 110,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-shield/,topic-candidate,29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-workspace/,topic-candidate,23 24 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-client-vpn/,topic-candidate,19 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-data-transfer-services/,topic-candidate,6 43 44 71,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/using-aws-in-a-hybrid-environment/,topic-candidate,12 15 19 20 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-best-practices/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-data-protection/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudformation-helper-scripts/,topic-candidate,72 73,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elb-monitoring/,topic-candidate,18 66,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-troubleshooting-connecting-to-an-instance/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-opsworks-deployment-strategies/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-ec2-vm-importexport/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-autoscaling-troubleshooting/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-pricing-whitepaper/,topic-candidate,68 69 70 71 78 85 115,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-security-whitepaper-overview/,topic-candidate,10 27 29 30 31 112,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-architecting-for-the-cloud-best-practices-whitepaper/,topic-candidate,8 10 105 106 107,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-root-access-enabled-services/,topic-candidate,25 26 79,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-services-overview/,topic-candidate,1 2 10,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-support-tiers/,topic-candidate,68 69 70 71 78 85 115,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-storage-options-whitepaper/,topic-candidate,6 43 44 71,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-interaction-tools/,topic-candidate,1 2 10,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-billing-cost-management-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-storage-options-s3-glacier/,topic-candidate,6 41 42 43 44 71,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-importexport/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-swf/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-storage-options-rds-dynamodb/,topic-candidate,6 7 43 44 45 46 47 71,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-securing-data-at-rest/,topic-candidate,10 27 29 30 31 112,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elastic-transcoder/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-risk-and-compliance-whitepaper/,topic-candidate,10 27 29 30 31 112,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudsearch/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-storage-options-sqs-redshift/,topic-candidate,6 43 44 49 52 71 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb-accelerator-dax/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certified-advanced-networking-specialty-ans-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-redshift-advanced/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sagemaker-built-in-algorithms-summary/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-glue/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-rds-automated-backups-vs-manual-snapshots/,topic-candidate,7 9 45 46 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-direct-connect-gateway/,topic-candidate,19 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-transit-gateway-tgw/,topic-candidate,15,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-secrets-manager-vs-systems-manager-parameter-store/,topic-candidate,18 28 75 76,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-db-snapshot-backup-restore/,topic-candidate,7 9 45 46 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-instance-metadata-userdata/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-object-lifecycle-management/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-high-availability-fault-tolerance-architecture-certification/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-global-accelerator/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-dynamodb-global-tables/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-resource-tags/,topic-candidate,68 69 70 71 78 85 115,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-networking-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/amazon-elastic-container-registry-ecr/,topic-candidate,3 38 89,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-analytics-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-ec2-network/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudfront-vs-global-accelerator/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-aurora-vs-rds/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudfront-edge-functions/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-route-53-routing-policy/,topic-candidate,5 16 20,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iam-roles-vs-resource-based-policies/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-proxy/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-network-architecture-patterns/,topic-candidate,12 15 19 20 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-instance-lifecycle/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon_dynamodb_streams/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-monitoring/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudformation/,topic-candidate,72 73,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-auto-scaling/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudhsm/,topic-candidate,27,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ddos-resiliency-best-practices-whitepaper-overview/,topic-candidate,10 27 29 30 31 112,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-config/,topic-candidate,66 76 78 81 90,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-gateway-load-balancer-gwlb/,topic-candidate,18,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb-secondary-indexes/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elastic-file-store-efs/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-intrusion-detection-prevention-idsips/,topic-candidate,10 27 29 30 31 112,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloud-migration-services/,topic-candidate,86 87 88 101 116,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-sqs-features/,topic-candidate,52,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-fsx-for-lustre/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudwatch-overview/,topic-candidate,66 67 113,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-data-pipeline/,topic-candidate,49 50 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certificate-manager-acm/,topic-candidate,18 28,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-blue-green-deployment/,topic-candidate,73 74,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-consolidated-billing/,topic-candidate,68 69 70 71 78 85 115,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-developer-tools/,topic-candidate,72 74 75,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elastic-beanstalk-deployment-strategies/,topic-candidate,40,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iam-best-practices/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elastic-beanstalk-vs-opsworks-vs-cloudformation/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-dynamodb-advanced/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-application-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-devops-professional-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-developer-associate-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certification-exam-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certification-management-tools-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-big-data-speciality-bds-c00-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-alexa-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-alexa-skill-builder-specialty-axs-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-solutions-architect-associate-feb-2018-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-sysops-administrator-associate-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-partnerships-that-have-upgraded-the-way-businesses-collaborate/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-certified-developer-associate-june-2018-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-solution-architect-professional-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-advanced-networking-speciality-ans-c00-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-data-analytics-specialty-das-c01-exam-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-certified-database-specialty-dbs-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certification-machine-learning-concepts-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-machine-learning-specialty-mls-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-rds-multi-az-db-instance/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certified-data-engineer-associate-dea-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-developer-associate-dva-c02-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-cloudwatch-logs/,topic-candidate,66 67 113,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-opsworks/,legacy-reference,,retired/legacy service; retained only for migration recognition
+https://jayendrapatil.com/aws-transit-vpc/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-security-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-kinesis-data-streams-vs-sqs/,topic-candidate,50 52 54,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-endpoints/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-interface-endpoints-privatelink/,topic-candidate,4 11 12 13 14 15,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-aurora-global-database-vs-dynamodb-global-tables/,topic-candidate,7 45 46 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb-security/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudformation-vs-cdk-vs-terraform/,topic-candidate,72 73,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-peering/,topic-candidate,4 11 12 13 14 15,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-bastion-host/,topic-candidate,12 15 19 20 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-placement-groups/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-compute-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-elastic-load-balancing/,topic-candidate,18,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-classic-load-balancer-vs-application-load-balancer/,topic-candidate,18,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iam-overview/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-vpn-cloudhub/,topic-candidate,4 11 12 13 14 19 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-data-encryption/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-kubernetes-engine-gke/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/google-cloud-pub-sub-asynchronous-messaging/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-data-transfer-services/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-ai-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-vertex-ai/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/certified-kubernetes-administrator-cka-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/certified-kubernetes-application-developer-ckad-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/kubernetes-and-cloud-native-associate-kcna-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-ec2-container-service-ecs/,topic-candidate,3 32 33 34 38 89,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-certified-cloud-digital-leader-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-dress4win-case-study/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-hiplocal-case-study/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-terramearth-case-study/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-ehr-healthcare-case-study/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-professional-cloud-devops-engineer-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-professional-cloud-developer-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-professional-cloud-security-engineer-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-professional-cloud-network-engineer-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-associate-cloud-engineer-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-professional-data-engineer-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-professional-cloud-architect-certification-learning-path/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-composer/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-firestore/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-peering/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-nat/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-compute-engine-snapshots/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-vpn/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-billing/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-bigquery/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-load-balancing/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-app-engine/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-vpc-peering/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-shared-vpc/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-compute-engine-instance-groups/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-compute-engine/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/gcp-google-cloud-storage-storage-classes/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/gcp-google-cloud-storage-gcs/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-monitoring-stackdriver/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-gcloud-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-storage-security/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-building-containers-best-practices/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-bigquery-security/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-bigquery-data-transfer-service/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-kubernetes-engine-gke-security/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/kubernetes-overview/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/kubernetes-architecture/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/kubernetes-security/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/hashicorp-certified-terraform-associate-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/google-cloud-networking-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-security-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-data-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-identity-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-storage-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-virtual-private-cloud-vpc/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-vpc-firewall-rules/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-hybrid-connectivity/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-access-context-manager/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-dataflow/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-dataproc/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-compute-options/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-identity-and-access-management-iam/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-storage-options/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-sql/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-key-management-service-kms/,topic-candidate,27,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudfront/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iam-role/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-kinesis/,topic-candidate,50 54,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-rds-blue-green-deployments/,topic-candidate,7 45 46 73 74,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-rds-cross-region-read-replicas/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/iam-role-identity-providers-federation/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-q-developer-q-business/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-guardduty/,topic-candidate,30 76 81,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-detective/,topic-candidate,30 76 81,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-athena/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-managed-streaming-for-apache-kafka-msk/,topic-candidate,50 54,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/gcp-resource-manager/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/aws-certified-security-specialty-scs-c02-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/certified-kubernetes-security-specialist-cks-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/terraform-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-eks-vs-ecs-decision-guide/,topic-candidate,3 38 89,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-transform-code-modernization/,topic-candidate,87 88 89 116,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-q-business-enterprise-ai-assistant/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-resilience-hub/,topic-candidate,9 61 62 63 77 84 103 114,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-verified-permissions/,topic-candidate,26,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lambda-durable-functions/,topic-candidate,3 36 37 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-security-lake/,topic-candidate,30 76 81,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-kinesis-data-streams-vs-firehose-vs-managed-flink/,topic-candidate,50 54,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-explained-beginners-guide/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iam-roles-vs-policies-vs-users/,topic-candidate,21 22 23 24 25 26 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-global-accelerator-vs-cloudfront/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-vs-aurora-vs-dynamodb-selection-guide/,topic-candidate,7 45 46 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-spanner-vs-firestore-vs-cloud-sql/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-app-engine-vs-cloud-run-vs-gke/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-ecs-vs-eks-vs-fargate/,topic-candidate,3 38 89,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-ci-cd-continuous-integration-continuous-deployment/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-functions/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-mountkirk-games-case-study/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-gemini-api-ai-studio/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/aws-rds-multi-az-db-instance-vs-db-cluster-deployment/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sqs-standard-queue/,topic-candidate,52,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-network-firewall/,topic-candidate,29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lake-formation/,topic-candidate,49 102,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/kubernetes-components/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/cloudfront-functions-vs-lambdaedge/,topic-candidate,17,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-security-command-center-scc/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-compute-services-cheat-sheet/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-storage-options-whitepaper-storage-gateway-importexport/,topic-candidate,6 43 44 71,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-quick-enterprise-ai-assistant/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-context-knowledge-graph/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-continuum-ai-security/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-firewall-manager/,topic-candidate,29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-verified-access/,topic-candidate,24,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-s3-vectors-s3-tables/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-aurora-dsql/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-lattice/,topic-candidate,4 11 12 13 14 15,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-vs-efs-vs-fsx/,topic-candidate,6 33 41 42 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lambda-vs-step-functions-vs-eventbridge/,topic-candidate,3 36 37 53 55 58 95 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-lambda-event-source/,topic-candidate,3 36 37 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-kms-key-management-service/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-ddos-protection-and-mitigation/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-dns/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-router/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/amazon-s3-replication/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-s3-event-notifications/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-security/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-data-loss-prevention-dlp/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-identity-aware-proxy-iap/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-network-endpoint-groups-neg/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-kubernetes-engine-networking/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/google-cloud-cdn-content-delivery-network/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-ebs-vs-instance-store/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ebs-performance/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ebs-snapshot/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-data-durability/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-overview/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-aurora/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-security/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-multi-az-db-cluster/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-auto-scaling-policies/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-waf/,topic-candidate,29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rag-architecture-bedrock-knowledge-bases/,mapped-pattern,91,curated 54-pattern audit
+https://jayendrapatil.com/aws-prompt-engineering-techniques-best-practices/,mapped-pattern,93,curated 54-pattern audit
+https://jayendrapatil.com/aws-ai-services-decision-guide/,mapped-pattern,91,curated 54-pattern audit
+https://jayendrapatil.com/amazon-bedrock/,topic-candidate,91 92 93 94 95 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ai-generative-ai-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-ai-practitioner-aif-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-ec2-instance-types/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-genai-architecture-bedrock-rag-agents-guardrails/,mapped-pattern,91 92 93 94 95 96,curated 54-pattern audit
+https://jayendrapatil.com/aws-multi-account-architecture-organizations-control-tower/,mapped-pattern,25 79 100,curated 54-pattern audit
+https://jayendrapatil.com/aws-cicd-pipeline-architecture-codepipeline-codebuild/,mapped-pattern,74,curated 54-pattern audit
+https://jayendrapatil.com/aws-zero-trust-architecture-verified-access-vpc-lattice/,mapped-pattern,15 24,curated 54-pattern audit
+https://jayendrapatil.com/aws-container-platform-architecture-ecs-eks-fargate/,mapped-pattern,38 89,curated 54-pattern audit
+https://jayendrapatil.com/aws-security-services-architecture-guardduty-security-hub/,mapped-pattern,30,curated 54-pattern audit
+https://jayendrapatil.com/aws-config-vs-cloudtrail-vs-cloudwatch-compared/,mapped-pattern,66 76 81,curated 54-pattern audit
+https://jayendrapatil.com/aws-cost-optimization-architecture-strategies/,mapped-pattern,68 69 70 71 85 115,curated 54-pattern audit
+https://jayendrapatil.com/aws-global-traffic-management-route53-global-accelerator-cloudfront/,mapped-pattern,16 17 83,curated 54-pattern audit
+https://jayendrapatil.com/aws-vpc-peering-vs-transit-gateway-vs-privatelink-decision-guide/,mapped-pattern,15,curated 54-pattern audit
+https://jayendrapatil.com/amazon-opensearch/,topic-candidate,51,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-aurora-serverless/,topic-candidate,3 7 36 37 45 46 98,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-multi-region-active-active-architecture/,mapped-pattern,61 83 103,curated 54-pattern audit
+https://jayendrapatil.com/aws-disaster-recovery-architecture-strategies/,mapped-pattern,62 63 103,curated 54-pattern audit
+https://jayendrapatil.com/aws-incident-response-architecture-forensics-containment-remediation/,mapped-pattern,30 76 81,curated 54-pattern audit
+https://jayendrapatil.com/aws-centralized-logging-architecture-cloudtrail-security-lake/,mapped-pattern,81,curated 54-pattern audit
+https://jayendrapatil.com/aws-data-encryption-architecture-kms-cloudhsm-key-policies/,mapped-pattern,27,curated 54-pattern audit
+https://jayendrapatil.com/aws-iam-security-architecture-scps-permission-boundaries-abac/,mapped-pattern,21 22 25 26,curated 54-pattern audit
+https://jayendrapatil.com/aws-ddos-edge-protection-architecture-waf-shield-cloudfront/,mapped-pattern,17 29,curated 54-pattern audit
+https://jayendrapatil.com/aws-three-tier-web-caching-architecture-elasticache-dax-cloudfront/,mapped-pattern,35 48 97,curated 54-pattern audit
+https://jayendrapatil.com/aws-federation-sso-architecture-identity-center-cognito-saml/,mapped-pattern,23 24 37,curated 54-pattern audit
+https://jayendrapatil.com/aws-auto-scaling-performance-architecture-policies-predictive-warm-pools/,mapped-pattern,34 64,curated 54-pattern audit
+https://jayendrapatil.com/aws-certified-solutions-architect-professional-sap-c02-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-agentic-ai-architecture-bedrock-agents-mcp-multi-agent/,mapped-pattern,91 94 104,curated 54-pattern audit
+https://jayendrapatil.com/aws-rag-advanced-patterns-vector-db-hybrid-search-chunking-reranking/,mapped-pattern,91 96,curated 54-pattern audit
+https://jayendrapatil.com/aws-genai-cost-performance-optimization-tokens-caching-model-routing/,mapped-pattern,96,curated 54-pattern audit
+https://jayendrapatil.com/aws-genai-security-guardrails-pii-prompt-injection-network-isolation/,mapped-pattern,92 93,curated 54-pattern audit
+https://jayendrapatil.com/aws-systems-manager-operations-patch-session-automation/,mapped-pattern,75 76,curated 54-pattern audit
+https://jayendrapatil.com/aws-elb-alb-vs-nlb-vs-gwlb/,topic-candidate,18,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sns-vs-sqs-vs-eventbridge-comparison/,mapped-pattern,52 53,curated 54-pattern audit
+https://jayendrapatil.com/aws-certified-devops-engineer-professional-dop-c02-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-solutions-architect-associate-saa-c03-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-data-lake-analytics-architecture/,mapped-pattern,49 102,curated 54-pattern audit
+https://jayendrapatil.com/aws-architecture-patterns-reference-diagrams/,topic-candidate,1 105 116,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-dynamodb-consistency/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-object-versioning/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-bedrock-agents-knowledge-bases-guardrails/,topic-candidate,91 92 93 94 95 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-load-balancing-types/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-logging/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-kinesis-data-streams-vs-kinesis-firehose/,topic-candidate,50 54,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-interconnect/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-app-engine-standard-vs-flexible-environment/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-global-vs-regional-vs-az-resources/,topic-candidate,1 2 10,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certified-ai-practitioner-professional-aip-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-cloud-practitioner-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-sysops-administrator-associate-soa-c02-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-generative-ai-developer-professional-aip-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-security-speciality-scs-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-solutions-architect-associate-saa-c02-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-devops-engineer-professional-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-sysops-administrator-associate-soa-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-solution-architect-associate-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-solution-architect-professional-certification-exam-preparation-guide/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certification-exams-sample-questions/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certification-exam-resources-courses-quiz/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-genai-observability-evaluation-monitoring-llm-judge-testing/,mapped-pattern,96,curated 54-pattern audit
+https://jayendrapatil.com/aws-certification-machine-learning-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-certified-machine-learning-engineer-associate-mla-c01-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-sagemaker/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-mlops-pipeline-architecture-sagemaker/,mapped-pattern,74 96,curated 54-pattern audit
+https://jayendrapatil.com/aws-responsible-ai-guardrails-governance/,mapped-pattern,93,curated 54-pattern audit
+https://jayendrapatil.com/aws-ai-ml-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-bedrock-vs-sagemaker/,mapped-pattern,91,curated 54-pattern audit
+https://jayendrapatil.com/aws-serverless-api-architecture-api-gateway-lambda/,mapped-pattern,37 98,curated 54-pattern audit
+https://jayendrapatil.com/aws-kinesis-vs-msk-kafka-streaming-comparison/,mapped-pattern,50 54,curated 54-pattern audit
+https://jayendrapatil.com/aws-event-driven-serverless-architecture/,mapped-pattern,52 53 55 58,curated 54-pattern audit
+https://jayendrapatil.com/aws-network-performance-ena-efa-jumbo-frames-placement-groups/,mapped-pattern,32,curated 54-pattern audit
+https://jayendrapatil.com/aws-hybrid-cloud-networking-architecture-direct-connect-transit-gateway/,mapped-pattern,19 80,curated 54-pattern audit
+https://jayendrapatil.com/aws-route-53-routing-policies-comparison/,topic-candidate,5 16 20,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-dataflow-vs-dataproc/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-ec2-instance-store-storage/,topic-candidate,3 6 32 33 34 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-cloudfront-with-s3/,topic-candidate,6 17 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-efs-vs-ebs-multi-attach/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-replication-multi-az-read-replica/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-regions-availability-zones-and-edge-locations/,topic-candidate,1 2 10,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-direct-connect-dx/,topic-candidate,19 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-dynamodb-time-to-live-ttl/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/amazon-dynamodb-with-vpc-endpoints/,topic-candidate,4 7 11 12 13 14 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-bigtable/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-ec2-spot-instances/,topic-candidate,3 32 33 34 39,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-encryption/,topic-candidate,6 27 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-iot-core/,topic-candidate,53 112,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-data-migration-service-dms/,topic-candidate,86 87 88 101 116,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sqs-simple-queue-service/,topic-candidate,52,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-network-firewall-traffic-inspection-ids-ips-gwlb/,mapped-pattern,29 80,curated 54-pattern audit
+https://jayendrapatil.com/aws-certified-security-specialty-scs-c03-exam-learning-path/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-secrets-certificate-management-secrets-manager-acm-rotation/,mapped-pattern,18 28,curated 54-pattern audit
+https://jayendrapatil.com/aws-migration-architecture-7rs-tools-strategies/,mapped-pattern,86 87 88 116,curated 54-pattern audit
+https://jayendrapatil.com/aws-database-migration-architecture-dms-sct/,mapped-pattern,87,curated 54-pattern audit
+https://jayendrapatil.com/aws-sqs-standard-vs-fifo/,topic-candidate,52,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sqs-fifo-queue/,topic-candidate,52,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-vs-ebs-vs-efs-vs-fsx/,topic-candidate,6 33 41 42 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ec2-dedicated-host-vs-dedicated-instances/,topic-candidate,3 32 33 34,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-control-tower/,topic-candidate,25 79 100,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-container-registry-vs-artifact-registry/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/google-cloud-identity/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-glacier/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-nat/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/rds-read-replicas/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-directory-services/,topic-candidate,23 24 82,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-data-consistency-model/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-ebs-volume-types/,topic-candidate,6 33 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-sqs-standard-vs-fifo-queue/,topic-candidate,52,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-emr-spark-architecture-cluster-modes-emrfs-optimization/,mapped-pattern,39,curated 54-pattern audit
+https://jayendrapatil.com/aws-glue-etl-data-pipeline-architecture-catalog-crawlers-quality/,mapped-pattern,49 102,curated 54-pattern audit
+https://jayendrapatil.com/aws-route53-resolver-hybrid-dns-dnssec-forwarding-split-horizon/,mapped-pattern,20,curated 54-pattern audit
+https://jayendrapatil.com/aws-vpc-advanced-networking-cidr-eni-prefix-lists-ipv6/,mapped-pattern,11 13,curated 54-pattern audit
+https://jayendrapatil.com/envelope-encryption/,topic-candidate,27,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/sre-site-reliability-engineering-best-practices/,out-of-scope,,no SAA/SAP AWS topic signal
+https://jayendrapatil.com/google-cloud-operations/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-direct-connect-deep-dive-dx-gateway-lag-resiliency/,mapped-pattern,19,curated 54-pattern audit
+https://jayendrapatil.com/aws-dynamodb-advanced-streams-global-tables-ttl-capacity/,mapped-pattern,47,curated 54-pattern audit
+https://jayendrapatil.com/aws-cloudformation-advanced-stacksets-drift-custom-resources-guard/,mapped-pattern,72 73,curated 54-pattern audit
+https://jayendrapatil.com/aws-rds-aurora-performance-read-replicas-proxy-global-insights/,mapped-pattern,45 46,curated 54-pattern audit
+https://jayendrapatil.com/aws-elb-network-load-balancer/,topic-candidate,18,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-alb-vs-nlb-vs-gwlb-load-balancer-decision-guide/,mapped-pattern,18,curated 54-pattern audit
+https://jayendrapatil.com/google-cloud-armor/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-direct-connect-vs-vpn/,topic-candidate,19 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/rds-multi-az-deployment/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb-vs-documentdb-vs-neptune/,topic-candidate,7 47 51,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-rds-storage/,topic-candidate,7 45 46,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-spanner/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-auto-scaling-lifecycle/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-kinesis-data-firehose/,topic-candidate,50 54,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-dynamodb-throughput-capacity/,topic-candidate,7 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/google-cloud-compute-engine-storage-options/,out-of-scope,,non-AWS or non-SAA/SAP article
+https://jayendrapatil.com/aws-network-firewall-vs-waf-vs-security-groups-vs-nacls/,topic-candidate,4 11 12 13 14 29 80,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-efs-vs-fsx-decision-guide-shared-file-storage/,mapped-pattern,43,curated 54-pattern audit
+https://jayendrapatil.com/amazon-nova-models/,topic-candidate,91 92 93 94 96 104,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-certification-database-services-cheat-sheet/,study-meta,1,exam strategy/version material; official guide overrides
+https://jayendrapatil.com/aws-auto-scaling-elb/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elastic-beanstalk/,topic-candidate,40,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-storage-classes/,topic-candidate,6 41 42,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-virtual-private-cloud-vpc/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-vpc-security-group-vs-nacls/,topic-candidate,4 11 12 13 14,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-aurora-vs-rds-vs-dynamodb/,topic-candidate,7 45 46 47,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-s3-vs-ebs-vs-efs-storage-compared/,topic-candidate,6 33 41 42 43,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-elasticache-redis-vs-memcached/,topic-candidate,7 48 110,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-storage-gateway-vs-datasync-vs-snow-hybrid-data-transfer/,mapped-pattern,44,curated 54-pattern audit
+https://jayendrapatil.com/aws-elb-application-load-balancer/,topic-candidate,18,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-auto-scaling-launch-template-vs-launch-configuration/,topic-candidate,34 64,keyword candidate; curated chapters remain authoritative
+https://jayendrapatil.com/aws-route-53-alias-vs-cname/,topic-candidate,5 16 20,keyword candidate; curated chapters remain authoritative

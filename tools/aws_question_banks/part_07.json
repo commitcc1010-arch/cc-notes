@@ -1,0 +1,3350 @@
+{
+  "part": 7,
+  "author_agent": "P07-A",
+  "chapters": [
+    {
+      "chapter": 72,
+      "questions": [
+        {
+          "id": "ch072-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "CDK authoring layer 與 CloudFormation state engine",
+          "prompt": "一個平台團隊想用 TypeScript constructs 封裝公司標準 VPC，同時要求 production 變更可先審查、失敗時可由同一套引擎管理 rollback，並保留 authoritative stack state。哪個流程最符合需求？",
+          "choices": [
+            "只把 CDK 程式碼存進 Git；production 仍由工程師在 console 手動重建相同資源",
+            "用 CDK 建立 constructs 並 synthesize；審查產生的 template/change set，再由 CloudFormation 管理資源生命週期",
+            "先由 CloudFormation 建立資源，再讓 CDK 自動接管所有 console drift，無須明確匯入或更新 template",
+            "讓 CDK 直接呼叫各服務 API 並自行維護 rollback，不產生 CloudFormation template"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。手動 production 操作會破壞可重現性與審查鏈，也使 Git 中的定義不再是可靠的 desired state。",
+            "正確。CDK 解決程式語言抽象與重用，CloudFormation 仍負責比較 desired state、呼叫服務 API、記錄 events，以及 create/update/delete/rollback。",
+            "錯誤。既有或手動變更不會因為 CDK 程式存在就自動被接管；仍需更新定義、匯入資源或明確調和 drift。",
+            "錯誤。標準 CDK 部署模型會合成 CloudFormation artifacts；CDK 並不是另一個獨立的 stack state 與 rollback 引擎。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1"
+          ],
+          "source_ids": [
+            "aws-saa-domain2",
+            "aws-sap-domain2",
+            "cdk-core",
+            "cfn-core"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch072-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "環境參數化與 secret 邊界",
+          "prompt": "同一份 CloudFormation template 要部署到 dev、staging 與 prod。Instance size 與 subnet ID 可因環境不同，但資料庫密碼會定期輪替，且不得出現在 template、Git history 或一般 parameter value 中。應如何設計？",
+          "choices": [
+            "不使用任何參數，部署後再由工程師逐一在 console 修改",
+            "把所有差異放進 Mappings，包含會獨立輪替的明文密碼",
+            "保留一份受版本控制的 template；用受約束的 parameters/mappings/conditions 表達非敏感差異，密碼以 Secrets Manager 或 SSM secure value 的 dynamic reference 取得",
+            "複製三份 template，將每個環境的密碼寫成 Parameter 的 Default"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。部署後手改會讓 template 無法完整表達環境，下一次更新也可能覆寫或衝突。",
+            "錯誤。Mappings 適合相對靜態、可審查的查表值，不是會獨立輪替的 secret store，而且明文仍會暴露。",
+            "正確。非敏感環境差異可參數化並加 AllowedValues 等約束；dynamic reference 讓 CloudFormation 在部署時向專用 secret store 解析值。",
+            "錯誤。複製 template 會造成環境漂移；把密碼放在 Default 也會把敏感值寫入定義與版本紀錄。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-saa-domain1",
+            "cfn-template",
+            "cfn-parameters",
+            "cfn-dynamic-references"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch072-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "implicit dependency 與 DependsOn",
+          "prompt": "一份 template 內，EC2 security group 的 VpcId 以 Ref 指向同 stack 的 VPC；另一個自訂路由資源雖未引用 Internet Gateway attachment 的屬性，卻必須等 attachment 完成才能建立。哪個 dependency 設計最正確？",
+          "choices": [
+            "用 Outputs 取代 Ref，因 Outputs 會強制同一 stack 的建立順序",
+            "保留 Ref 讓 CloudFormation 推導 security group 對 VPC 的依賴；只在路由上對 gateway attachment 加 DependsOn",
+            "在每個資源之間都加入 DependsOn，確保完全序列化",
+            "依照 YAML 中的出現順序排列資源，CloudFormation 會嚴格由上到下建立"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Outputs 用於暴露結果，不是同 stack 內建立 dependency 的替代語法。",
+            "正確。Ref/GetAtt/Sub 等引用會形成 implicit dependency；只有無法由 properties 看出的額外排序限制才需要 DependsOn。",
+            "錯誤。過度使用 DependsOn 會不必要地降低平行度，且不能修正錯誤的資源契約。",
+            "錯誤。Template 的文字順序不是資源建立順序；CloudFormation 依 dependency graph 平行處理可獨立的資源。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1"
+          ],
+          "source_ids": [
+            "cfn-core",
+            "cfn-depend"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch072-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "stack boundary、nested stack 與 failure scope",
+          "prompt": "公司有共享網路、長生命週期資料庫，以及每天部署多次的應用服務。網路由中央團隊管理，資料庫更新需額外審批；應用部署失敗不應把三層一起 rollback。哪個 stack 邊界最合理？",
+          "choices": [
+            "把整個組織所有資源放進單一 stack，讓任何變更都具備同一個原子 rollback",
+            "依 ownership、change cadence 與 blast radius 拆分 stacks；以穩定的單向介面共享必要輸出，只有需要同 root lifecycle 的模組才使用 nested stacks",
+            "只要 template 超過 500 行，就一律改成由同一 root 管理的 nested stack，不考慮 owner",
+            "讓網路與應用互相 export/import 對方的值，形成雙向依賴以保持同步"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。單一巨大 stack 會把不同 owner 與生命週期綁在一起，擴大部署失敗與權限的影響範圍。",
+            "正確。Stack 應是 ownership 與 failure boundary；穩定、單向、非敏感的 interface 可降低跨 stack coupling。",
+            "錯誤。Nested stack 的價值是組合與共同 lifecycle，不是單純依檔案長度決定；它仍受 root operation 影響。",
+            "錯誤。雙向 cross-stack dependency 容易形成不可部署的循環，也會妨礙獨立替換與刪除。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-nested",
+            "cfn-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch072-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "StackSets permission model 與 rollout control",
+          "prompt": "安全團隊要把相同的 Config recorder 與 IAM baseline 部署到 AWS Organizations 內指定 OUs 的 180 個帳號、三個 Regions；新帳號加入 OU 後也要自動取得 baseline，且 rollout 需限制並行與可容忍失敗數。應選哪個方案？",
+          "choices": [
+            "使用 service-managed StackSets、啟用 Organizations trusted access 與 OU auto-deployment，並設定 concurrency 與 failure tolerance",
+            "在 management account 建立一個普通 stack，讓它自動跨帳號擁有所有 member resources",
+            "使用 self-managed StackSets，但不建立 administration/execution roles，因 Organizations 會自動補上",
+            "把 maximum concurrency 設為 100%、failure tolerance 設為 0，這會提供最小 blast radius"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Service-managed permissions 能以 Organizations 的 OU 為 targets 並支援 auto-deployment；operation preferences 可限制同時受影響的帳號與停止條件。",
+            "錯誤。普通 stack 的資源位於其部署帳號/Region；它不會自動成為跨組織部署引擎。",
+            "錯誤。Self-managed 模式需要明確建立並信任 administration 與 execution roles，不會因為屬於同一 Organization 就省略。",
+            "錯誤。高並行加零容忍可能在第一個失敗前同時影響大量帳號，不是最小 blast radius。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAA-2.2",
+            "SAP-2.1"
+          ],
+          "source_ids": [
+            "aws-saa-domain1",
+            "cfn-stacksets",
+            "aws-sap-domain2"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch072-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "CDK bootstrap、assets 與跨帳號部署",
+          "prompt": "Tooling account 的 pipeline 要將含 Lambda zip 與 container asset 的 CDK app 部署到兩個 production accounts、各兩個 Regions。公司禁止開發者持有 production access key。哪個準備動作是必要的？",
+          "choices": [
+            "以合適的 trust 與 qualifier bootstrap 每個 target environment，讓 pipeline 發布 assets 並 assume 限權 deployment roles",
+            "只執行 cdk synth；synthesized template 會內嵌所有 binary assets，因此不需要發布",
+            "讓每位開發者在本機建立 production IAM user，再由 cdk deploy 上傳 assets",
+            "建立一個允許匿名讀取的全域 S3 bucket，所有環境共用"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Bootstrap stack 提供 asset bucket/repository 與 deployment-related roles；每個帳號與 Region 都是需要準備的 environment boundary。",
+            "錯誤。Synth 會產生 template 與 asset manifests；本地檔案或 image 仍須先發布到 target deployment 可存取的位置。",
+            "錯誤。長期 production access key 違反需求，也不利於集中稽核與撤銷。",
+            "錯誤。公開 asset bucket 會暴露部署內容；跨帳號存取應由 IAM、bucket policy 與加密權限明確控制。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "cdk-core",
+            "cdk-bootstrap",
+            "codepipeline-cross-account"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced",
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch072-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "IaC pipeline 各驗證層責任",
+          "prompt": "Production pipeline 必須在部署前擋下 malformed templates 與「S3 bucket 必須加密」的公司規則，並讓 reviewer 看見可能的 replacement。架構師也必須避免宣稱這些檢查能證明 runtime 一定成功。哪個 pipeline 最完整？",
+          "choices": [
+            "只要 ValidateTemplate 成功就直接部署，因它同時驗證 IAM、quota 與應用程式行為",
+            "只建立 change set；change set 已等同公司 policy-as-code 與 end-to-end test",
+            "先部署 production，再執行 Guard；因只有實體資源存在時 Guard 才能解析 template",
+            "依序執行 template/lint 驗證、CloudFormation Guard policy checks、測試與 change-set review；部署後仍做 health/integration validation"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Template 驗證不會證明執行角色權限、帳號 quota、服務狀態或應用依賴一定可用。",
+            "錯誤。Change set 顯示 CloudFormation 預計採取的資源動作，但不會自動套用組織自訂規則或驗證業務流程。",
+            "錯誤。Guard 是可在部署前對結構化資料執行的 policy-as-code 工具；延後到 production 失去 shift-left 的目的。",
+            "正確。語法/schema、組織政策、proposed resource transition 與 runtime health 是不同證據，應分層驗證。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-guard",
+            "cfn-change-sets",
+            "cfn-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced",
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch072-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "immutable IaC artifact promotion",
+          "prompt": "稽核要求證明 production 部署的是 staging 已驗證的同一份 synthesized template 與 Lambda artifact；環境間只允許受控參數不同。哪種做法最能建立證據鏈？",
+          "choices": [
+            "每個環境都從當下 main branch 重新 synthesize，因 source repository 相同即可視為相同 artifact",
+            "每個環境重新 build Lambda zip，並沿用同一個可覆寫的 S3 key",
+            "build/synthesize 一次，將 template、asset digest 與測試結果版本化且不可變地保存，再逐環境提升同一 revision 並注入核准參數",
+            "在 production approval 後手動修改 template，以免重新走 pipeline"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Moving branch、依賴版本與 build environment 都可能使重新 synthesize 的結果不同。",
+            "錯誤。可覆寫 key 與重建都破壞 artifact identity；無法證明 production binary 等於 staging binary。",
+            "正確。Build once、promote same artifact 把 code/template identity 與環境設定分開，能建立可追溯且可重現的供應鏈。",
+            "錯誤。Approval 後手改會使被部署內容不再是 reviewer 與測試所看見的 revision。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codepipeline-concepts",
+            "codepipeline-cfn",
+            "cfn-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch072-q09",
+          "intent": 9,
+          "level": "SAA",
+          "kind": "multi",
+          "tested": "Outputs、cross-stack export 與敏感資料",
+          "prompt": "網路 stack 要把 VPC ID 提供給同 Region、由另一團隊獨立部署的 application stack；資料庫密碼也要供 runtime 取得。哪些 TWO 做法最符合低耦合與 secret 安全？",
+          "choices": [
+            "把資料庫密碼放進 Output 並 Export，因 Outputs 只對 stack owner 可見",
+            "建立雙向 exports，讓 network stack 同時 Import application stack 的 deployment ID",
+            "將穩定且非敏感的 VPC ID 作為 Output；若使用 Export/ImportValue，明確管理單向 ownership 與替換限制",
+            "將密碼存入 Secrets Manager，讓 runtime role 以最小權限讀取，而不是從 stack Outputs 傳遞",
+            "Export 每個 subnet、security group rule 與暫時資源 ARN，讓 consumer 不需任何自己的設定"
+          ],
+          "answers": [
+            2,
+            3
+          ],
+          "explanations": [
+            "錯誤。Stack Outputs 不是 secret store，可能透過 console/API 被讀取；不應輸出明文密碼。",
+            "錯誤。雙向 imports 會造成 circular dependency，破壞兩個 stack 的獨立生命週期。",
+            "正確。Output 適合提供非敏感 identifiers；cross-stack export 適合穩定同 Region 介面，但 consumer 存在時會限制 exporting value 的修改或刪除。",
+            "正確。專用 secret store 支援獨立輪替與 IAM-controlled runtime access，不必把敏感值固化在 deployment interface。",
+            "錯誤。把頻繁變動的 implementation details 全部 export 會形成高度 coupling，使替換與刪除困難。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-2.2",
+            "SAP-2.1"
+          ],
+          "source_ids": [
+            "aws-saa-domain1",
+            "cfn-template",
+            "cfn-dynamic-references",
+            "cfn-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch072-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "CloudFormation failure diagnosis",
+          "prompt": "一個 stack update 先出現自訂資源 CREATE_FAILED，接著十多個相依資源顯示 UPDATE_FAILED 或 UPDATE_ROLLBACK_IN_PROGRESS。值班工程師必須找出根因並安全重試。應先採取哪些 TWO 動作？",
+          "choices": [
+            "把每一個後續 UPDATE_FAILED 都視為獨立根因，同時修改所有資源",
+            "反覆重新建立 stack，直到 eventual consistency 自動解決所有問題",
+            "關閉 production rollback，讓失敗資源保持可用狀態",
+            "按時間檢查 stack/resource events，沿 dependency chain 找到最早的服務 API 或 custom-resource error",
+            "保留 custom-resource logs 與請求證據，確認 IAM、quota、parameters 和外部 dependency 後再部署修正版"
+          ],
+          "answers": [
+            3,
+            4
+          ],
+          "explanations": [
+            "錯誤。許多後續失敗只是上游 dependency failure 的結果；同時修改會增加噪音與風險。",
+            "錯誤。未修正權限、quota 或 custom logic 前重試只會重複失敗，並可能產生外部副作用。",
+            "錯誤。停用 rollback 不會讓建立失敗的資源突然健康，也會留下更難管理的 partial state。",
+            "正確。Events 是 CloudFormation state transition 的 authoritative sequence；最早的具體 API error 通常比最後的 rollback 訊息更接近根因。",
+            "正確。自訂資源與外部系統可能有 CloudFormation 無法自動撤銷的副作用；先保存 evidence 並驗證前置條件才可安全重試。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-core",
+            "cfn-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 73,
+      "questions": [
+        {
+          "id": "ch073-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "change set 的能力邊界",
+          "prompt": "Production template 更新可能替換一個有資料的資源。Change set 已成功建立並顯示 Replace，reviewer 想知道是否可據此保證執行一定成功且資料可回復。哪個判斷最準確？",
+          "choices": [
+            "只要 change set 顯示 Modify，就絕不可能重建 physical resource",
+            "Change set 應用來審查新增、修改、刪除與 replacement；但執行前仍須驗證資料保護、權限、quota 與 runtime/外部副作用",
+            "Drift detection 才是預測新 template 將採取哪些 update action 的主要工具",
+            "Change set 成功代表所有 IAM、quota、service health 與應用副作用都已驗證"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Reviewer 應查看 resource change details 與 replacement semantics，不能只憑高階 action 推論資料一定保留。",
+            "正確。它能提高 destructive transition 的可見性，但 rollback 與 data recovery 仍需另行設計與測試。",
+            "錯誤。Drift detection 比較既有 expected 與 actual configuration；預覽新 template update 應用 change set。",
+            "錯誤。Change set 是 proposed change preview，不是所有執行期前置條件與業務資料的模擬器。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-change-sets"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "nested stack change-set review",
+          "prompt": "Root stack 只把 child template URL 從 v17 改成 v18，但 child 內的 RDS resource 可能 replacement。審核規則要求在執行前看見 child-resource 層級的影響。應如何處理？",
+          "choices": [
+            "直接更新 child stack，繞過 root stack 的生命週期",
+            "只審 root resource 的 template URL，因 nested stack 失敗不會影響 root operation",
+            "建立支援 include nested stacks 的 change set，展開並審查 child changes、replacement 與 dependency order",
+            "假設 URL 變更只會下載新檔案，不會觸發 child resources 更新"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。由 parent 管理的 nested stack 應透過 parent 更新，以免 parent 與 child state 不一致。",
+            "錯誤。Root 摘要可能不足以揭露 child 中的 stateful replacement，而且 child failure 可使整個 root operation rollback。",
+            "正確。Nested change-set analysis 讓 reviewer 查看實際執行層級的 child resource transitions。",
+            "錯誤。Nested template 內容改變正是 child resources 可能新增、修改、替換或刪除的原因。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-change-sets",
+            "cfn-nested"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "drift detection 的 scope",
+          "prompt": "稽核員看到 stack drift status 為 IN_SYNC，便宣稱沒有任何人改過資源、所有 service defaults 與 application data 也都符合設計。架構師應如何回應？",
+          "choices": [
+            "IN_SYNC 只代表受支援資源中被 CloudFormation 建模並檢查的 properties 符合 expected state；它不證明未建模 defaults、runtime data 或外部系統一致",
+            "只要刻意不在 template 宣告 property，drift detection 就會把當前 service default 當成永久 desired state",
+            "稽核員正確；drift detection 會比較所有 AWS resource types、每個隱含 default 與資料內容",
+            "IN_SYNC 只證明 CloudTrail 沒有任何 API event"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Drift evidence 受 resource support 與 template 中明確建模的 properties 限制，不能取代 application/runtime validation。",
+            "錯誤。未宣告的重要 property 會降低 expected-state 的明確性，而不是自動鎖定現值。",
+            "錯誤。並非所有資源與 property 都具備完整 drift support，且 Config data/application data 不在此比較模型內。",
+            "錯誤。CloudTrail event history 與 CloudFormation drift 是不同證據來源。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-drift"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "drift reconciliation 與 authority",
+          "prompt": "事故期間，值班人員在 console 放寬 connection pool 並恢復服務；Git 中 template 仍是舊值。立即覆寫 live state 可能再度故障，永久接受手改也未經審查。下一步最佳做法是什麼？",
+          "choices": [
+            "把所有 console changes 自動寫回 main branch，不需 review",
+            "無條件立即以 Git 覆寫 production，因 IaC 永遠不可能有錯",
+            "只在 ticket 寫下例外，讓 template 與 live state 永久不同",
+            "確認事故變更的效果與風險，明確決定 template 或 live state 誰是 authority；測試後更新定義/採納現值或受控 revert，並保存 rationale"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Live change 可能只是暫時 workaround 或過度授權，不能跳過 review 直接成為標準。",
+            "錯誤。Source control 應是有治理的 desired state，但事故已提供證據顯示舊值可能有害，仍需先判斷。",
+            "錯誤。永久未調和的 drift 會使下一次 deployment 不可預測，也無法清楚陳述 desired state。",
+            "正確。Reconciliation 是 ownership decision：選定 authority、驗證、更新其中一方，並讓事件原因與例外期限可追溯。"
+          ],
+          "task_keys": [
+            "SAP-3.1",
+            "SAP-3.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-drift",
+            "cfn-drift-aware",
+            "cfn-change-sets"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "stack policy 與 update protection",
+          "prompt": "一個 stack 內，application resources 可正常更新，但 production database 只有在核准維護期間才能被 CloudFormation update 或 replace。Stack 本身仍可能在正式除役流程中刪除。應使用哪個控制？",
+          "choices": [
+            "設定 stack policy 拒絕 database 的 update actions，核准時使用範圍最小的 temporary override",
+            "只設定 DeletionPolicy: Retain；它會同時阻擋所有 property updates",
+            "只啟用 termination protection；它會成為 per-resource update allowlist",
+            "設定 UpdateReplacePolicy；它會阻止 replacement 發生"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Stack policy 能限制特定 logical resources 的 update actions；temporary override 應只開放核准變更所需範圍。",
+            "錯誤。DeletionPolicy 管理 stack deletion 或 template removal 時的 disposition，不是 update deny policy。",
+            "錯誤。Termination protection 阻擋 DeleteStack，不限制一般 stack update。",
+            "錯誤。UpdateReplacePolicy 決定 replacement 後舊 physical resource 如何處理，不會阻止 CloudFormation 建立 replacement。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "cfn-stack-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "DeletionPolicy 與 UpdateReplacePolicy",
+          "prompt": "一個 RDS database 必須在兩種情況都保留資料：(a) logical resource 從 template 移除或 stack 被刪除；(b) 某次 property update 需要 replacement。哪個設定最符合？",
+          "choices": [
+            "設定 stack policy Deny Delete，因 stack policy 會在 stack deletion 後繼續管理 database",
+            "只設定 DeletionPolicy: Retain，因它也會套用到 replacement 的舊 physical resource",
+            "只設定 UpdateReplacePolicy: Retain，因它也涵蓋從 template 移除",
+            "同時依需求設定 DeletionPolicy 與 UpdateReplacePolicy 為 Retain，並建立 retained resource 的後續 ownership 流程"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Stack policy 是 update restriction，而且 stack 刪除後不會繼續管理 retained physical resource。",
+            "錯誤。DeletionPolicy 不等同 replacement 時舊資源的 disposition control。",
+            "錯誤。UpdateReplacePolicy 針對 replacement；資源被移除或 stack deletion 仍由 DeletionPolicy 決定。",
+            "正確。兩個 attributes 對應不同 lifecycle path；若兩條路都要保留，必須分別設定並承接 retained resource 管理責任。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "cfn-deletion-policy",
+            "cfn-update-replace-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "retained resource lifecycle ownership",
+          "prompt": "舊 stack 已依 DeletionPolicy: Retain 保留資料庫，stack record 則被刪除。六個月後沒有人知道誰支付、patch、備份或何時可清理。原設計缺少哪個關鍵控制？",
+          "choices": [
+            "依賴 Retain 自動把資料跨帳號複製並輪替 encryption key",
+            "對所有 resource types 一律使用 Snapshot，因 CloudFormation 保證都支援",
+            "把 retention 視為 ownership transfer，登記 physical ID、KMS key、access owner、backup/cleanup 期限與 import/migration plan",
+            "假設 retained resource 仍由已刪除的 stack 自動更新與刪除"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Retention 不會自動完成 cross-account copy 或 key rotation。",
+            "錯誤。Snapshot 行為只支援特定 resource types，且 snapshot 本身也需要 lifecycle owner。",
+            "正確。Retain 只改變 CloudFormation 的刪除行為；組織必須接手成本、安全、備份、更新與最終 disposition。",
+            "錯誤。Stack 被刪除後，retained physical resource 不再受該 stack 的 lifecycle 管理。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-2.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "cfn-deletion-policy",
+            "cfn-update-replace-policy",
+            "cfn-resource-import"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "termination protection 的責任邊界",
+          "prompt": "團隊要防止操作員誤刪 production root stack，但仍要允許經審批的 stack updates，並確保特定 database 在真正除役時保留。哪個組合敘述正確？",
+          "choices": [
+            "只要開啟 termination protection，即使之後關閉並刪 stack，database 也必然保留",
+            "Stack policy 能直接阻擋 DeleteStack，因此不需要 termination protection",
+            "用 termination protection 阻擋 stack deletion；另以 stack policy 管 update，以 DeletionPolicy/UpdateReplacePolicy 管 physical resource disposition",
+            "Termination protection 會阻止所有 update 與 replacement"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。保留資料需 resource lifecycle policy；termination protection 一旦停用，不能取代 DeletionPolicy。",
+            "錯誤。Stack policy 主要限制 update actions，不是 DeleteStack 的保護開關。",
+            "正確。三種控制保護的事件不同：刪 stack、更新資源、以及刪除/替換 physical resource。",
+            "錯誤。Termination protection 不會阻擋一般 update。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "cfn-termination-protection",
+            "cfn-stack-policy",
+            "cfn-deletion-policy"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        },
+        {
+          "id": "ch073-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "rollback trigger 與 application side effects",
+          "prompt": "CloudFormation update 可能在 control plane 顯示完成後 8 分鐘才讓 checkout error rate 上升。團隊希望在 15 分鐘觀察窗內自動 rollback，但不誇大 rollback 能力。哪些 TWO 設計正確？",
+          "choices": [
+            "依賴帳號中任何 CloudWatch alarm，因所有 alarm 都會自動成為 rollback trigger",
+            "明確設定 alarm dimensions、threshold、period 與 missing-data behavior，並為不可逆副作用設計補償或 forward recovery",
+            "將能反映 checkout 失敗的 CloudWatch alarm 設為 rollback trigger，並選擇涵蓋延遲故障的 monitoring time",
+            "宣稱 rollback 可撤銷已提交的付款、資料庫寫入與第三方 API side effects",
+            "把 monitoring window 設為零，因 stack UPDATE_COMPLETE 已證明 customer journey 正常"
+          ],
+          "answers": [
+            1,
+            2
+          ],
+          "explanations": [
+            "錯誤。不是帳號內任意 alarm 都會自動參與該次 stack operation。",
+            "正確。Alarm 必須代表正確 workload 與 failure mode；不可逆資料變更需要另行補償。",
+            "正確。Rollback trigger 必須明確關聯，monitoring window 也要足以看見題述的 delayed failure。",
+            "錯誤。CloudFormation 能回復受管資源狀態，但無法通用撤銷外部或已提交的業務 side effects。",
+            "錯誤。Control-plane complete 不是 application success，零觀察窗也無法捕捉八分鐘後才出現的故障。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-rollback-triggers",
+            "cloudwatch-alarms"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch073-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "UPDATE_ROLLBACK_FAILED recovery",
+          "prompt": "Production stack 卡在 UPDATE_ROLLBACK_FAILED，原因是某 IAM permission 被移除，另一個 resource 已由人工刪除。團隊要恢復 stack 可更新狀態且不把不一致隱藏起來。應採取哪些 TWO 動作？",
+          "choices": [
+            "在 ContinueUpdateRollback 時跳過所有失敗 resources，之後將它們視為自動 IN_SYNC",
+            "只有無法立即修復時才最小化 resource skip；完成後以 drift、template 更新或 import 調和其真實狀態",
+            "直接 DeleteStack，因 UPDATE_ROLLBACK_FAILED 沒有其他恢復方式",
+            "先修復可修復的 permission/dependency 或重建必要 resource，再執行 ContinueUpdateRollback",
+            "停用 drift detection，避免看見被跳過 resource 的差異"
+          ],
+          "answers": [
+            1,
+            3
+          ],
+          "explanations": [
+            "錯誤。Skipped resources 可能與 template 不一致；狀態名稱恢復不代表 physical configuration 已調和。",
+            "正確。Skip 是最後手段，且必須把被跳過 resource 當成待修復 drift，而不是已完成修復。",
+            "錯誤。CloudFormation 提供 continue rollback；立即刪除可能擴大 stateful resource 風險。",
+            "正確。先移除 rollback blocker 能讓 CloudFormation 儘量完成原本的恢復流程。",
+            "錯誤。隱藏 evidence 不會修正 desired/actual state discrepancy。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cfn-continue-rollback",
+            "cfn-drift",
+            "cfn-resource-import"
+          ],
+          "inspiration_ids": [
+            "jayendra-cfn-advanced"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 74,
+      "questions": [
+        {
+          "id": "ch074-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "rolling 與 all-at-once 選擇",
+          "prompt": "一組 40 台 EC2 application servers 沒有足夠預算建立完整 duplicate fleet，但可在部署期間同時執行新舊版本；容量規劃顯示至少 32 台必須保持健康。哪個策略最合適？",
+          "choices": [
+            "Blue/green，因它不需要任何額外 instances",
+            "使用 EC2/on-premises in-place deployment，建立 custom deployment configuration，將 minimum healthy hosts 設為至少 32 台或 80%，並先驗證新舊版本相容",
+            "任意使用最大 batch，因縮短部署時間比 minimum healthy capacity 更重要",
+            "All-at-once，因同時替換全部 instances 會產生最小 customer blast radius"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Blue/green 的典型代價正是同時維持 replacement 與 original capacity。",
+            "正確。這裡的 rolling 是部署策略描述；CodeDeploy EC2/on-premises 的實際控制欄位是 minimum healthy hosts，而不是另一個獨立 batch-size 設定。設為至少 32 台或 80% 可約束同時離線更新的上限，仍須驗證 mixed-version compatibility。",
+            "錯誤。Batch 過大可能把健康容量降到服務需求以下；部署速度不能越過 availability constraint。",
+            "錯誤。All-at-once 把整個 fleet 同時暴露於新版本，也可能造成完整中斷。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codedeploy-deployment-config",
+            "codedeploy-ec2"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "blue/green 的成本與 rollback 邊界",
+          "prompt": "付款 API 要求近乎零中斷，application tier 必須能在一分鐘內切回舊版；公司願意在 30 分鐘觀察期支付兩套 stateless capacity。哪個方案最符合？",
+          "choices": [
+            "Blue/green 切換後立即刪除 blue，因 DNS 或 load balancer 可從 snapshot 自動恢復它",
+            "Rolling 且部署完第一台就刪除所有舊 instances",
+            "建立並驗證 green environment，切換流量後保留 blue 至觀察期結束；另處理共享資料與不可逆 side effects",
+            "All-at-once，失敗時再重新 build 舊版本"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。立即銷毀 blue 就失去快速回切能力，流量層也不會自動還原已刪除的 compute environment。",
+            "錯誤。這不保留完整可迅速回切的 original environment。",
+            "正確。Blue/green 用 duplicate environment 換取低中斷與快速 application traffic reversal；保留時間與資料契約仍需明確。",
+            "錯誤。重新 build 與部署無法滿足一分鐘 reversal，且 production exposure 最大。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codedeploy-blue-green",
+            "wa-plan-unsuccessful-changes"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "canary、bake time 與 stop criteria",
+          "prompt": "新推薦演算法的缺陷只會在真實流量組合下出現。產品允許先讓 5% 使用者接觸新版本，但要求付款成功率或 p99 latency 惡化時不得再擴大流量。應如何部署？",
+          "choices": [
+            "先送 5% 流量，經過足以覆蓋故障模式的 bake time，檢查業務與技術 alarms；健康才繼續，否則停止並 rollback",
+            "送 5% 後立即切到 100%，因初始比例已限制全部風險",
+            "固定每五分鐘加流量，即使 alarms 已進入 ALARM 仍照表前進",
+            "只看 deployment status；只要 CodeDeploy 成功，customer metrics 無需檢查"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Canary 的價值來自 bounded exposure 加 evidence-based promotion；bake time 要與延遲故障相符。",
+            "錯誤。沒有觀察期就無法利用小流量驗證真實流量下的延遲故障；若需求改成只驗證部署步驟且可接受立即全面暴露，才可能縮短 bake time。",
+            "錯誤。Promotion 必須受 stop criteria 控制，不能在健康訊號失敗時繼續。",
+            "錯誤。Control-plane completion 不能證明推薦、付款或 latency 等 customer outcomes。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codedeploy-deployment-config",
+            "codedeploy-alarms",
+            "wa-automate-rollback"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Lambda version、alias 與 CodeDeploy",
+          "prompt": "Lambda function 的 clients 固定呼叫 `prod` alias。團隊想把 10% 流量送到不可變的新 revision，驗證 hook 與 alarm 正常後再全量；失敗要把 alias traffic 還原。哪個做法正確？",
+          "choices": [
+            "每次改 client URL 指向新的 function name，不使用 alias",
+            "Publish 新 version，讓 CodeDeploy 調整 `prod` alias 的版本權重，並設定 validation hooks、alarms 與 rollback",
+            "修改已 published version 的 environment variables，讓它成為新 revision",
+            "在兩份 `$LATEST` 之間直接設定 weighted routing"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。改 client 會失去穩定 endpoint 與集中式 traffic control，也增加 rollback 時間。",
+            "正確。Alias 提供穩定名稱，CodeDeploy 可在兩個 published versions 間執行 canary/linear shift 並由 alarm 觸發回切。",
+            "錯誤。Published Lambda version 是 immutable snapshot，需 publish 另一個 version 表達新 revision。",
+            "錯誤。Weighted alias routing 是針對 published versions；`$LATEST` 不是不可變 release artifact。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-2.2",
+            "SAP-2.1"
+          ],
+          "source_ids": [
+            "codedeploy-lambda",
+            "codedeploy-rollback"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "ECS CodeDeploy blue/green topology",
+          "prompt": "ECS service 要在 production traffic 切換前，用 test listener 驗證新 task set；切換失敗時舊 task set 必須仍可接回流量。哪個配置符合 CodeDeploy blue/green 模型？",
+          "choices": [
+            "把新舊 tasks 全放在同一 target group，ALB health check 通過即刪除舊 tasks",
+            "只依賴 container process running 狀態，因它等同完整業務交易驗證",
+            "在 production 切流前先終止 original task set，以釋放容量",
+            "使用 original 與 replacement task sets/target groups、production listener 與可選 test listener，搭配 lifecycle hooks、alarms 和 termination wait"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。單一 target group 無法清楚表達 CodeDeploy 管理的 original/replacement traffic boundary。",
+            "錯誤。Process/ALB health 是必要訊號之一，但不證明登入、結帳或資料一致性等 business flow。",
+            "錯誤。提前終止 original 會消除快速 rollback 的目標。",
+            "正確。兩組 target groups 與 task sets 讓 test traffic、production cutover、alarm rollback 和舊環境保留具備明確狀態。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codedeploy-blue-green",
+            "codedeploy-alarms"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "EC2 in-place 與 blue/green mechanics",
+          "prompt": "公司有兩套 EC2 workload：A 的資料只存在本機且目前無法重建；B 完全 stateless、位於 ALB 後方並可臨時增加容量。哪個部署決策最合理？",
+          "choices": [
+            "A 與 B 都一律 in-place，因 CodeDeploy managed service 可保證零中斷",
+            "只要 AppSpec hooks 成功，A 與 B 都不需要 load balancer/application health checks",
+            "A 與 B 都一律 blue/green，因本機資料會自動複製到 replacement instances",
+            "A 在確認 backup 與容量影響後採受控 in-place；B 可用 blue/green replacement，以額外容量換 immutable hosts 與快速回切"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。In-place 會修改現有 hosts 並可能降低 serving capacity，managed orchestration 不等於零中斷。",
+            "錯誤。Hook completion 只證明 script 階段成功；仍需 runtime 與 customer-path validation。",
+            "錯誤。Blue/green 不會自動遷移 instance-local durable state；若無外部化/同步策略可能遺失資料。",
+            "正確。策略應由 state、replacement feasibility、capacity 與 rollback contract 決定，而不是全公司只選一種。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codedeploy-ec2",
+            "codedeploy-blue-green"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "build once promote same artifact",
+          "prompt": "Production container image 必須與 staging 通過測試的 image 位元完全相同。現行 pipeline 會在每個 account 重新 docker build，即使使用相同 commit。應如何改善？",
+          "choices": [
+            "繼續每個 account 重建，因相同 Git commit 保證 compiler、base image 與 dependency 完全相同",
+            "Build 一次，記錄 immutable image digest 與測試 evidence，逐環境 promotion 同一 digest；環境設定由外部注入",
+            "所有環境都使用可覆寫的 `latest` tag，以方便快速更新",
+            "把 production credentials 烘進 image，避免 target deployment role"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Base tag、dependency repository、build toolchain 與時間都可能使相同 source 產生不同 bits。",
+            "正確。Digest 固定 artifact identity，能證明 production 所執行的就是已測 revision；設定與 binary 應分離。",
+            "錯誤。Mutable tag 會讓核准內容與實際拉取內容分離，破壞 provenance。",
+            "錯誤。把 credentials 放進 image 造成長期 secret 暴露，應由 workload/deployment role 在 runtime 取得權限。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codepipeline-concepts",
+            "wa-plan-unsuccessful-changes"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "cross-account pipeline trust 與 artifact encryption",
+          "prompt": "Tooling account 的 CodePipeline 把 encrypted S3 artifact 部署到 production account。Target role 能被 assume，也有 s3:GetObject，但仍收到 KMS AccessDenied。最適當的修正是什麼？",
+          "choices": [
+            "改用 artifact bucket 的 AWS managed key，並假設所有帳號都能解密",
+            "把 production IAM user access key 存入 CodeBuild environment variables",
+            "把 target role 改成 AdministratorAccess，無須調整 resource policy",
+            "在 KMS key policy/grant 與 IAM policy 中允許正確的 cross-account role 解密，並保持 bucket、pipeline role、target role 各自最小權限"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。跨帳號 artifact encryption 需要選擇可授權 target principal 的 key 與明確 policy。",
+            "錯誤。永久 access key 不必要，會降低輪替、撤銷與 attribution 能力；只有無法使用 IAM role 的外部系統才應另評估短期或受控 credentials。",
+            "錯誤。Identity policy 過度擴權也不能保證 resource-based KMS key policy 建立跨帳號信任。",
+            "正確。S3 object access 與 KMS decrypt 是兩個獨立 authorization checks；pipeline 設計必須同時滿足。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-2.1",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-saa-domain1",
+            "codepipeline-cross-account",
+            "codepipeline-concepts"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "expand/contract schema migration",
+          "prompt": "Canary 期間舊版與新版會同時讀寫同一資料庫與事件 stream，而且 rollback 後舊版仍需工作。哪些 TWO 步驟符合 expand/contract？",
+          "choices": [
+            "等舊 writers/readers 完全退出且驗證完成後，在後續 release 移除舊結構，並為不可逆 side effects 設補償",
+            "Canary 開始時立即 rename 或 drop 舊欄位，迫使所有 clients 升級",
+            "先新增向後相容的欄位/結構，部署能同時讀寫舊新格式的程式，再安全 backfill",
+            "Rollback 時重播所有 events，不檢查 idempotency、ordering 或 duplicate effects",
+            "假設 compute traffic 回切會自動撤銷 schema、付款與已發出的 events"
+          ],
+          "answers": [
+            0,
+            2
+          ],
+          "explanations": [
+            "正確。Contract 階段應在舊版確定退出後進行，且資料/事件副作用需有獨立 recovery 設計。",
+            "錯誤。提前破壞舊 contract 會使 canary mixed traffic 與 rollback 都失敗。",
+            "正確。Expand 先增加兼容能力，讓 mixed versions 可以安全共存，再逐步移轉資料與讀寫路徑。",
+            "錯誤。無條件 replay 可能造成重複扣款、亂序或再次觸發外部副作用。",
+            "錯誤。Load balancer 或 alias 只控制 compute traffic，不會通用逆轉 durable state 與外部動作。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-plan-unsuccessful-changes",
+            "wa-automate-rollback"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch074-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "deployment rollback signals",
+          "prompt": "新版通過 ALB health check，但付款成功率下降 12%，dependency timeout 與 p99 latency 同時上升。團隊要自動 rollback 且避免單一雜訊 datapoint 造成振盪。哪些 TWO 做法最佳？",
+          "choices": [
+            "任何一筆失敗 request 都立即 rollback，不需要 bake time 或 threshold",
+            "把適當 alarms 接到 deployment rollback，並保留 deployment revision、metrics 與 logs 供後續診斷",
+            "用付款成功率、error/latency、dependency 與 saturation 等互補 signals，設定合理 period/evaluation windows 與 missing-data behavior",
+            "只監控 EC2 CPU，因所有 application regression 最終都會反映在 CPU",
+            "只信任 CodeDeploy SUCCEEDED，因 deployment status 等同 customer success"
+          ],
+          "answers": [
+            1,
+            2
+          ],
+          "explanations": [
+            "錯誤。單筆失敗通常不具統計意義，容易造成 false positive 與 rollout oscillation。",
+            "正確。自動 rollback 需要明確 alarm integration，診斷則需要保存 release context 與執行期 evidence。",
+            "正確。多層 signals 能同時捕捉 customer impact 與可能原因；window/threshold 可降低瞬時噪音。",
+            "錯誤。CPU 可能正常而下游 dependency、程式邏輯或付款成功率已失敗；只有已證明 CPU 是此回歸的可靠領先指標時，才可把它納入而非單獨使用。",
+            "錯誤。Deployment orchestration success 只表示步驟完成，不代表 workload outcome。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "codedeploy-alarms",
+            "codedeploy-rollback",
+            "cloudwatch-alarms",
+            "wa-automate-rollback"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 75,
+      "questions": [
+        {
+          "id": "ch075-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Systems Manager managed-node prerequisites",
+          "prompt": "一批 private EC2 instances 已安裝 SSM Agent，但 Fleet Manager 看不到節點。公司禁止 public IP 與 inbound administration ports。哪個檢查清單最完整？",
+          "choices": [
+            "只把 Systems Manager permission 加到工程師的 IAM user；instance 會繼承 user credentials",
+            "從管理員電腦對 instances 開放 inbound TCP 443；node 不需要 IAM role",
+            "在 security group 開放 inbound SSH，因 SSM Agent 透過 SSH 註冊",
+            "確認 agent 版本與運作狀態，使用 Default Host Management Configuration 或具最小權限的 EC2 instance profile，並確認時間、DNS 與到必要 Systems Manager endpoints 的 outbound HTTPS"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+          "錯誤。Human principal 只決定誰可呼叫管理 API；在此 EC2 context，node 本身仍須使用 Default Host Management Configuration，或附加具 Systems Manager 最小權限的 EC2 instance profile。Hybrid activation 僅適用於 non-EC2 hybrid 或 multicloud machines。",
+            "錯誤。Agent 是由 node 主動連到 service endpoints；不需要從管理員網路對 instance 開 inbound 443。",
+            "錯誤。SSM Agent 不依賴 inbound SSH 註冊；保留 22 反而違反題目安全要求。",
+            "正確。EC2 managed node 需要 agent、node identity/permissions 與 control-plane connectivity 三者同時成立。Hybrid activation 是給 non-EC2 hybrid 或 multicloud machines 使用，不是這批 EC2 instances 的同等身分選項。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAP-2.1",
+            "SAP-2.3"
+          ],
+          "source_ids": [
+            "aws-saa-domain1",
+            "ssm-managed-node",
+            "ssm-vpc-endpoints"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "SSM control channel 與 OS repository connectivity",
+          "prompt": "Private instances 可正常開啟 Session Manager shell，也能執行 Run Command，但 Patch Manager 安裝時顯示無法下載套件。只有 Systems Manager interface endpoints，沒有 NAT 或內部 package mirror。最可能缺少什麼？",
+          "choices": [
+            "Systems Manager endpoint 會鏡像所有 Linux/Windows repositories，因此問題一定是 inbound rule",
+            "對每台 instance 開放 inbound 80/443，讓 repository 主動推送套件",
+            "Session Manager 成功已證明所有 patch payload 都能下載，應忽略錯誤",
+            "除 Systems Manager interface endpoints 外，還要以 S3 gateway endpoint 與 endpoint/IAM policy 允許 Patch Manager operation buckets，並讓作業系統 package manager 到達核准 repositories 或 internal mirror"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。SSM service endpoints 不會替各 OS vendor 或自建 repository 提供透明鏡像。",
+            "錯誤。Package manager 通常主動對 repository 發起連線，不需要 repository 對 node 開 inbound。",
+            "錯誤。Management command path 與 package-content data path 是不同依賴。",
+            "正確。Patch Manager 有三段相互獨立的路徑：interface endpoints 承載 management/control channel；AWS-managed S3 patch-operation buckets 提供 command documents 與 baseline snapshots；yum、apt、Windows Update、WSUS 或 internal mirror 提供實際 package content。只打通第一段仍會下載失敗。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "ssm-vpc-endpoints",
+            "ssm-run-patch-baseline",
+            "ssm-patch-operation-buckets"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Session Manager logging limitations",
+          "prompt": "公司要淘汰 bastion 與共用 SSH key，改用 IAM 控制的 Session Manager。稽核人員要求準確說明 transcript：哪些敘述正確？",
+          "choices": [
+            "共用一個 IAM role 給所有人最容易稽核，因 transcript 會自動還原每位真實使用者",
+            "只要啟用 S3 logging，所有經 port forwarding 傳送的 SQL payload 都會逐字記錄",
+            "可為受支援的互動 shell 設定 S3/CloudWatch Logs 記錄；但 SSH 與 port-forwarding 的加密 tunnel 內容不會被 Session Manager command logging 解讀",
+            "Session Manager 一定需要 instance 對管理員開 inbound 22"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。稽核需要 per-user IAM identity 與最小權限；共用 principal 會降低 attribution。",
+            "錯誤。Port forwarding 內容不會因設定 log destination 就被 Session Manager 解密成 SQL transcript。",
+            "正確。Session metadata 與支援的 shell content 可集中記錄，但 encrypted SSH/port-forwarding traffic 有明確 logging limitation。",
+            "錯誤。Session Manager 的核心優點之一是無需 inbound SSH 或 bastion。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAA-1.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "ssm-session-manager",
+            "ssm-session-logging"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Run Command rate control",
+          "prompt": "團隊要對 5,000 台 nodes 執行設定修正，但同時處理不得超過 5%，累積失敗超過 1% 就要停止擴散，且需保存每台執行結果。哪個做法最合適？",
+          "choices": [
+            "由工程師逐台開 Session Manager shell，以換取一致性",
+            "把 max-errors 設為 100%，確保命令不會提早停止",
+            "Target 全 fleet 並使用 unlimited concurrency，因 Systems Manager 會自動推斷 application capacity",
+            "以 tags/resource groups target，先跑 canary，再設定 max-concurrency=5%、max-errors=1%，收集 invocation status/output"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。逐台互動不可規模化、難重現，也無法一致執行 rate/error controls。",
+            "錯誤。高 error threshold 會容許已知有害命令繼續擴散。",
+            "錯誤。Managed orchestration 不知道 workload 的 quorum、capacity 或 business blast-radius 限制。",
+            "正確。Target selection、concurrency 與 error threshold 共同界定變更波次，per-target status 則提供證據。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "ssm-run-command"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Systems Manager capabilities responsibility map",
+          "prompt": "團隊分別要：(1) 蒐集 installed applications；(2) 持續確保 NTP 設定；(3) 立刻執行一次診斷命令；(4) 每月在核准時窗重啟服務。哪個對應正確？",
+          "choices": [
+            "Inventory 改設定；Run Command 蒐集 durable inventory；Session Manager 排程每月工作；Maintenance Windows 維持 desired state",
+            "CloudTrail 蒐集 installed packages，Config 直接登入 instance 修正 NTP",
+            "Inventory 蒐集 facts；State Manager association 維持 desired state；Run Command 執行一次性動作；Maintenance Windows 排程 disruptive tasks",
+            "Patch Manager 同時取代四項，因所有 fleet operation 都是 patch"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Inventory 是 read-oriented metadata collection，不負責修改；其餘責任也被互換。",
+            "錯誤。CloudTrail 記錄 AWS API activity，Config 記錄/evaluate AWS resource configuration，兩者不會直接盤點 OS packages 或登入修改 NTP。",
+            "正確。四個 capabilities 分別對應 inventory、continuous association、ad hoc command 與 bounded schedule。",
+            "錯誤。Patch Manager 專注於 patch classification/scan/install，不是所有 host management 的單一替代品。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "ssm-inventory",
+            "ssm-state-manager",
+            "ssm-maintenance-windows",
+            "ssm-state-vs-maintenance"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q06",
+          "intent": 6,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "patch baseline 與 schedule 分工",
+          "prompt": "Windows servers 的 security updates 要在 release 後 7 天自動核准，但已知有問題的 KB 必須拒絕；Linux 使用不同規則。實際安裝只可在週日維護窗。應如何設計？",
+          "choices": [
+            "把 patch 核准後立刻安裝所有 nodes，因 baseline 就是 execution schedule",
+            "使用一份 Windows baseline 套用所有 Linux package classifications",
+            "只設定 Maintenance Window；它會同時決定每個 OS 哪些 patches approved/rejected",
+            "為 Windows 與 Linux 分別建立 custom patch baselines，設定 approval delay 與 rejected patches；建立週日 Maintenance Window 執行 AWS-RunPatchBaseline"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Baseline 決定 eligible patches；是否及何時執行是另一層 orchestration。",
+            "錯誤。不同作業系統的 product/classification 與 repository semantics 不可假設相同。",
+            "錯誤。Maintenance Window 控制作業何時與以何種 rate 執行，不定義 patch classification policy。",
+            "正確。Custom baseline 決定各 OS 哪些 patches 在七天後成為 eligible，以及哪些 KB/package 必須拒絕；Maintenance Window 則只負責週日何時執行 AWS-RunPatchBaseline。若改採 Quick Setup patch policy，schedule 與 reboot behavior 應由 policy 本身定義，不必再假設另建 Maintenance Window。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+          "ssm-patch-baselines",
+          "ssm-patch-policies",
+          "ssm-maintenance-windows",
+          "ssm-run-patch-baseline"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Patch scan、install 與 reboot evidence",
+          "prompt": "稽核報告顯示所有 nodes 的 `AWS-RunPatchBaseline` Scan command 成功。團隊因此宣稱 patches 已安裝且 kernel fix 已生效。哪個判斷正確？",
+          "choices": [
+            "`NoReboot` 代表所有需要重啟的修補也已立即完全生效",
+            "Scan 只評估/回報 compliance；要 remediation 必須執行 Install，按需求選 reboot behavior，並在 reboot 後驗證 compliance 與 application health",
+            "Scan 會安裝所有 approved patches，只是不會留下紀錄",
+            "Command success 自動證明服務已重新加入 load balancer 且業務交易正常"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。NoReboot 只控制 document 不主動重啟；某些更新可能待 reboot 才生效。",
+            "正確。Scan、Install、Reboot 與 application validation 是不同證據；不可由第一步推論後三步。",
+            "錯誤。Scan 用於識別 missing/failed 等 compliance state，不執行安裝。",
+            "錯誤。Command exit status 不涵蓋 cluster membership、load balancer health 或 end-to-end transaction。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "ssm-run-patch-baseline",
+            "ssm-compliance"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "availability-aware patch waves",
+          "prompt": "十二台 clustered nodes 分散三個 AZ；任何時刻至少九台健康且每個 AZ 至少兩台，否則 quorum 或容量不足。哪個 patch plan 最安全？",
+          "choices": [
+            "只檢查 patch command exit code，不檢查 node drain、rejoin 或 customer traffic",
+            "一次 patch 全 fleet，失敗後再用 max-errors 報告結果",
+            "三個 AZ 同時各關閉三台，因 Multi-AZ 名稱保證 quorum",
+            "先 patch 小型 canary，逐 wave drain/patch/reboot/rejoin；concurrency 不越過九台與每 AZ 下限，application check 失敗即停止"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。OS command 成功不代表 node 已回到 serving set 或 cluster state 正常。",
+            "錯誤。100% concurrency 直接越過 availability constraint，error reporting 不能追回中斷。",
+            "錯誤。這會只剩三台，不符合至少九台的硬限制；Multi-AZ 不會替應用自動維持 quorum。",
+            "正確。Patch wave 必須結合 infrastructure rate controls、workload drain/rejoin 與 business health gate。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.3",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "ssm-maintenance-windows",
+            "ssm-run-patch-baseline"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "organization patch policy governance",
+          "prompt": "企業要由 delegated admin 對多帳號、多 Regions 定義 patch policy，同時保留 member node 的 least-privilege identity 與集中 compliance。哪些 TWO 做法正確？",
+          "choices": [
+            "只在 management account 建一個 Maintenance Window，它會無需角色地直接控制所有 member nodes",
+            "Organization targeting 會自動取代每個 managed node 的 IAM identity 與 endpoint connectivity",
+            "監控 Quick Setup configuration deployment 狀態與各 node compliance，並明確設定 delegated administration 與 execution permissions",
+            "用 Systems Manager Quick Setup patch policy 選定 Organization/OUs、Regions、targets、baseline、schedule 與 reboot behavior",
+            "自訂 baseline 被 policy 引用時可直接刪除，不會影響後續執行"
+          ],
+          "answers": [
+            2,
+            3
+          ],
+          "explanations": [
+            "錯誤。Member accounts 與 nodes 仍需要正確的組織部署、roles、agent 與 connectivity。",
+            "錯誤。Central targeting 不會消除 data-plane managed-node prerequisites。",
+            "正確。中央 policy 建立成功與 nodes 真正 compliant 是兩種 evidence，必須分別監控。",
+            "正確。Quick Setup 提供跨帳號/Region rollout 的 patch-policy 管理平面，但 target scope 與 patch/reboot contract 仍需明確。",
+            "錯誤。刪除被引用 baseline 會破壞 policy dependency；應先更新 consumers 與 lifecycle。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-2.1",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "ssm-quick-setup",
+            "ssm-patch-policies",
+            "ssm-compliance"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        },
+        {
+          "id": "ch075-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "immutable replacement 與 in-place patching",
+          "prompt": "公司同時有 stateless Auto Scaling web fleet 與無法在本季重建的 legacy stateful nodes。安全修補期限為七天。哪些 TWO 決策最合理？",
+          "choices": [
+            "假設任何 OS patch 都能完整 uninstall，所以不需 backup 或 recovery plan",
+            "先終止 legacy stateful nodes，再確認資料是否位於 durable external storage",
+            "所有 hosts 一律 in-place patch，因 Patch Manager 必然比 replacement 風險低",
+            "對 stateless fleet 建立 patched/tested image，分 wave 替換 instances，以降低長期 drift 並保留舊 image rollback",
+            "對暫時無法重建的 legacy nodes 採 canary、backup、in-place patch、reboot 與 application recovery 驗證，並建立未來外部化 state 的計畫"
+          ],
+          "answers": [
+            3,
+            4
+          ],
+          "explanations": [
+            "錯誤。Patch rollback 能力依 OS/package 而異，且資料與 application side effects 仍需 recovery design。",
+            "錯誤。未確認 durable state 就終止會造成不可逆資料風險。",
+            "錯誤。Stateless/replaceable workloads 常能從 immutable image workflow 得到更一致的結果。",
+            "正確。Golden image 加 replacement 使新 hosts 從已知狀態建立，也能以 Auto Scaling 控制 exposure。",
+            "正確。無法重建的 stateful fleet 可先以受控 in-place 流程滿足期限，同時降低下一輪的結構性限制。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-2.3",
+            "SAP-3.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "ssm-patch-policies",
+            "ssm-run-patch-baseline",
+            "wa-plan-unsuccessful-changes"
+          ],
+          "inspiration_ids": [
+            "jayendra-ssm"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 76,
+      "questions": [
+        {
+          "id": "ch076-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "preventive S3 public-access control",
+          "prompt": "公司政策要求所有一般 workload accounts 的 S3 public access 在 API 層就不可成立；少數網站例外必須位於獨立受治理帳號。哪個主要控制最符合，且仍保留事後證據？",
+          "choices": [
+            "只用 Config rule，因 NON_COMPLIANT evaluation 會同步阻止原始 API request",
+            "在適當的 organization/account boundary 啟用 S3 Block Public Access 並搭配 policy guardrails；用 Config 與 CloudTrail 做合規、變更 attribution 與例外監控",
+            "只開 CloudTrail，因它會自動拒絕 PutBucketPolicy",
+            "依賴每日執行一次的 Config rule，讓 bucket 最多公開 24 小時"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Config 是 detective/evaluation service，不是 PutBucketPolicy 的同步 admission controller。",
+            "正確。Block Public Access 在最強適用 boundary 阻擋不安全配置；Config/CloudTrail 則補充 state 與 actor evidence。",
+            "錯誤。CloudTrail 記錄 API activity，但本身不是 authorization deny control。",
+            "錯誤。Detect-and-repair 留有曝露窗口，無法滿足「不可成立」的 preventive requirement。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "s3-block-public-access",
+            "config-rules",
+            "cloudtrail-events"
+          ],
+          "inspiration_ids": [
+            "jayendra-config",
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch076-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "AWS Config recorder scope",
+          "prompt": "中央 dashboard 顯示 organization 內資源都 compliant，但後來發現某 Region 的新 resource type 從未有 configuration history。團隊只在主 Region 建立 aggregator 與 rules。哪個修正最重要？",
+          "choices": [
+            "建立更多 CloudWatch dashboards，因 dashboard 會啟動 Config recorder",
+            "在每個必要 account/Region 正確啟用 recorder 與 delivery，明確選擇 recording scope，並確認 rules 支援該 resource type；aggregator 只彙總來源資料",
+            "只在 management account 啟用一個 rule，它會同步評估所有 regional member resources",
+            "Aggregator 會回填所有未記錄歷史，只需等待 24 小時"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。CloudWatch dashboard 與 Config recorder 是不同服務與 data source。",
+            "正確。完整性先取決於 source recording scope，再由 aggregator 提供中央查詢視圖。",
+            "錯誤。Organization governance 仍需把 recorder/rules 或 conformance packs 部署到正確 accounts/Regions。",
+            "錯誤。Aggregator 不會產生 source account/Region 從未記錄的 configuration items。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "config-core",
+            "config-rules",
+            "config-aggregator"
+          ],
+          "inspiration_ids": [
+            "jayendra-config"
+          ]
+        },
+        {
+          "id": "ch076-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "change-triggered 與 periodic Config evaluation",
+          "prompt": "Security group ingress 變更會產生受支援的 configuration item；另一個控制要每小時查詢外部核准清單，單靠 resource configuration change 不會觸發。應如何配置 rules？",
+          "choices": [
+            "兩者都 change-triggered，外部清單更新會自動變成 AWS resource configuration item",
+            "Security group rule 用 change-triggered evaluation；外部條件用 periodic evaluation，頻率依偵測目標設定，且兩者都不宣稱同步阻擋 API",
+            "兩者都只能 periodic，因 Config 不支援 resource-change trigger",
+            "使用 periodic rule 即可在 API request 完成前拒絕不合規變更"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。外部清單改變不一定會產生目標 AWS resource 的 configuration-item change。",
+            "正確。Trigger 應由可觀察事實決定；resource configuration change 與外部時間性條件需要不同評估模型。",
+            "錯誤。Config rules 可依 recorded configuration changes 觸發。",
+            "錯誤。Periodic evaluation 發生在變更後，不是同步 preventive gate。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "config-rules"
+          ],
+          "inspiration_ids": [
+            "jayendra-config"
+          ]
+        },
+        {
+          "id": "ch076-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "CloudTrail、Config 與 CloudWatch evidence boundary",
+          "prompt": "事故調查要回答三件事：誰把 RDS instance class 改小、resource 變更前後的 configuration 是什麼、顧客付款成功率是否下降。哪個資料來源組合最正確？",
+          "choices": [
+            "只用 CloudTrail，因 API event 會保存所有 business transactions 與 resource timeline",
+            "只用 CloudWatch，因 metrics 會自動包含完整 old/new IAM policy documents",
+            "CloudTrail 查 actor/request；Config 查 configuration history/compliance；CloudWatch 與 application telemetry 查 runtime/customer impact，再以時間與 resource IDs 關聯",
+            "只用 Config，因它同時保存完整 IAM session intent 與 application latency"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。CloudTrail 提供 API activity，但不等於完整 configuration state 與 customer outcome。",
+            "錯誤。Metrics/logs 不會自動取代 API audit 與 resource configuration timeline。",
+            "正確。三種服務回答不同問題：who/what API、resource became what、workload performed how。",
+            "錯誤。Config 聚焦 resource configuration，不是完整 user intent 或 application health 記錄。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cloudtrail-events",
+            "config-core",
+            "cloudwatch-agent"
+          ],
+          "inspiration_ids": [
+            "jayendra-config"
+          ]
+        },
+        {
+          "id": "ch076-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "EventBridge direct 與 CloudTrail-delivered events",
+          "prompt": "團隊要在某 AWS service 的 job 狀態變成 FAILED 時立即觸發 remediation；另一條規則要在有人呼叫特定 Delete API 時連同 actor 欄位通知。應採哪個 event source 原則？",
+          "choices": [
+            "建立一個匹配所有 API calls 的超寬 pattern，再由 target 猜測是哪種事件",
+            "用 Config aggregator，因它會即時路由任何 service state change 與 API event",
+            "Job state 優先用該服務直接發出的 EventBridge event；API actor/action 用 EventBridge 上 CloudTrail-delivered event，並以實際 schema 測試 pattern",
+            "所有 AWS events 都必須等 CloudTrail log files 寫入 S3 後才能進 EventBridge"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。過寬 pattern 增加誤觸發、成本與 remediation 風險；應在 routing boundary 精確篩選。",
+            "錯誤。Aggregator 是 Config compliance/configuration 彙總，不是通用 event router。",
+            "正確。選擇原生 state event 或 CloudTrail API event 應由所需語意與欄位決定，不能假設 envelope 相同。",
+            "錯誤。許多服務直接向 EventBridge 發送 state-change events，不需經 CloudTrail log-file delivery。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "eventbridge-direct-events",
+            "eventbridge-cloudtrail-events",
+            "cloudtrail-events"
+          ],
+          "inspiration_ids": [
+            "jayendra-config",
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch076-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "Config automatic remediation 與 stale evaluation",
+          "prompt": "Config rule 偵測 security group 開放 SSH 後要自動移除 rule；但在 remediation 排隊期間，owner 可能已合法修改 resource。如何降低 stale evaluation 造成誤改？",
+          "choices": [
+            "使用 least-privilege SSM Automation，執行前重新讀取目前 rule 與 exception state，讓步驟 idempotent，限制 retries 並保存結果",
+            "給 Automation role AdministratorAccess，避免 precondition 阻擋修復",
+            "對任何失敗無限 retry，直到 resource 被刪除",
+            "假設 NON_COMPLIANT snapshot 永遠 strongly consistent，直接重複執行 revoke"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Re-read、precondition、idempotency、bounded retry 與 evidence 共同把 detective state 安全轉成 mutation。",
+            "錯誤。擴大權限不能修復 stale-state 問題，反而放大 automation blast radius。",
+            "錯誤。無界 destructive retries 會放大錯誤，且可能與 owner/IaC 形成 remediation loop。",
+            "錯誤。Config 自動修復可能依先前 evaluation 啟動，current state 必須在 mutation 前重新確認。"
+          ],
+          "task_keys": [
+            "SAA-1.2",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "config-remediation",
+            "config-auto-remediation",
+            "ssm-automation"
+          ],
+          "inspiration_ids": [
+            "jayendra-config",
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch076-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "human approval boundary",
+          "prompt": "EventBridge 偵測 production database 的 encryption setting 異常。自動 replacement 可能造成數小時中斷，而 CMDB 顯示某些 databases 有短期核准例外。哪個 response design 最適合？",
+          "choices": [
+            "所有 security finding 都立即刪除並重建 resource，不論可逆性與 business impact",
+            "所有低風險 deterministic fixes 也一律等待每月 change board",
+            "只看 resource name 決定是否修復，因 dependency 與 owner 不影響 replacement",
+            "收集 current state、dependency 與 exception evidence，先 dry-run/precondition；由 accountable approver 在期限內決定，逾時 escalation，保留完整 decision trail"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。無條件 destructive action 可能造成比原 finding 更大的 outage 或 data risk。",
+            "錯誤。Approval boundary 應按 ambiguity 與 impact；已知安全且可逆的 correction 可全自動化。",
+            "錯誤。Production remediation 必須理解 dependencies、exception、owner 與 recovery path。",
+            "正確。高影響、情境依賴的 remediation 應保留人工 decision point；自動化仍可完成證據蒐集、時限與執行。"
+          ],
+          "task_keys": [
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "ssm-automation",
+            "wa-respond-events",
+            "wa-runbook-process"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch076-q08",
+          "intent": 8,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "EventBridge retry、DLQ 與 idempotency",
+          "prompt": "同一個 resource-change event 可能被 retry 或重複投遞；偶發 target failure 也不得讓修復靜默消失。哪個 target design 最可靠？",
+          "choices": [
+            "在 Lambda 記憶體放一個 processed flag，跨 cold start 永久去重",
+            "依賴 EventBridge exactly-once delivery，target 不需讀 current state",
+            "Target 每次先讀 authoritative current state 並執行 idempotent transition；設定 bounded retry/maximum age、same-Region SQS standard DLQ、必要 queue policy、alarms 與受控 replay",
+            "停用 retries，這樣就不會發生 duplicate mutation"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Lambda execution environment 不具 durable uniqueness contract，並行與 cold start 都會失效。",
+            "錯誤。事件系統與 target retry 需按 at-least-once/duplicate possibility 設計，而不能假設 exactly once。",
+            "正確。Idempotent current-state transition 防止重複副作用。Classic EventBridge rule target 的 DLQ 必須是與 rule/event bus 同 Region 的 SQS standard queue，不能使用 FIFO queue；queue policy 也必須允許 events.amazonaws.com 執行 SendMessage。DLQ、alarm 與 replay 流程共同防止靜默遺失。",
+            "錯誤。停用 retry 會把暫時故障轉成 lost remediation。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "eventbridge-retry",
+            "eventbridge-dlq",
+            "lambda-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch076-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "remediation loop 與 exception governance",
+          "prompt": "Automation 每五分鐘把 security group 改回安全設定，但 application pipeline 隨後又加回違規 rule，形成持續 loop；另有一個已核准到月底的例外。哪些 TWO 改善最重要？",
+          "choices": [
+            "停止評估整個 security-group resource type，避免 dashboard 變紅",
+            "把例外寫成沒有 owner、原因或 expiration 的永久 free-text tag",
+            "將例外建模為有 scope、owner、理由與到期日的資料，修復前重新驗證；到期後恢復 enforcement",
+            "只把 EventBridge maximum event age 與 retry attempts 調高，讓同一 remediation 更久地重試，但不修改 pipeline 或 authoritative IaC",
+            "偵測重複 oscillation，限制 retries/changes，通知 authoritative IaC owner 並修正 pipeline/template 根因"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。關閉整類 control 會隱藏其他真實 violations。",
+            "錯誤。無 owner、reason、scope 與 expiration 的永久文字例外無法自動到期、稽核或精確匹配；若建立結構化例外資料與審批生命週期，才可成為有效 policy input。",
+            "正確。Exception 也是 policy data，必須具備 owner 與 expiry，才能兼顧合法變更與恢復 default enforcement。",
+            "錯誤。提高可設定的 event age 或 retry attempts 只能延長投遞與重試時間，無法消除 pipeline 持續寫回違規設定的根因；反而可能增加 API、成本與 remediation oscillation。",
+            "正確。Runtime remediation 不應永遠與 source of truth 對打；需修正上游 IaC/workflow 並限制變更風暴。"
+          ],
+          "task_keys": [
+            "SAP-3.1",
+            "SAP-3.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "config-auto-remediation",
+            "eventbridge-retry",
+            "cfn-drift",
+            "wa-post-incident"
+          ],
+          "inspiration_ids": [
+            "jayendra-config"
+          ]
+        },
+        {
+          "id": "ch076-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "organization conformance pack、aggregator 與 remediation authority",
+          "prompt": "中央 security team 要把共同 Config controls 部署到 80 個 accounts/Regions 並集中查看 compliance；member teams 仍保有範圍受限的 remediation responsibility。哪些 TWO 架構敘述正確？",
+          "choices": [
+            "只在 management account 建立 rules，即可評估所有 member accounts 的 regional resources",
+            "Config aggregator 會以中央角色自動修復所有 source accounts 的 resources",
+            "用 organization conformance packs 在所需 accounts/Regions 部署共同 rules/remediation definitions，並明確設定 delivery/execution roles",
+            "用 aggregator 彙總 configuration/compliance view；它是 read-oriented consolidation，不取代 source recorder、rule 或 remediation authority",
+            "因 controls 是 organization-wide，中央 remediation role 應無條件取得所有服務 AdministratorAccess"
+          ],
+          "answers": [
+            2,
+            3
+          ],
+          "explanations": [
+            "錯誤。Regional source resources 需要相應的 recorder/evaluation deployment，不能只靠 management account 單點 rule。",
+            "錯誤。Aggregator 集中資料與查詢，不是跨帳號 enforcement engine。",
+            "正確。Conformance pack 可標準化 rule/remediation definitions，但仍需在正確 scope 部署並給執行角色最小權限。",
+            "正確。中央 visibility 與 distributed remediation 是可分離的責任；aggregator 只完成前者。",
+            "錯誤。Organization scope 不代表 execution role 可忽略 least privilege 與 member ownership。"
+          ],
+          "task_keys": [
+            "SAA-1.1",
+            "SAP-2.3",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "config-organization-packs",
+            "config-aggregator",
+            "config-remediation"
+          ],
+          "inspiration_ids": [
+            "jayendra-config"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 77,
+      "questions": [
+        {
+          "id": "ch077-q01",
+          "intent": 1,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "RPO、backup windows 與 retention",
+          "prompt": "訂單資料的 RPO 是 4 小時，法規 retention 是 7 年。現行 backup rule 每四小時排程，但多次因 start window 過期而未執行；團隊仍宣稱 RPO 已達成。應如何修正判斷與設定？",
+          "choices": [
+            "把 completion window 設為零，讓所有 jobs 立即完成",
+            "只要 schedule 寫每四小時，即使 job 未開始也算符合 RPO",
+            "依 RPO 設 frequency 與 start/completion windows，依法規設 lifecycle/retention；監控成功 jobs 與 latest usable recovery point age",
+            "把 retention 設七年即可同時保證四小時 RPO 與快速 restore"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Window 是 job scheduling/operation constraint，不會讓服務瞬間建立 backup。",
+            "錯誤。Configured intention 不是 achieved recovery point；missed/failed jobs 會讓實際 data-loss window 變大。",
+            "正確。Frequency/window 決定 recovery points 能否形成，retention 決定保存多久；兩者都需以 job evidence 驗證。",
+            "錯誤。Retention 不決定 recovery-point frequency，也不等同 RTO。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "backup-plans"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup"
+          ]
+        },
+        {
+          "id": "ch077-q02",
+          "intent": 2,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "backup vault、KMS 與 restore authority",
+          "prompt": "Recovery account 的團隊能看到 workload account 複製來的 recovery point，也有 vault restore permission，但 restore 仍因 KMS 拒絕。原 workload admin 被視為可能遭入侵。最佳修正是什麼？",
+          "choices": [
+            "使用唯一可能遭入侵的 workload role 作為 recovery principal",
+            "依 resource backup 的 encryption model 設計可跨帳號使用的 key/policies、vault policy 與獨立 restore role，並在 recovery account 端實際測試",
+            "任何 AWS managed KMS key 都可跨帳號直接解密，應重試即可",
+            "Vault access policy 已隱含所有 KMS decrypt permissions"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Recovery path 不應只依賴可能被撤銷或破壞的原 workload identity。",
+            "正確。可恢復性必須把 recovery point、vault、KMS key 與 restore role 當成一條端到端 authorization path 驗證。",
+            "錯誤。跨帳號與服務特定 encryption 行為需要支援的 key 類型與明確授權。",
+            "錯誤。Vault authorization 與 KMS key authorization 是不同 control planes，兩者都要通過。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-2.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "backup-encryption",
+            "backup-restore",
+            "backup-cross-account"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup"
+          ]
+        },
+        {
+          "id": "ch077-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "cross-account cross-Region backup copy",
+          "prompt": "公司希望 backup 同時承受 source-account compromise 與整個 Region disruption。架構師不能假設所有 resource types 支援相同 copy path。應採取哪個做法？",
+          "choices": [
+            "先做 cross-Region copy，再假設它可無限次 transitive copy 到任意帳號",
+            "逐 resource/backup type 驗證 cross-account/cross-Region 支援，設定 organization trust、destination vault/KMS、copy retention，並在 destination 實測 restore",
+            "把任何 cross-Region replica 視為已具 WORM 的 cross-account backup",
+            "只建立 source vault policy；destination KMS 與 restore role 會自動推導"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Copy 組合與後續 copy 能力不可假設普遍或 transitive。",
+            "正確。Copy support、key requirements 與 restore metadata 都可能依服務而異，必須從 source 到 destination 完整驗證。",
+            "錯誤。Replication 與 immutable backup 是不同 resilience/control contract。",
+            "錯誤。Destination vault/key 與 principals 仍需明確授權。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "backup-cross-account",
+            "backup-encryption"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup",
+            "jayendra-resilience"
+          ]
+        },
+        {
+          "id": "ch077-q04",
+          "intent": 4,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "Backup Vault Lock modes 與能力邊界",
+          "prompt": "法規要求 recovery points 在 retention 期間不可被高權限管理員縮短或刪除。團隊也希望先有測試期，避免錯誤 policy 永久鎖死資料。哪個敘述最準確？",
+          "choices": [
+            "Compliance mode 的 lock date 後仍可由 root user 任意縮短 retention",
+            "建立 compliance-mode Vault Lock，設定 3 至 36,500 天的 ChangeableForDays grace time 來驗證 min/max retention 與流程；grace time 到期後進入不可變狀態",
+            "Vault Lock 會自動把每個 recovery point 複製到隔離帳號",
+            "Vault Lock 會自動還原並驗證 application，因此不需要 restore test"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Compliance mode 的目的正是提供不可由一般高權限甚至帳號管理權限任意解除的 WORM 保護。",
+            "正確。Compliance mode 的 ChangeableForDays 會建立 3 至 36,500 天的 grace time，期間仍可調整或移除 lock；lock date 後 vault lock 與受保護 recovery points 進入不可變狀態。Governance mode 仍可由具適當 IAM 權限者移除，因此不符合最終 WORM 硬需求。KMS、restore authorization 與 recoverability tests 仍須另行管理。",
+            "錯誤。Cross-account copy 必須由 backup/copy plan 與 destination policies 另外設定。",
+            "錯誤。Vault Lock 保護 recovery point retention，不證明資料或應用可成功恢復。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-2.2",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "backup-vault-lock"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup"
+          ]
+        },
+        {
+          "id": "ch077-q05",
+          "intent": 5,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "AWS Backup restore testing plan",
+          "prompt": "稽核要求每月從過去 24 小時內的合格 recovery points，自動選取 RDS 與 EBS backup 還原到測試環境，記錄 restore duration；不能每次由操作員手選。應使用什麼？",
+          "choices": [
+            "只建立 backup plan；每個 backup rule 都會自動產生 application restore test",
+            "只選最新 recovery point 測一次，便可證明所有七年 retained points 都可用",
+            "使用 FIS 停止 production database，視為 backup restore test",
+            "建立 restore testing plan 與 resource selections，設定 frequency、recovery-point age、restore role/metadata，並監控 restore jobs"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。Backup creation plan 與 restore testing plan 是不同資源與工作流程。",
+            "錯誤。單一 recovery point 的結果不能證明所有歷史點都可讀，選樣與風險需另行設計。",
+            "錯誤。Fault injection 可測 failover/response，但不會證明 backup 可解密、還原與驗證。",
+            "正確。Restore testing 能依 schedule 與 selection 自動選 recovery points 並建立 resource-level restore evidence。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "backup-restore-testing",
+            "backup-restore"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup",
+            "jayendra-resilience"
+          ]
+        },
+        {
+          "id": "ch077-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "restore validation workflow",
+          "prompt": "AWS Backup restore testing job 顯示 COMPLETED，但測試資料庫缺少必要資料，API 也無法完成 checkout。如何讓 restore testing evidence 反映業務可用性？",
+          "choices": [
+            "以 EventBridge 接收 restore-job completion，啟動明確 validation workflow 檢查資料與 application invariants，在時限內回報 validation result 並保存 logs",
+            "COMPLETED 已等同 business transaction success，不需額外步驟",
+            "只要 validator Lambda 執行成功，AWS Backup 會自動推斷 validation outcome",
+            "在 restore resource 可用前先執行所有 SQL validation"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Event-driven validation 把 resource restore evidence 提升為 data/application evidence，且讓失敗可追蹤。",
+            "錯誤。Resource API restore complete 只證明基礎資源形成，不保證內容與 end-to-end use case。",
+            "錯誤。Workflow 必須明確回報 validation status；function execution success 不等同 invariant pass。",
+            "錯誤。驗證必須等待 restored resource 到可讀/可連線狀態，並處理 dependencies。"
+          ],
+          "task_keys": [
+            "SAA-2.1",
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "backup-restore-validation",
+            "backup-restore-testing",
+            "eventbridge-direct-events"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup"
+          ]
+        },
+        {
+          "id": "ch077-q07",
+          "intent": 7,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "isolated restore testing 與 cleanup",
+          "prompt": "每月 restore test 含敏感 customer data。測試不得覆寫 production、加入 production DNS、讓一般 developers 取得完整資料，或無限留下昂貴 resources。哪個設計最佳？",
+          "choices": [
+            "直接 restore over production，這最能證明真實性",
+            "還原到隔離 account/VPC，以 scoped role 與必要 masking 控制 access；使用唯一命名與測試 dependencies，並驗證 validation 後 cleanup",
+            "假設 restore job 一變 COMPLETED，所有 services 都會立刻自動刪除 restored resources",
+            "給 validator production AdministratorAccess，避免任何 permission failure"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。覆寫 production 將測試轉成真實破壞性事件，並違反隔離要求。",
+            "正確。Isolation 同時控制 collision、data exposure 與 blast radius；cleanup 也必須被觀察，而非只假設。",
+            "錯誤。Restore-testing cleanup 行為與時機依服務/validation window 而異，需明確監控與驗證。",
+            "錯誤。應只授權 validation 所需 actions/resources，不能用過度權限掩蓋依賴設計問題。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-2.3",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "backup-restore-testing",
+            "backup-restore-validation"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup"
+          ]
+        },
+        {
+          "id": "ch077-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "application RTO 與 usable recovery",
+          "prompt": "Database restore 在 18 分鐘完成，但 DNS、secrets、application capacity 與 event replay 尚未恢復，直到第 74 分鐘第一筆付款才成功。Business RTO 是 60 分鐘。應如何報告？",
+          "choices": [
+            "RTO 是 18 分鐘，因最重要的 database 已完成",
+            "實際 end-to-end RTO 是 74 分鐘，未達目標；另記 effective recovery point、依賴順序、validation 與 event reconciliation 的改善項目",
+            "RTO 在 CloudFormation 建完 compute 時停止，不必等待 traffic",
+            "只要 backup job 成功，RTO 不需測量"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Resource restore time 只是 application recovery timeline 的一部分。",
+            "正確。RTO 應從中斷/宣告到受要求服務恢復；題目證據是第 74 分鐘，因此需如實記錄 gap。",
+            "錯誤。Infrastructure ready 不等同 critical business transaction usable。",
+            "錯誤。Backup success 是保護 evidence，不是 recovery-duration evidence。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.2",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "backup-restore",
+            "backup-restore-validation",
+            "resilience-hub"
+          ],
+          "inspiration_ids": [
+            "jayendra-resilience"
+          ]
+        },
+        {
+          "id": "ch077-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "guarded game day 與 FIS stop conditions",
+          "prompt": "自動 restore test 已通過，但公司還要驗證 on-call 是否能偵測 Regional dependency failure、決定 failover、溝通並完成 failback。哪些 TWO 做法符合安全 game day？",
+          "choices": [
+            "用 FIS 取代所有 backup restores，因 fault injection 能證明 data 可還原",
+            "在 production 執行無界 experiment，不設定 CloudWatch stop conditions",
+            "先定義 hypothesis、scope、steady-state/customer metrics、owners、runbook、communications、rollback 與 cleanup",
+            "只做會議 tabletop 就宣稱技術 failover 與 DNS 已驗證",
+            "使用受支援且範圍受限的 FIS actions/targets，設定 CloudWatch stop conditions；量測 failover/failback 並做事後改進"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。FIS 驗證 failure response；backup decrypt/restore/data validation 仍需真正 restore test。",
+            "錯誤。沒有 stop condition 與 bounded target 會把學習實驗變成未控制的 outage。",
+            "正確。Game day 是有假設與 guardrails 的實驗，不是臨時製造事故。",
+            "錯誤。Tabletop 可驗證角色與決策，但不能證明實際 data plane、routing 與 automation。",
+            "正確。FIS 的 target/action/stop-condition contract 可控制 blast radius，並產生可重複技術 evidence。"
+          ],
+          "task_keys": [
+            "SAP-2.2",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "fis-core",
+            "fis-stop-conditions",
+            "wa-respond-events"
+          ],
+          "inspiration_ids": [
+            "jayendra-resilience"
+          ]
+        },
+        {
+          "id": "ch077-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "backup audit evidence 與 corrective action",
+          "prompt": "稽核員要求證明所有應保護 resources 已納入、backup jobs 成功、retention/immutability 正確、restore validation 通過，而且失敗有 owner。哪些 TWO 做法最完整？",
+          "choices": [
+            "Audit control 顯示 compliant 就宣稱所有 business transactions 已成功還原",
+            "Restore test 失敗後只重跑報告；新報告生成即關閉問題",
+            "保存 restore/validation logs、exceptions 的 owner/expiry 與 remediation status，追蹤失敗直到修正並重測",
+            "只列成功 jobs，未被 backup plan 選中的 resources 不在報告範圍",
+            "用 AWS Backup Audit Manager controls/reports，並與 authoritative inventory 對照 coverage、vault 與 job evidence"
+          ],
+          "answers": [
+            2,
+            4
+          ],
+          "explanations": [
+            "錯誤。Policy/job compliance 不等同 application-level restore validation。",
+            "錯誤。重新產生報告不會修正失敗的 key、role、metadata 或 application dependency。",
+            "正確。Durable evidence 必須包含 exceptions 與 failed-test corrective action，而不只是一張當下綠色報表。",
+            "錯誤。只看成功集合會產生 survivorship bias，無法發現完全未受保護的 resources。",
+            "正確。Audit Manager 提供可重複 controls/reports，但 coverage 仍應與外部 inventory/source of truth 對帳。"
+          ],
+          "task_keys": [
+            "SAA-1.3",
+            "SAP-2.2",
+            "SAP-3.1",
+            "SAP-3.2"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "aws-saa-domain1",
+            "backup-audit-manager",
+            "backup-restore-validation",
+            "wa-post-incident"
+          ],
+          "inspiration_ids": [
+            "jayendra-backup",
+            "jayendra-resilience"
+          ]
+        }
+      ]
+    },
+    {
+      "chapter": 78,
+      "questions": [
+        {
+          "id": "ch078-q01",
+          "intent": 1,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "production operational ownership",
+          "prompt": "三個 teams 共同開發 checkout service，但半夜 alarm 只送到沒有 owner 的聊天頻道；依賴廠商、business 溝通與 production rollback 也沒有人有最終決策權。上線前最重要的改善是什麼？",
+          "choices": [
+            "把 alarm 數量加倍，讓任何 team 都可能看到",
+            "定義 service owner、24x7 on-call、dependency contacts、escalation、技術/業務 decision authority 與 stakeholder communication responsibilities",
+            "把所有 teams 都列為同等 owner，不指定 incident decision maker",
+            "購買 AWS Support，讓 AWS Support 成為 application 的主要 on-call owner"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。增加未擁有的 alerts 只會提高 noise，不會補上 decision authority。",
+            "正確。Operational ownership 必須在事件發生前清楚到人/角色、時段、權限與升級路徑。",
+            "錯誤。多人共同負責但無 accountable decision owner，事故時仍會產生衝突與延誤。",
+            "錯誤。AWS Support 可協助 AWS service 問題，但不承擔 workload business outcome、應用 rollback 或內部溝通責任。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-operational-excellence",
+            "wa-respond-events"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q02",
+          "intent": 2,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "operations as code",
+          "prompt": "不同值班工程師用各自 shell history 執行同一個 cache failover，步驟與驗證結果常不一致，也沒有 approval 或 execution logs。哪個改善最符合 operational excellence？",
+          "choices": [
+            "先把不穩定步驟全部自動化，不定義 preconditions、stop criteria 或 rollback",
+            "因不是 application code，所以 operational changes 不需 code review",
+            "將 infrastructure/config/automation documents 與 observability 設定版本化、review、測試；以受控 pipeline/SSM Automation 執行並保存 approvals 與結果",
+            "讓最資深工程師保留唯一可用的私人指令清單"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Automation 會放大既有流程；先明確化安全邊界與驗證，再逐步自動化。",
+            "錯誤。Operational code 同樣能改變 production，風險不低於 application code。",
+            "正確。Operations as code 使例行變更可重現、可審查、可測與可追蹤。",
+            "錯誤。私人知識形成單點故障，無法建立一致執行、peer review 與稽核證據；只有在緊急探索階段可暫時使用，之後仍須沉澱成受控 runbook 或 automation。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-2.1",
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-operational-excellence",
+            "ssm-automation",
+            "cfn-best-practices"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd"
+          ]
+        },
+        {
+          "id": "ch078-q03",
+          "intent": 3,
+          "level": "SAA",
+          "kind": "single",
+          "tested": "metrics、logs、traces 與 correlation",
+          "prompt": "Checkout p99 上升，但 CPU 正常。團隊要區分 application regression、database dependency latency 與 thread-pool saturation，且能由一筆 request 追到各服務。哪個 telemetry design 最好？",
+          "choices": [
+            "從 workload questions 出發蒐集 customer/component metrics、structured logs 與 distributed traces，加入 request、service、environment 與 deployment correlation context",
+            "只啟用 tracing，但不傳遞 trace context，也不標記 deployment revision",
+            "只收集 host CPU，因 managed database 的 latency 最終一定會提高 EC2 CPU",
+            "永久記錄所有未遮罩 payload，成本與 privacy 不需控制"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Metrics 顯示趨勢，logs 提供事件細節，traces 顯示跨服務路徑；一致 context 才能把三者關聯。",
+            "錯誤。沒有 context propagation 與 release metadata，trace 片段難以組成 causal path。",
+            "錯誤。下游 latency、lock 或 network 問題可能在 CPU 正常時造成 customer impact。",
+            "錯誤。Observability 仍需 retention、sensitivity、sampling 與成本治理。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-observability",
+            "cloudwatch-agent"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q04",
+          "intent": 4,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "customer-facing indicators、SLO 與 alert priorities",
+          "prompt": "公司有 420 個 infrastructure alarms，卻無法回答客戶能否成功付款。每次低 CPU、disk burst 或 queue 波動都 page，值班人員逐漸忽略通知。第一個結構性改善是什麼？",
+          "choices": [
+            "以 instance availability 直接代表 payment success SLO",
+            "事故後再依當天表現調整 SLO，確保報告達標",
+            "定義付款成功率、latency 等 customer/business indicators 與 objectives，再把 component signals 連回這些結果，依可行動性與 objective risk 決定 page",
+            "把所有 thresholds 再降低 20%，提早收到更多 alarms"
+          ],
+          "answers": [
+            2
+          ],
+          "explanations": [
+            "錯誤。Infrastructure up 不代表 dependency、應用邏輯或付款流程成功。",
+            "錯誤。Objective 應事先反映 business expectation，不能在事後為了綠色報表重寫。",
+            "正確。先定義使用者結果，才能決定哪些 telemetry 是 indicator、哪些偏差值得立即回應。",
+            "錯誤。更多未連結 customer impact 的 alarms 會加劇 alert fatigue。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-observability",
+            "wa-operational-excellence"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q05",
+          "intent": 5,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "actionable alarm design",
+          "prompt": "某 alarm 每晚固定進入 ALARM，但從未需要人類在當下採取動作；它沒有 owner、runbook、customer impact 或 escalation。應如何處理？",
+          "choices": [
+            "重新定義有意義的 threshold/window/missing-data behavior，指派 owner 並連結診斷/response；若無即時行動就降級為 ticket/dashboard 或移除",
+            "把 alarm 複製到更多 SNS topics，提高收到機率",
+            "維持永久 ALARM，讓 dashboard 看起來資訊充足",
+            "保留為最高嚴重度 page，因任何異常都應叫醒值班人員"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。Actionability、ownership、routing 與 response context 是 page contract；不符合者應改變通知層級。",
+            "錯誤。更多 notification destinations 不會建立可行動性、owner 或 response contract；只有原本 alarm 已具明確處置而需提高送達可靠性時，增加路由才有意義。",
+            "錯誤。永久噪音降低 dashboard 與 paging system 的信任度。",
+            "錯誤。Page 是要求立即行動的中斷，無 response 的 page 會訓練人員忽略真正事件。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "cloudwatch-alarms",
+            "wa-alert-process",
+            "wa-respond-events"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q06",
+          "intent": 6,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "deployment/configuration correlation",
+          "prompt": "Error rate 在 14:07 上升；14:00–14:06 間有 application、CloudFormation 與 runtime configuration 三種 releases。團隊現在只憑「最後一個 commit」猜測根因。哪個改善最有效？",
+          "choices": [
+            "為每次 deploy/config change 保存 revision 與時間並標記 dashboards/events；把 metrics、logs、traces、CloudTrail、Config 前後狀態關聯後再決定 rollback 或 forward fix",
+            "永遠 rollback 最新 commit，不看 metrics 或 dependency evidence",
+            "成功後立即刪除 deployment markers，避免 dashboard 太複雜",
+            "只查 CloudTrail，因 API history 能直接解釋每一筆 customer latency"
+          ],
+          "answers": [
+            0
+          ],
+          "explanations": [
+            "正確。統一 change context 與 pre/post evidence 能快速縮小 causal candidates，並支持可辯護的修復決策。",
+            "錯誤。時間鄰近不是因果證明，盲目 rollback 也可能撤錯變更。",
+            "錯誤。Release marker 是事故與趨勢分析的重要 context，應按 retention policy 保存。",
+            "錯誤。CloudTrail 說明 API activity，但 customer latency 原因需要 runtime telemetry。"
+          ],
+          "task_keys": [
+            "SAA-2.2",
+            "SAP-3.1",
+            "SAP-3.3"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-observability",
+            "cloudtrail-events",
+            "config-core",
+            "codepipeline-concepts"
+          ],
+          "inspiration_ids": [
+            "jayendra-cicd",
+            "jayendra-config"
+          ]
+        },
+        {
+          "id": "ch078-q07",
+          "intent": 7,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "runbook 與 playbook",
+          "prompt": "團隊需要兩份文件：A 用於已知的 failover 操作，步驟固定；B 用於『延遲升高但原因未知』的調查，需要依證據分支。哪個設計正確？",
+          "choices": [
+            "兩者都只寫一條線性 command list，不需 validation",
+            "B 應保持完全抽象，不寫任何 signals、owner 或 escalation，才能通用",
+            "A 成功執行 API command 就等同 recovery，因此不用 customer check",
+            "A 使用 runbook，包含 prerequisites、執行/automation、validation、rollback 與 evidence；B 使用 playbook，包含 hypotheses、branching diagnostics、decision points 與 escalation"
+          ],
+          "answers": [
+            3
+          ],
+          "explanations": [
+            "錯誤。未知事件需要分支與假設，已知程序也需要 pre/post validation。",
+            "錯誤。沒有 signal 與 decision boundary 的 playbook 無法實際協助值班人員。",
+            "錯誤。Control action success 不等同 workload recovery，runbook 必須驗證目標 outcome。",
+            "正確。Runbook 適合已知可重複程序；playbook 支援未知原因下的引導式調查。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-operational-readiness",
+            "wa-runbooks",
+            "wa-playbooks",
+            "ssm-automation"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q08",
+          "intent": 8,
+          "level": "SAP",
+          "kind": "single",
+          "tested": "operational readiness review",
+          "prompt": "新服務功能測試已通過，但尚未確認 on-call owner、quota、alarms、support access、rollback、restore 或 dependency capacity。產品希望今天直接上線，下週再補文件。架構師應建議什麼？",
+          "choices": [
+            "ORR 只需在公司第一次上雲時做一次，後續服務不適用",
+            "在 launch 前執行一致的 ORR，對關鍵項目要求 evidence；accepted risks 指派 owner/deadline，且重大變更與新學習後重做 review",
+            "填一張沒有 evidence、owner 或 approver 的 checklist 即可",
+            "Managed services 已通過 deploy，所以可免除所有 readiness checks"
+          ],
+          "answers": [
+            1
+          ],
+          "explanations": [
+            "錯誤。Readiness 隨 workload、dependencies、流量與組織能力變化，需要週期性或事件驅動更新。",
+            "正確。ORR 是 production responsibility gate；它讓缺口在顧客流量進入前被驗證、接受或修正。",
+            "錯誤。Checklist 沒有 evidence 與 accountable decision 只是形式，不能降低 launch risk。",
+            "錯誤。Managed service 降低部分基礎設施工作，不承擔 workload quotas、data recovery、alerts 或 ownership。"
+          ],
+          "task_keys": [
+            "SAP-2.1",
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-operational-readiness",
+            "wa-orr"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q09",
+          "intent": 9,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "incident command 與 stakeholder communication",
+          "prompt": "Regional outage 同時觸發 35 個 alarms，四個 teams 各自想修改 production；客戶已受影響但根因未知。哪些 TWO 回應方式最符合有效 incident management？",
+          "choices": [
+            "讓每個 team 獨立變更 production，誰先修好就算成功",
+            "根因百分之百確定前不對 stakeholder 提供任何狀態",
+            "維護 timestamped decision/change log，以單一協調流程核准 rollback/recovery，按 cadence 提供已知事實與下一步",
+            "依 business impact 宣告與分級事件，指派 incident lead、technical roles、communication owner 與明確 escalation",
+            "以 alarm 數量決定優先級，不需要 customer outcome"
+          ],
+          "answers": [
+            2,
+            3
+          ],
+          "explanations": [
+            "錯誤。未協調 concurrent changes 會增加風險、破壞 evidence 並造成互相抵銷。",
+            "錯誤。可在不猜測根因的前提下溝通已知 impact、mitigation 與下一次 update 時間。",
+            "正確。Decision log 與 change coordination 保留共同事實，也便於 handoff 與 post-incident analysis。",
+            "正確。明確 command structure 能避免衝突，並把技術、business 與 dependency response 對齊。",
+            "錯誤。多個 alarms 可能源自單一 failure；事件優先級應由 customer/business impact 主導。"
+          ],
+          "task_keys": [
+            "SAP-3.1"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-respond-events",
+            "wa-runbook-process"
+          ],
+          "inspiration_ids": [
+            "jayendra-incident-response"
+          ]
+        },
+        {
+          "id": "ch078-q10",
+          "intent": 10,
+          "level": "SAP",
+          "kind": "multi",
+          "tested": "post-incident continuous improvement",
+          "prompt": "相同 capacity incident 三個月內發生四次。每次 postmortem 都寫「多加一個 alarm」，但 action item 沒有 owner、due date 或驗證；Well-Architected review 仍重複同一 high-risk issue。哪些 TWO 改善最重要？",
+          "choices": [
+            "將事故歸因於最後值班的人，因個人懲處可取代 capacity design",
+            "只建立 Well-Architected milestone，就視為 remediation 已部署",
+            "新增更多沒有 response process 的 alarms，並關閉原 action items",
+            "用 load/game day 或 runtime evidence 驗證修正有效，追蹤到完成；用 Well-Architected milestones 記錄 review 進度而非取代執行",
+            "做 blameless、evidence-based analysis，找出 system/process contributing factors，依風險排序 corrective actions 並指派 owner/due date"
+          ],
+          "answers": [
+            3,
+            4
+          ],
+          "explanations": [
+            "錯誤。只責怪個人會隱藏 capacity、automation、review 與 alert-design 等系統性條件。",
+            "錯誤。Milestone 是 review snapshot，不是 code/config 已變更或效果已證明的 evidence。",
+            "錯誤。沒有 actionability 的 alarm 會增加 toil，無法消除重複根因。",
+            "正確。Corrective action 要有 verification loop；Well-Architected Tool 可保存 risks/progress，但真正改善由團隊實作與驗證。",
+            "正確。Continuous improvement 需要從事件 evidence 形成可執行、可問責且有優先級的工程工作。"
+          ],
+          "task_keys": [
+            "SAP-3.1",
+            "SAP-3.4"
+          ],
+          "source_ids": [
+            "aws-sap-domain3",
+            "wa-post-incident",
+            "wa-tool",
+            "fis-core",
+            "wa-orr"
+          ],
+          "inspiration_ids": [
+            "jayendra-resilience",
+            "jayendra-incident-response"
+          ]
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "aws-saa-domain1",
+      "title": "SAA-C03 Domain 1: Design Secure Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain1.html",
+      "kind": "official",
+      "usage": "SAA-C03 secure-architecture task mapping."
+    },
+    {
+      "id": "aws-saa-domain2",
+      "title": "SAA-C03 Domain 2: Design Resilient Architectures",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-associate-03/solutions-architect-associate-03-domain2.html",
+      "kind": "official",
+      "usage": "SAA-C03 resilient architecture task mapping."
+    },
+    {
+      "id": "aws-sap-domain2",
+      "title": "SAP-C02 Domain 2: Design for New Solutions",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain2.html",
+      "kind": "official",
+      "usage": "SAP-C02 new-solution task mapping."
+    },
+    {
+      "id": "aws-sap-domain3",
+      "title": "SAP-C02 Domain 3: Continuous Improvement for Existing Solutions",
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/solutions-architect-professional-02/solutions-architect-professional-02-domain3.html",
+      "kind": "official",
+      "usage": "SAP-C02 operational excellence, security, performance, reliability, and improvement task mapping."
+    },
+    {
+      "id": "cfn-core",
+      "title": "What is AWS CloudFormation?",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html",
+      "kind": "official",
+      "usage": "CloudFormation stack state, resource lifecycle, events, and rollback."
+    },
+    {
+      "id": "cfn-template",
+      "title": "CloudFormation template sections",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html",
+      "kind": "official",
+      "usage": "Template structure, parameters, resources, and outputs."
+    },
+    {
+      "id": "cfn-parameters",
+      "title": "CloudFormation Parameters section",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html",
+      "kind": "official",
+      "usage": "Parameter constraints and environment-specific inputs."
+    },
+    {
+      "id": "cfn-dynamic-references",
+      "title": "CloudFormation dynamic references",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html",
+      "kind": "official",
+      "usage": "Resolving values from Systems Manager and Secrets Manager without embedding plaintext."
+    },
+    {
+      "id": "cfn-depend",
+      "title": "CloudFormation DependsOn attribute",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-dependson.html",
+      "kind": "official",
+      "usage": "Implicit dependencies and explicit creation or deletion ordering."
+    },
+    {
+      "id": "cfn-nested",
+      "title": "Work with nested stacks",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html",
+      "kind": "official",
+      "usage": "Nested-stack composition and parent-managed lifecycle."
+    },
+    {
+      "id": "cfn-best-practices",
+      "title": "CloudFormation best practices",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/best-practices.html",
+      "kind": "official",
+      "usage": "IaC organization, testing, security, and operational practices."
+    },
+    {
+      "id": "cfn-stacksets",
+      "title": "CloudFormation StackSets concepts",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/what-is-cfnstacksets.html",
+      "kind": "official",
+      "usage": "Multi-account and multi-Region deployment permission and rollout models."
+    },
+    {
+      "id": "cfn-guard",
+      "title": "AWS CloudFormation Guard",
+      "url": "https://docs.aws.amazon.com/cfn-guard/latest/ug/what-is-guard.html",
+      "kind": "official",
+      "usage": "Pre-deployment policy-as-code validation."
+    },
+    {
+      "id": "cfn-change-sets",
+      "title": "Update stacks using change sets",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-changesets.html",
+      "kind": "official",
+      "usage": "Previewing proposed stack changes, replacements, and nested-stack changes."
+    },
+    {
+      "id": "cdk-core",
+      "title": "What is the AWS CDK?",
+      "url": "https://docs.aws.amazon.com/cdk/v2/guide/home.html",
+      "kind": "official",
+      "usage": "CDK constructs, synthesis, and CloudFormation deployment model."
+    },
+    {
+      "id": "cdk-bootstrap",
+      "title": "Bootstrap AWS CDK environments",
+      "url": "https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping-env.html",
+      "kind": "official",
+      "usage": "CDK target-environment roles and asset resources."
+    },
+    {
+      "id": "codepipeline-concepts",
+      "title": "AWS CodePipeline concepts",
+      "url": "https://docs.aws.amazon.com/codepipeline/latest/userguide/concepts.html",
+      "kind": "official",
+      "usage": "Pipeline stages, actions, revisions, and artifacts."
+    },
+    {
+      "id": "codepipeline-cross-account",
+      "title": "Create a cross-account CodePipeline pipeline",
+      "url": "https://docs.aws.amazon.com/codepipeline/latest/userguide/pipelines-create-cross-account.html",
+      "kind": "official",
+      "usage": "Cross-account roles, artifact buckets, and KMS permissions."
+    },
+    {
+      "id": "codepipeline-cfn",
+      "title": "CloudFormation deploy action reference",
+      "url": "https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html",
+      "kind": "official",
+      "usage": "CloudFormation actions and artifact use in CodePipeline."
+    },
+    {
+      "id": "cfn-drift",
+      "title": "Detect unmanaged configuration changes with drift detection",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html",
+      "kind": "official",
+      "usage": "Drift status, property comparison, and support limitations."
+    },
+    {
+      "id": "cfn-drift-aware",
+      "title": "Use drift-aware change sets",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/drift-aware-change-sets.html",
+      "kind": "official",
+      "usage": "Reconciling actual and expected state during change planning."
+    },
+    {
+      "id": "cfn-stack-policy",
+      "title": "Prevent updates to stack resources",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html",
+      "kind": "official",
+      "usage": "Stack-policy update restrictions and temporary overrides."
+    },
+    {
+      "id": "cfn-deletion-policy",
+      "title": "DeletionPolicy attribute",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-deletionpolicy.html",
+      "kind": "official",
+      "usage": "Resource disposition on stack deletion or template removal."
+    },
+    {
+      "id": "cfn-update-replace-policy",
+      "title": "UpdateReplacePolicy attribute",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-updatereplacepolicy.html",
+      "kind": "official",
+      "usage": "Old physical resource disposition during replacement."
+    },
+    {
+      "id": "cfn-resource-import",
+      "title": "Import AWS resources into a CloudFormation stack",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import-existing-stack.html",
+      "kind": "official",
+      "usage": "Bringing existing resources under CloudFormation management."
+    },
+    {
+      "id": "cfn-termination-protection",
+      "title": "Protect a stack from deletion",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-protect-stacks.html",
+      "kind": "official",
+      "usage": "Stack termination protection behavior."
+    },
+    {
+      "id": "cfn-rollback-triggers",
+      "title": "Roll back a stack on CloudWatch alarm breaches",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-rollback-triggers.html",
+      "kind": "official",
+      "usage": "Rollback triggers and monitoring windows."
+    },
+    {
+      "id": "cfn-continue-rollback",
+      "title": "Continue rolling back an update",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-continueupdaterollback.html",
+      "kind": "official",
+      "usage": "Recovery from UPDATE_ROLLBACK_FAILED and resource skipping caveats."
+    },
+    {
+      "id": "codedeploy-deployment-config",
+      "title": "Work with CodeDeploy deployment configurations",
+      "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-configurations.html",
+      "kind": "official",
+      "usage": "All-at-once, rolling, canary, and linear deployment controls."
+    },
+    {
+      "id": "codedeploy-blue-green",
+      "title": "CodeDeploy blue/green deployments for Amazon ECS",
+      "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-steps-ecs.html",
+      "kind": "official",
+      "usage": "ECS task sets, target groups, traffic shifting, and termination."
+    },
+    {
+      "id": "codedeploy-lambda",
+      "title": "CodeDeploy deployments on Lambda",
+      "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-steps-lambda.html",
+      "kind": "official",
+      "usage": "Lambda versions, aliases, hooks, and traffic shifting."
+    },
+    {
+      "id": "codedeploy-ec2",
+      "title": "CodeDeploy deployments on EC2 and on-premises instances",
+      "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-steps.html",
+      "kind": "official",
+      "usage": "EC2 and on-premises deployment lifecycle."
+    },
+    {
+      "id": "codedeploy-rollback",
+      "title": "Roll back and redeploy with CodeDeploy",
+      "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/deployments-rollback-and-redeploy.html",
+      "kind": "official",
+      "usage": "CodeDeploy rollback behavior and redeployment."
+    },
+    {
+      "id": "codedeploy-alarms",
+      "title": "Monitor CodeDeploy deployments with CloudWatch alarms",
+      "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/monitoring-create-alarms.html",
+      "kind": "official",
+      "usage": "Deployment alarm monitoring and automatic stop or rollback."
+    },
+    {
+      "id": "wa-plan-unsuccessful-changes",
+      "title": "OPS06-BP01 Plan for unsuccessful changes",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_mit_deploy_risks_plan_for_unsucessful_changes.html",
+      "kind": "official",
+      "usage": "Reversible change planning and failure recovery."
+    },
+    {
+      "id": "wa-automate-rollback",
+      "title": "OPS06-BP04 Automate testing and rollback",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_mit_deploy_risks_auto_testing_and_rollback.html",
+      "kind": "official",
+      "usage": "Automated deployment validation and rollback."
+    },
+    {
+      "id": "ssm-managed-node",
+      "title": "Configure managed-node permissions for Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-instance-permissions.html",
+      "kind": "official",
+      "usage": "Managed-node IAM identity and agent prerequisites."
+    },
+    {
+      "id": "ssm-vpc-endpoints",
+      "title": "Create VPC endpoints for Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html",
+      "kind": "official",
+      "usage": "Private network connectivity to Systems Manager services."
+    },
+    {
+      "id": "ssm-session-manager",
+      "title": "AWS Systems Manager Session Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html",
+      "kind": "official",
+      "usage": "IAM-controlled interactive node access without inbound ports."
+    },
+    {
+      "id": "ssm-session-logging",
+      "title": "Session Manager logging limitations",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-logging.html",
+      "kind": "official",
+      "usage": "Session logging behavior for shell, SSH, and port forwarding."
+    },
+    {
+      "id": "ssm-run-command",
+      "title": "Run commands at scale",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/send-commands-multiple.html",
+      "kind": "official",
+      "usage": "Run Command targeting, concurrency, error limits, and status."
+    },
+    {
+      "id": "ssm-inventory",
+      "title": "AWS Systems Manager Inventory",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-inventory.html",
+      "kind": "official",
+      "usage": "Managed-node software and configuration metadata collection."
+    },
+    {
+      "id": "ssm-state-manager",
+      "title": "AWS Systems Manager State Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-state.html",
+      "kind": "official",
+      "usage": "Associations and desired-state configuration."
+    },
+    {
+      "id": "ssm-maintenance-windows",
+      "title": "AWS Systems Manager Maintenance Windows",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/maintenance-windows.html",
+      "kind": "official",
+      "usage": "Scheduled fleet tasks, targets, concurrency, and error thresholds."
+    },
+    {
+      "id": "ssm-state-vs-maintenance",
+      "title": "Choose between State Manager and Maintenance Windows",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/state-manager-vs-maintenance-windows.html",
+      "kind": "official",
+      "usage": "Responsibility boundary between continuous associations and scheduled operations."
+    },
+    {
+      "id": "ssm-patch-policies",
+      "title": "Patch policy configurations in Quick Setup",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-policies.html",
+      "kind": "official",
+      "usage": "Patch-policy schedules, targeting, baselines, and reboot behavior."
+    },
+    {
+      "id": "ssm-patch-baselines",
+      "title": "Predefined and custom patch baselines",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-predefined-and-custom-patch-baselines.html",
+      "kind": "official",
+      "usage": "Patch approval, rejection, products, and classifications."
+    },
+    {
+      "id": "ssm-run-patch-baseline",
+      "title": "AWS-RunPatchBaseline operations",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-aws-runpatchbaseline.html",
+      "kind": "official",
+      "usage": "Scan, install, repository access, and reboot behavior."
+    },
+    {
+      "id": "ssm-patch-operation-buckets",
+      "title": "Amazon S3 buckets used by Patch Manager operations",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-operations-s3-buckets.html",
+      "kind": "official",
+      "usage": "S3 reachability and policy requirements for patch baseline snapshots and patch operations."
+    },
+    {
+      "id": "ssm-quick-setup",
+      "title": "Configure organization patching with Quick Setup",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/quick-setup-patch-manager.html",
+      "kind": "official",
+      "usage": "Cross-account and cross-Region patch policy deployment."
+    },
+    {
+      "id": "ssm-compliance",
+      "title": "AWS Systems Manager Compliance",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-compliance.html",
+      "kind": "official",
+      "usage": "Patch and association compliance evidence."
+    },
+    {
+      "id": "s3-block-public-access",
+      "title": "Block public access to S3 storage",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html",
+      "kind": "official",
+      "usage": "Preventive public-access controls at bucket, account, and organization boundaries."
+    },
+    {
+      "id": "config-core",
+      "title": "What is AWS Config?",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html",
+      "kind": "official",
+      "usage": "Configuration recording, history, and compliance concepts."
+    },
+    {
+      "id": "config-rules",
+      "title": "Evaluate resources with AWS Config rules",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/evaluate-config.html",
+      "kind": "official",
+      "usage": "Change-triggered and periodic resource evaluation."
+    },
+    {
+      "id": "config-remediation",
+      "title": "Remediate noncompliant resources with AWS Config rules",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/remediation.html",
+      "kind": "official",
+      "usage": "Manual and automatic remediation using Systems Manager Automation."
+    },
+    {
+      "id": "config-auto-remediation",
+      "title": "Set up automatic remediation",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/setup-autoremediation.html",
+      "kind": "official",
+      "usage": "Automatic-remediation retries and stale compliance caveats."
+    },
+    {
+      "id": "config-organization-packs",
+      "title": "Deploy organization conformance packs",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/conformance-pack-organization-apis.html",
+      "kind": "official",
+      "usage": "Organization-wide Config rule and remediation packages."
+    },
+    {
+      "id": "config-aggregator",
+      "title": "Aggregate AWS Config data",
+      "url": "https://docs.aws.amazon.com/config/latest/developerguide/aggregate-data.html",
+      "kind": "official",
+      "usage": "Centralized multi-account and multi-Region configuration/compliance views."
+    },
+    {
+      "id": "cloudtrail-events",
+      "title": "CloudTrail events",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-events.html",
+      "kind": "official",
+      "usage": "AWS API actor, request, resource, and event evidence."
+    },
+    {
+      "id": "eventbridge-direct-events",
+      "title": "AWS service events reference for EventBridge",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/ref/events.html",
+      "kind": "official",
+      "usage": "Direct service-event delivery and schemas."
+    },
+    {
+      "id": "eventbridge-cloudtrail-events",
+      "title": "CloudTrail-delivered AWS service events in EventBridge",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-service-event-cloudtrail.html",
+      "kind": "official",
+      "usage": "Routing supported API activity through EventBridge."
+    },
+    {
+      "id": "eventbridge-retry",
+      "title": "Retry policies for EventBridge targets",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-retry-policy.html",
+      "kind": "official",
+      "usage": "Target retry age and attempt controls."
+    },
+    {
+      "id": "eventbridge-dlq",
+      "title": "Dead-letter queues for EventBridge targets",
+      "url": "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-dlq.html",
+      "kind": "official",
+      "usage": "Capturing failed target deliveries for remediation and replay."
+    },
+    {
+      "id": "lambda-best-practices",
+      "title": "AWS Lambda best practices",
+      "url": "https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html",
+      "kind": "official",
+      "usage": "Idempotent function design and safe retries."
+    },
+    {
+      "id": "ssm-automation",
+      "title": "AWS Systems Manager Automation",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-automation.html",
+      "kind": "official",
+      "usage": "Automated operational runbooks, approvals, and execution roles."
+    },
+    {
+      "id": "backup-plans",
+      "title": "AWS Backup plans",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/about-backup-plans.html",
+      "kind": "official",
+      "usage": "Backup schedules, windows, lifecycle, and retention."
+    },
+    {
+      "id": "backup-restore",
+      "title": "Restore a backup",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/restoring-a-backup.html",
+      "kind": "official",
+      "usage": "Restore jobs, roles, metadata, and resource recovery."
+    },
+    {
+      "id": "backup-restore-testing",
+      "title": "Restore testing in AWS Backup",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing.html",
+      "kind": "official",
+      "usage": "Scheduled restore-testing plans, selections, and cleanup."
+    },
+    {
+      "id": "backup-restore-validation",
+      "title": "Validate restore testing jobs",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/restore-testing-validation.html",
+      "kind": "official",
+      "usage": "Application validation workflows and result reporting."
+    },
+    {
+      "id": "backup-cross-account",
+      "title": "Create backup copies across AWS accounts",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html",
+      "kind": "official",
+      "usage": "Cross-account backup copy prerequisites and permissions."
+    },
+    {
+      "id": "backup-encryption",
+      "title": "Encryption for backups in AWS Backup",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/encryption.html",
+      "kind": "official",
+      "usage": "Service-specific backup encryption and KMS behavior."
+    },
+    {
+      "id": "backup-vault-lock",
+      "title": "AWS Backup Vault Lock",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html",
+      "kind": "official",
+      "usage": "Governance and compliance-mode WORM retention."
+    },
+    {
+      "id": "backup-audit-manager",
+      "title": "AWS Backup Audit Manager",
+      "url": "https://docs.aws.amazon.com/aws-backup/latest/devguide/aws-backup-audit-manager.html",
+      "kind": "official",
+      "usage": "Backup compliance controls, frameworks, and reports."
+    },
+    {
+      "id": "fis-core",
+      "title": "What is AWS Fault Injection Service?",
+      "url": "https://docs.aws.amazon.com/fis/latest/userguide/what-is.html",
+      "kind": "official",
+      "usage": "Controlled fault experiments, targets, actions, and reports."
+    },
+    {
+      "id": "fis-stop-conditions",
+      "title": "Stop conditions for AWS Fault Injection Service",
+      "url": "https://docs.aws.amazon.com/fis/latest/userguide/stop-conditions.html",
+      "kind": "official",
+      "usage": "CloudWatch alarm stop conditions for experiments."
+    },
+    {
+      "id": "resilience-hub",
+      "title": "What is AWS Resilience Hub?",
+      "url": "https://docs.aws.amazon.com/resilience-hub/latest/userguide/what-is.html",
+      "kind": "official",
+      "usage": "Resilience objectives, assessment, recommendations, and testing context."
+    },
+    {
+      "id": "cloudwatch-agent",
+      "title": "Collect metrics, logs, and traces with the CloudWatch agent",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html",
+      "kind": "official",
+      "usage": "Workload metrics, logs, and traces collection."
+    },
+    {
+      "id": "cloudwatch-alarms",
+      "title": "Use Amazon CloudWatch alarms",
+      "url": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Alarms.html",
+      "kind": "official",
+      "usage": "Alarm thresholds, evaluation, actions, and missing-data behavior."
+    },
+    {
+      "id": "wa-operational-excellence",
+      "title": "AWS Well-Architected Operational Excellence Pillar",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/operational-excellence.html",
+      "kind": "official",
+      "usage": "Operational ownership, operations as code, and continuous improvement."
+    },
+    {
+      "id": "wa-observability",
+      "title": "Implement observability",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/implement-observability.html",
+      "kind": "official",
+      "usage": "Metrics, logs, traces, workload questions, and correlation."
+    },
+    {
+      "id": "wa-operational-readiness",
+      "title": "Operational readiness and change management",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/operational-readiness.html",
+      "kind": "official",
+      "usage": "Readiness, runbooks, playbooks, and change preparation."
+    },
+    {
+      "id": "wa-orr",
+      "title": "OPS07-BP02 Ensure a consistent review of operational readiness",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_ready_to_support_const_orr.html",
+      "kind": "official",
+      "usage": "Operational readiness review evidence and cadence."
+    },
+    {
+      "id": "wa-respond-events",
+      "title": "Responding to events",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/responding-to-events.html",
+      "kind": "official",
+      "usage": "Event response ownership, escalation, communication, and learning."
+    },
+    {
+      "id": "wa-alert-process",
+      "title": "OPS10-BP02 Have a process per alert",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_event_response_process_per_alert.html",
+      "kind": "official",
+      "usage": "Actionable, owned alert-response processes."
+    },
+    {
+      "id": "wa-runbook-process",
+      "title": "OPS10-BP01 Use a process for event, incident, and problem management",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_event_response_event_incident_problem_process.html",
+      "kind": "official",
+      "usage": "Event, incident, and problem-management roles and decision processes."
+    },
+    {
+      "id": "wa-runbooks",
+      "title": "OPS07-BP03 Use runbooks to perform procedures",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_ready_to_support_use_runbooks.html",
+      "kind": "official",
+      "usage": "Repeatable operational procedures, validation, and automation."
+    },
+    {
+      "id": "wa-playbooks",
+      "title": "OPS07-BP04 Use playbooks to investigate issues",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_ready_to_support_use_playbooks.html",
+      "kind": "official",
+      "usage": "Branching investigation guidance for unknown failure causes."
+    },
+    {
+      "id": "wa-post-incident",
+      "title": "OPS11-BP02 Perform post-incident analysis",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/ops_evolve_ops_perform_rca_process.html",
+      "kind": "official",
+      "usage": "Post-incident analysis and tracked corrective actions."
+    },
+    {
+      "id": "wa-tool",
+      "title": "AWS Well-Architected Tool",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/userguide/intro.html",
+      "kind": "official",
+      "usage": "Workload reviews, risks, milestones, and improvement tracking."
+    },
+    {
+      "id": "jayendra-cfn-advanced",
+      "title": "CloudFormation Advanced — StackSets, Drift, Custom Resources and Guard",
+      "url": "https://jayendrapatil.com/aws-cloudformation-advanced-stacksets-drift-custom-resources-guard/",
+      "kind": "community",
+      "usage": "Topic frequency and distractor-boundary inspiration only; no question wording copied."
+    },
+    {
+      "id": "jayendra-cicd",
+      "title": "AWS CI/CD Pipeline Architecture",
+      "url": "https://jayendrapatil.com/aws-cicd-pipeline-architecture-codepipeline-codebuild/",
+      "kind": "community",
+      "usage": "Deployment-strategy and cross-account pipeline trap inspiration only."
+    },
+    {
+      "id": "jayendra-ssm",
+      "title": "AWS Systems Manager Operations",
+      "url": "https://jayendrapatil.com/aws-systems-manager-operations-patch-session-automation/",
+      "kind": "community",
+      "usage": "Systems Manager capability-comparison inspiration only."
+    },
+    {
+      "id": "jayendra-config",
+      "title": "AWS Config vs CloudTrail vs CloudWatch Compared",
+      "url": "https://jayendrapatil.com/aws-config-vs-cloudtrail-vs-cloudwatch-compared/",
+      "kind": "community",
+      "usage": "Service-responsibility and distractor inspiration only."
+    },
+    {
+      "id": "jayendra-incident-response",
+      "title": "AWS Incident Response Architecture",
+      "url": "https://jayendrapatil.com/aws-incident-response-architecture-forensics-containment-remediation/",
+      "kind": "community",
+      "usage": "Event-routing, remediation, and incident-role topic inspiration only."
+    },
+    {
+      "id": "jayendra-backup",
+      "title": "AWS Backup",
+      "url": "https://jayendrapatil.com/aws-backup/",
+      "kind": "community",
+      "usage": "Backup-plan and recovery-control topic inspiration only."
+    },
+    {
+      "id": "jayendra-resilience",
+      "title": "AWS Resilience Hub",
+      "url": "https://jayendrapatil.com/aws-resilience-hub/",
+      "kind": "community",
+      "usage": "Resilience assessment and game-day topic inspiration only."
+    }
+  ]
+}
