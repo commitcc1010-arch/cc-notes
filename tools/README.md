@@ -42,6 +42,44 @@ Python 與 NGINX C 的逐項映射、source microscope，以及 48 個直接內�
 C 源碼視窗。讀者可以先跑懂簡化模型，再在同一頁對照真實 object、callback、
 return code 與生命週期，不必先跳出書外。
 
+`Software Engineering SRE AI/` 是《從 Commit 到可靠服務：Software Engineering
+× SRE × AI》的可重建來源。重建 Markdown、HTML、執行內容品質閘門，再產生 EPUB：
+
+```bash
+./.venv-epub/bin/python tools/build_swe_sre_ai_book.py
+PYTHONPATH=tools ./.venv-epub/bin/python tools/check_swe_sre_ai_book.py
+./.venv-epub/bin/python tools/build_epub.py software-engineering-sre-ai.html
+./.venv-epub/bin/python tools/check_epub.py epub/software-engineering-sre-ai.epub
+epubcheck epub/software-engineering-sre-ai.epub
+```
+
+全書含 48 個主章節、195 張章內先備概念卡、48 段可解析的 Python
+coding／實務例子、337 組 Follow-up Q&A、194 個動手驗證步驟，以及 7 份附錄。
+每章固定包含 context、use case、完整 flow、心智模型、implementation walkthrough、
+trade-offs、AI Shift、業界 practices 與 guardrails、domain expert lens。專用
+`check_swe_sre_ai_book.py` 會逐章驗證這些欄位、可見正文深度、內部連結與離線
+自包含性。EPUB builder 會把 337 個 `<details>` 全部改為常駐展開內容。
+
+`CSAPP_系統思維學習手冊.html` 的深化內容由可重複執行的 enrichment layer
+產生。它保留原始章節，再逐章加入 context、component contract、先備概念卡、
+Big Picture、完整機制、可執行實驗、錯誤模型、來源與詳細問答：
+
+```bash
+./.venv-epub/bin/python tools/enrich_csapp_systems_book.py
+PYTHONPATH=tools ./.venv-epub/bin/python tools/check_csapp_systems_book.py
+./.venv-epub/bin/python tools/build_epub.py CSAPP_系統思維學習手冊.html
+./.venv-epub/bin/python tools/check_epub.py epub/csapp-系統思維學習手冊.epub
+epubcheck epub/csapp-系統思維學習手冊.epub
+```
+
+Enrichment markers 讓腳本可安全重跑而不重複插入。目前成品含 Chapter 0–12
+共 13 個引導章、13 個實際執行驗證的 Python 概念模型、66 張先備卡、158 組
+折疊問答、30 張架構／流程圖，以及完整 coverage、Labs、跨層診斷、公式工具、
+研究方法與術語附錄。每個 Python 模型後都提供逐步 C／CPU／OS 映射、至少三個
+實際應用與三個跨領域同型設計。品質閘門會逐章檢查可見正文深度、至少 7 組
+新增詳細問答、Python 執行結果、圖解、先備卡、內部連結與離線資產；EPUB 會
+將全部 158 組答案轉為常駐展開內容。
+
 `tools/nginx_source_journey_foundations.py` 提供 114 個零背景術語定義，依各章
 需求在正文首次設計討論前放入至少 4 張「白話定義／具體例子／在 NGINX 中」
 先備概念卡，目前合計 213 張；附錄 H 也會自動產生完整術語表。第 12 章另有
