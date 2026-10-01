@@ -9,16 +9,18 @@ part: 6
 > [!abstract] 本章地圖
 > **你會學到**：
 > - 說明同步呼叫為什麼會讓一個慢服務拖垮整條流程，以及 queue、topic、event bus 各自解決哪一種耦合
-> - 正確設定 SQS 的 visibility timeout、long polling、delay、retention 與 DLQ，並解釋一則訊息從送出到刪除的完整生命週期
+> - 正確設定 SQS 的 visibility timeout、long polling、delay、retention 與 DLQ，解釋一則訊息從送出到刪除的完整生命週期，並處理超過大小上限的 payload（claim check）與依 queue 深度擴展 consumer
 > - 判斷何時用 Standard queue、何時用 FIFO queue，並用 message group ID 同時取得順序與平行度
 > - 用 SNS 搭配多個 SQS queue 做可靠的 fan-out，並用 filter policy 讓每個訂閱者只收到自己要的訊息
 > - 用 EventBridge 的 rules、archive／replay、跨帳號 event bus、Pipes 與 Scheduler 建立事件驅動架構
 > - 在 SQS、SNS、EventBridge、Kinesis 與 Amazon MQ 之間依題目關鍵字做出選擇
 >
-> **前置知識**：第 4 章（同步 vs 非同步、loose coupling）、第 19 章（Lambda invocation types）
+> **前置知識**：第 4 章（同步 vs 非同步、loose coupling）、第 19 章（Lambda invocation types）、第 31 章（stream 與 Kinesis，本章會拿它來對比）
 > **考試比重**：SAA ★★★（Domain 2 解耦與高可用、Domain 3 資料擷取）｜SAP ★★★（Domain 2 可靠性、Domain 4 現代化）
 
 ## 32.1 故事：一封確認信讓整個結帳卡住
+
+第 31 章讓點擊流變成即時資料：事件一產生就被處理，延遲從小時縮到秒。Part 5 從頭到尾解決的都是「資料放在哪、怎麼讀、怎麼即時分析」。但 Wanderly 的服務之間還是用最原始的方式對話：直接同步呼叫，然後等對方回答。
 
 Wanderly 進入成長期後，訂房流程變得越來越長。使用者按下「確認付款」時，訂單服務會依序做六件事：寫入訂單資料庫、呼叫金流、呼叫旅館的庫存 API、寄確認信、幫會員加點數、送一筆紀錄給分析系統。這六件事全部寫在同一個 HTTP request 裡，一件做完才做下一件。
 
@@ -108,9 +110,9 @@ Standard queue 也只提供 **best-effort ordering（盡力排序）**：大致�
 
 訊息不會永遠留在 queue 裡。**Message retention period（保留期間）** 可以設定為 1 分鐘到 14 天，預設 4 天。超過保留期間還沒被刪除的訊息會被 SQS 自動丟棄。如果你的 consumer 可能因為事故停擺一個週末，4 天通常夠；如果需要保留更久的歷史資料供重讀，SQS 就不是正確的工具，應該考慮第 31 章的 Kinesis 或把資料寫入 S3。
 
-## 32.4 三個時間參數：visibility timeout、long polling 與 delay
+## 32.4 時間參數：visibility timeout、long polling 與 delay
 
-SQS 有好幾個以秒為單位的設定，考試很喜歡讓它們互相混淆。我們一個一個看。
+SQS 有四個以秒為單位的設定，考試很喜歡讓它們互相混淆。Retention 已經在上一節講過，這一節補上剩下三個，最後再把四個放在一起對照。
 
 ### Visibility timeout：給 consumer 的處理時限
 
@@ -506,7 +508,7 @@ Pipes 是**一個 source 對一個 target** 的點對點管線，負責輪詢 so
 
 Wanderly 併購的旅行社（Part 8 會正式登場）有一套 Java 訂位系統，透過 **JMS（Java Message Service）** API 和 Apache ActiveMQ broker 溝通，程式裡到處是 JMS 的 queue 與 topic。如果要改成 SQS，得改寫所有訊息相關的程式碼。
 
-**Amazon MQ** 是受管的 message broker 服務，提供 **Apache ActiveMQ** 與 **RabbitMQ** 兩種引擎。它的價值不是比 SQS 更強，而是**相容業界標準協定**：JMS、AMQP、MQTT、STOMP、OpenWire、WebSocket。既有應用程式只要把連線位址改到 Amazon MQ 的 broker，幾乎不用改程式碼，AWS 負責 broker 的佈建、patch 與備份。
+**Amazon MQ** 是受管的 message broker 服務，提供 **Apache ActiveMQ** 與 **RabbitMQ** 兩種引擎。它的價值不是比 SQS 更強，而是**相容業界既有的訊息協定**：應用程式用什麼協定講話，broker 就聽得懂。常見的有 **JMS**（Java 應用最常用的訊息 API）、**AMQP**（跨語言的開放訊息協定，RabbitMQ 的母語）、**MQTT**（為 IoT 裝置設計的輕量協定）、**STOMP**（文字格式的簡易協定）、**OpenWire**（ActiveMQ 的原生協定）與 WebSocket。這些協定 SQS 一個都不支援，所以搬到 SQS 一定要改程式。既有應用程式只要把連線位址改到 Amazon MQ 的 broker，幾乎不用改程式碼，AWS 負責 broker 的佈建、patch 與備份。
 
 ### 部署模式與高可用
 
@@ -521,7 +523,7 @@ Amazon MQ 的 broker 跑在你的 VPC 裡（也可以設定公開存取），你
 |---|---|
 | 既有應用使用 JMS、AMQP、MQTT 等標準協定，要搬到 AWS 且不想改程式 | Amazon MQ |
 | 新開發的雲端應用，需要佇列或 pub/sub | SQS、SNS、EventBridge |
-| 需要 RabbitMQ 特有的路由功能（exchange、routing key），團隊已熟悉 | Amazon MQ for RabbitMQ |
+| 需要 RabbitMQ 特有的路由功能（**exchange**：訊息先進入的分流點，依 **routing key** 決定複製到哪些 queue；其中 fanout exchange 會複製給所有綁定的 queue，等於 RabbitMQ 版的 SNS fan-out），團隊已熟悉 | Amazon MQ for RabbitMQ |
 | 需要無上限的擴展、不想管 broker 大小 | SQS／SNS |
 
 考試的判斷訊號非常固定：題目提到「JMS」「AMQP」「MQTT」「既有 ActiveMQ／RabbitMQ」「不修改程式碼遷移」，答案就是 Amazon MQ；題目說「新應用」「serverless」「最少營運負擔」「高擴展」，答案就是 SQS／SNS。長期現代化路線則常是先 rehost 到 Amazon MQ，之後再逐步改寫成 SQS／SNS（第 44、46 章）。

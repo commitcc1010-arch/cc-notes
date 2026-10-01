@@ -8,10 +8,10 @@ part: 8
 
 > [!abstract] 本章地圖
 > **你會學到**：
-> - 為一家正在擴張的公司畫出完整的帳號地圖：哪些是 foundational 帳號、哪些是 workload 帳號，各自為什麼存在
+> - 說得出一個帳號同時是安全、service quotas、帳單與爆炸半徑四種邊界，並據此畫出完整的帳號地圖：哪些是 foundational 帳號、哪些是 workload 帳號，各自為什麼存在
 > - 依「政策與生命週期」而不是組織圖設計 OU，並安排 Sandbox、Policy Staging、Suspended 等特殊 OU
 > - 選擇 Control Tower 的帳號供應方式（Account Factory、Account Factory Customization、AFT、CfCT），並安全地推出新 control
-> - 設計不可竄改的集中化日誌，以及以 delegated administrator 為核心的集中安全架構
+> - 設計不可竄改的集中化日誌、以 delegated administrator 為核心的集中安全架構，以及用 SCP、RCP 與 endpoint policy 圍出的 data perimeter
 > - 為人、pipeline、服務三種角色選對跨帳號授權模式，並設計 root 與 break-glass 緊急存取
 > - 讓新帳號一建立就自動套上 baseline，包含 tag 治理與帳號層級的安全預設值
 >
@@ -26,7 +26,9 @@ Wanderly 完成了併購：對方是一家經營二十年的旅行社，有一�
 
 稽核顧問的問題很直接：「誰能證明 production 的日誌沒有被改過？誰能在半夜三點進入任何一個帳號處理事故？新的帳號怎麼確定一開始就符合規範？」這三個問題，沒有一個有答案。
 
-阿哲知道，在搬任何一台 VM 之前，必須先把地基打好。這個地基在 AWS 的術語裡叫做 **landing zone（著陸區）**：一個預先規劃好帳號結構、身份、日誌、安全、網路與治理規則的多帳號環境，讓之後每一個 workload 都能「降落」在已經合規的位置上。第 14 章介紹了 Organizations、SCP 與 Control Tower 的運作原理；這一章要回答的是更難的設計問題：帳號要怎麼切、誰住在哪裡、怎麼讓幾十個帳號像一個整體一樣被治理。
+阿哲知道，在搬任何一台 VM 之前，必須先把地基打好。這個地基在 AWS 的術語裡叫做 **landing zone（著陸區）**：一個預先規劃好帳號結構、身份、日誌、安全、網路與治理規則的多帳號環境，讓之後每一個 workload 都能「降落」在已經合規的位置上。第 39 章結束在一個沒有答案的問題上：帳單翻了三倍，卻沒有人說得出是哪個團隊花的。成本歸屬最可靠的工具從來不是 tag，是帳號，因為每個帳號的費用天然就是分開的。Part 8 從這一章開始處理這一類企業規模的問題（多帳號、企業網路、多 Region、治理、遷移、現代化），考試比重也從 SAA 轉向 SAP；只考 SAA 的讀者可以略過 Part 8 的其他章，但本章 40.2 到 40.4 節的帳號與 OU 觀念 SAA 也會考。
+
+第 14 章介紹了 Organizations、SCP 與 Control Tower 的運作原理；這一章要回答的是更難的設計問題：帳號要怎麼切、誰住在哪裡、怎麼讓幾十個帳號像一個整體一樣被治理。
 
 ## 40.2 帳號要切到多細：從四種邊界到切分原則
 
@@ -196,7 +198,7 @@ Control Tower 建立新帳號的入口叫 **Account Factory**。在它之上，A
 | 方式 | 怎麼運作 | 適合 |
 |---|---|---|
 | Account Factory（console／Service Catalog） | 填寫帳號名稱、email、OU、SSO 使用者，透過 Service Catalog product 建立並套用 baseline | 帳號數量少、手動申請可接受 |
-| Account Factory Customization（AFC） | 把一個 CloudFormation（或 Terraform）**blueprint** 登記成 hub 帳號中的 Service Catalog product，建立帳號時選擇 blueprint，帳號建好就套上 | 少數幾種標準帳號範本，想要在 console 一鍵完成 |
+| Account Factory Customization（AFC） | 把一個 CloudFormation（或 Terraform）**blueprint** 登記成 **hub 帳號**（存放 blueprint 的帳號，通常就是平台團隊的 Shared Services 帳號）裡的 Service Catalog product，建立帳號時選擇 blueprint，帳號建好就套上 | 少數幾種標準帳號範本，想要在 console 一鍵完成 |
 | Account Factory for Terraform（AFT） | 在獨立的 AFT management 帳號部署一組 Terraform pipeline；在 Git repository 新增一個帳號請求檔案，pipeline 就會建立帳號並執行 global 與 account-specific customizations | 團隊以 Terraform 為主、需要 GitOps 與大量帳號 |
 | Customizations for Control Tower（CfCT） | 用一個 manifest 檔描述要部署到哪些 OU／帳號的 CloudFormation StackSets 與 SCP，由 pipeline 依 Control Tower lifecycle event 自動部署 | 團隊以 CloudFormation 為主，要讓所有帳號持續套用一致的資源 |
 

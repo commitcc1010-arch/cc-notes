@@ -12,12 +12,15 @@ part: 5
 > - 分辨 Multi-AZ（高可用）與 read replica（讀取擴展）：複寫方式、能不能讀、failover 怎麼發生
 > - 依 RPO／RTO 選擇 automated backup、PITR、snapshot、Backtrack、cloning 或跨 Region 方案
 > - 解釋 Aurora 為什麼「把儲存層拆出來」，以及 reader endpoint、custom endpoint、Serverless v2、Global Database 的用途
+> - 用 parameter group 改引擎設定（dynamic 立即生效、static 要 reboot），並用 Performance Insights 找出真正吃掉資料庫的那句 SQL
 > - 用加密 snapshot copy、RDS Proxy、IAM DB authentication、Blue/Green Deployments 解決常見的安全與營運題
 >
 > **前置知識**：第 4 章（ACID、同步與非同步複寫、RPO／RTO）、第 5 章（DB subnet group 與 isolated subnet）、第 15 章（KMS）
 > **考試比重**：SAA ★★★（Domain 2 高可用、Domain 3 資料庫效能、Domain 4 資料庫成本）｜SAP ★★★（Domain 2 業務持續、Domain 3 改善可靠性、Domain 4 遷移）
 
 ## 26.1 故事：訂單資料庫在凌晨三點停了
+
+Part 4 處理的都是「檔案與物件」：照片、影片、備份、機房裡搬不走的那些目錄。但 Wanderly 最核心的那份資料不是檔案：訂單、會員、房價有固定欄位、有交易、要能用 SQL 查，它需要的是資料庫。Part 5 從這裡開始，而起點要回到比第 25 章更早的時間，因為這個資料庫從公司成立起就沒有人動過。
 
 Wanderly 成立第一年，所有訂單、會員與房價都放在一台 EC2 上自己安裝的 MySQL。工程師小林寫了一支 cron job，每天凌晨兩點用 `mysqldump` 把資料庫匯出到 S3。這個做法撐了很久，直到某個週五凌晨三點，那台 EC2 所在 AZ 的硬體出了問題，instance 卡在無法連線的狀態。
 
@@ -155,7 +158,7 @@ Read replica 可以被 **promote（升格）** 成一個獨立、可寫的 DB in
 
 1. **跨 Region 災難復原**：主 Region 失效時，把另一個 Region 的 replica 升格成新的 primary。因為是非同步複寫，RPO 等於當時的 replication lag；而且升格與修改應用程式連線都需要操作，RTO 通常是分鐘級。
 2. **分拆資料庫**：把某個功能的資料移到獨立資料庫。
-3. **重大變更前的預演**。
+3. **重大變更前的預演**：把 replica 升格成獨立資料庫，在上面跑一次有風險的 schema 遷移或版本升級。它已經和 primary 斷開，弄壞了也不影響正式環境；Aurora 有更快也更便宜的做法，見 26.11 節的 cloning。
 
 下面兩個指令分別建立跨 Region read replica（在目的 Region 執行），以及在災難時把它升格：
 
@@ -338,7 +341,9 @@ Wanderly 把訂單 API 改成 Lambda（第 19 章）。促銷開始的那一刻�
 > [!warning] 常見誤解
 > RDS Proxy 不是快取，也不會讓慢查詢變快。它解決的是**連線數量與連線建立成本**。CPU 被慢 SQL 吃滿，要調 index、加 read replica 或 ElastiCache（第 28 章）。
 
-## 26.8 Parameter groups、維護與監控
+## 26.8 Parameter groups、維護與監控：拿不到 shell，要怎麼調整資料庫
+
+把維運交給 AWS 的代價是你拿不到主機的 shell：不能改 `my.cnf`、不能自己下 `yum update`、不能裝監控 agent。RDS 的做法是把「改設定」「排修補」「看指標」這三件事都搬到 API 上。
 
 ### Parameter group 與 option group
 
@@ -359,7 +364,7 @@ RDS 不讓你登入主機改設定檔，引擎設定改由 **parameter group（�
 
 - **CloudWatch metrics**：CPU、可用記憶體、可用儲存空間、`DatabaseConnections`、`ReadIOPS`、`ReplicaLag` 等，由 hypervisor 層收集。
 - **Enhanced Monitoring**：由 instance 上的 agent 收集作業系統層級指標（每個 process 的 CPU、記憶體），最細可到 1 秒。
-- **Performance Insights／CloudWatch Database Insights**：以「資料庫負載（average active sessions，平均活躍 session 數）」為核心，顯示哪些 SQL、哪些等待事件佔用資源，是找慢查詢最快的工具。AWS 已把這項功能整併到 **CloudWatch Database Insights**（底層 API 仍叫 Performance Insights），舊教材與考題多半沿用 Performance Insights 這個名稱，兩者指的是同一類功能。
+- **Performance Insights**：以「資料庫負載」為核心的效能分析畫面。它的單位是 **average active sessions（平均同時有幾個 session 正在等 CPU、鎖或 I/O）**，再把這個數字依 SQL 與等待事件拆開，所以你一眼就能看到「現在是哪一句 SQL、卡在什麼上面」，不必自己翻 slow query log。AWS 已把這個畫面整併進 **CloudWatch Database Insights**，底層 API 仍叫 Performance Insights，考題多半沿用舊名，看到哪一個都是指同一件事。
 - **RDS events** 可以透過 EventBridge 或 SNS 通知 failover、備份失敗等事件。
 
 到這裡，RDS 已能滿足 Wanderly 的大部分需求。但隨著業務成長，團隊開始遇到 RDS 架構本身的限制：read replica 有明顯 lag、failover 要一兩分鐘、儲存要預先配置。這些限制都來自同一個設計：每台 instance 都有自己的一份資料。Aurora 改變的正是這一點。
@@ -393,7 +398,7 @@ RDS 不讓你登入主機改設定檔，引擎設定改由 **parameter group（�
   ════════════════════════════════════════════════════════════════
 ```
 
-① 所有寫入都送到 **cluster endpoint**（也叫 writer endpoint），它永遠指向目前的 writer。② 讀取送到 **reader endpoint**，它在連線層級把新連線分散到各個 replica。③ 一個 cluster 最多 15 個 **Aurora Replica**，它們和 writer **讀同一份儲存**，不需要各自複製資料，所以 replica lag 通常低於 100 毫秒，新增 replica 也很快。④ Writer 只把 redo log 送到儲存層，由儲存節點自己套用，網路傳輸量比傳統複寫少得多。⑤ **Cluster volume** 把資料切成 10 GB 的 segment，每個 segment 有 **6 份副本分布在 3 個 AZ**；寫入只要 6 份中的 4 份確認、讀取只要 3 份，所以失去一整個 AZ（2 份）仍可正常讀寫，壞掉的副本會自動從其他副本修復。
+① 所有寫入都送到 **cluster endpoint**（也叫 writer endpoint），它永遠指向目前的 writer。② 讀取送到 **reader endpoint**，它在連線層級把新連線分散到各個 replica。③ 一個 cluster 最多 15 個 **Aurora Replica**，它們和 writer **讀同一份儲存**，不需要各自複製資料，所以 replica lag 通常低於 100 毫秒，新增 replica 也很快。④ Writer 不把「改好的整頁資料」送出去，只送 **redo log（重做紀錄：描述「這一頁的第幾個位元組改成什麼」的小筆記，資料庫本來就會寫它，以便當機後能把未完成的變更重做一次）**，由儲存節點自己依紀錄把資料頁改好。要傳的量因此少得多，這也是 replica lag 能壓到 100 毫秒以下的原因。⑤ **Cluster volume** 把資料切成 10 GB 的 segment，每個 segment 有 **6 份副本分布在 3 個 AZ**；寫入只要 6 份中的 4 份確認、讀取只要 3 份，所以失去一整個 AZ（2 份）仍可正常讀寫，壞掉的副本會自動從其他副本修復。
 
 這個設計帶來幾個直接的結果：
 
@@ -432,7 +437,7 @@ Wanderly 的內部後台、測試環境與一些新功能，流量很難預測�
 - 它是 cluster 裡的一種 **instance class（`db.serverless`）**，可以和一般 provisioned instance 混用。例如 writer 用 provisioned、replica 用 Serverless v2 應付讀取尖峰，或反過來。
 - 支援 Multi-AZ、read replica、Global Database 等 Aurora 功能。
 - 較新的引擎版本支援把最小容量設為 **0 ACU**，閒置一段時間後**自動暫停（auto-pause）**，暫停期間不收運算費，下次連線時恢復（恢復需要幾秒，第一個連線會等待）。這很適合開發與測試環境，不適合需要穩定低延遲的 production。
-- 尖峰時容量放大需要一點時間；如果平時就要接住突然的大流量，最小 ACU 不要設太低，因為容量越小、可用的 buffer pool 越小，冷啟動的查詢會比較慢。
+- 尖峰時容量放大需要一點時間；如果平時就要接住突然的大流量，最小 ACU 不要設太低：ACU 越小，**buffer pool（資料庫在記憶體裡快取資料頁的區域）** 也越小，資料得從儲存層重新讀進來，剛放大後的前幾個查詢會明顯比較慢。
 
 > [!note] Serverless v1 的現況
 > 舊版 Aurora Serverless v1 以「暫停後冷啟動」聞名，AWS 已結束對它的支援，並要求升級到 v2。看到舊資料說「Aurora Serverless 不能有 read replica、不能 Multi-AZ」，那是 v1 的限制，不適用於 v2。
@@ -570,6 +575,8 @@ Wanderly 要把 PostgreSQL 從 14 升級到 16。原地 major version upgrade �
 | Major version upgrade、最少停機、可先測試 | Blue/Green Deployments |
 | 需要在資料庫主機安裝 agent（SQL Server／Oracle） | RDS Custom |
 | 資料要保存超過 35 天 | Manual snapshot 或 AWS Backup |
+| 不能登入主機，但要改 `max_connections` 或強制 TLS | 建立 custom parameter group 並套用（static 參數要 reboot 才生效） |
+| 要找出「是哪一句 SQL 吃掉資料庫」 | Performance Insights／CloudWatch Database Insights（看 average active sessions） |
 
 **常見陷阱**：
 
@@ -627,6 +634,7 @@ SAP 題目常給一組 RPO／RTO 與成本限制，要你挑「剛好滿足、�
 - 靜態加密只能在建立時啟用；既有未加密資料庫要用「snapshot → 加密 copy → restore」；用 `aws/rds` 加密的 snapshot 不能跨帳號分享。
 - RDS Proxy 是受管連線池，解決 Lambda 等大量短連線造成的連線耗盡，並縮短 failover 影響；它不加速 SQL，pinning 會降低效果。
 - IAM DB authentication 用 15 分鐘有效的 token 代替密碼；Secrets Manager 可管理並自動輪替主帳號密碼。
+- 引擎設定改在 parameter group：default parameter group 不能修改，static 參數要 reboot 才生效，Aurora 另有 cluster 層與 instance 層兩種；找慢查詢用 Performance Insights 的 average active sessions。
 - Aurora 把運算與儲存分離：cluster volume 每 10 GB segment 有 6 份副本跨 3 AZ，寫入 4/6、讀取 3/6，自動成長。
 - Aurora 最多 15 個 replica，共用儲存、lag 通常低於 100 毫秒，同時是 failover 目標；用 cluster、reader、custom endpoint 分流。
 - Aurora Serverless v2 以 ACU 自動伸縮，可與 provisioned instance 混用，新版本可降到 0 ACU 自動暫停；Serverless v1 已結束支援。

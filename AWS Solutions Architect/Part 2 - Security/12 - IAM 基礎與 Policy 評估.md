@@ -8,6 +8,7 @@ part: 2
 
 > [!abstract] 本章地圖
 > **你會學到**：
+> - 把一個 AWS 請求拆成 principal、action、resource、context 四個元素，並分辨「憑證錯了」（簽章失敗）與「policy 不允許」（AccessDenied）兩種失敗
 > - 說清楚 root user、IAM user、group、role 的差別，以及「人」與「程式」各自該用哪一種身份
 > - 讀懂並寫出一份 IAM policy JSON，知道 Effect、Action、Resource、Condition、Principal 每個欄位在做什麼
 > - 分辨 identity-based 與 resource-based policy、AWS managed／customer managed／inline policy，並選對類型
@@ -18,6 +19,8 @@ part: 2
 > **考試比重**：SAA ★★★（Domain 1 安全，task 1.1 幾乎每份考卷都有）｜SAP ★★★（Domain 1、2、3 的安全控制與改善題）
 
 ## 12.1 故事：一把被推上 GitHub 的鑰匙
+
+Part 1 走到第 11 章，Wanderly 的網路已經從 VPC 一路鋪到 CloudFront：封包走哪條路、誰能從外面連進來，都說得清楚了。但那七章管的全是「網路層能不能通」。還有一個完全不同的問題從創業第一天就沒人管過：**誰可以對 AWS 本身下指令**。能呼叫 API 的人不必經過你的 security group，網路做得再緊也擋不住一組外洩的金鑰。
 
 Wanderly 創業第一年，帳號裡只有一組登入方式：註冊 AWS 時用的那個 email 和密碼，也就是 **root user**。三位工程師共用這組密碼登入 console；為了讓訂房程式能把照片上傳到 S3，小林還在 root user 底下產生了一組 **access key**（長期有效的程式金鑰），直接寫進設定檔。
 
@@ -45,7 +48,7 @@ AWS 用來實現這三件事的服務就是 **IAM（Identity and Access Manageme
 | Resource | 對哪個資源 | `arn:aws:s3:::wanderly-photos/hotels/123.jpg` |
 | Context（情境） | 請求的其他屬性 | 來源 IP、是否用了 MFA、時間、Region、是否走 HTTPS、身份與資源上的 tag |
 
-這裡第一次出現 **ARN（Amazon Resource Name）**：AWS 用來唯一識別資源的字串，格式是 `arn:partition:service:region:account-id:resource`。IAM 是 global（全域）服務，所以 IAM 資源的 ARN 沒有 Region 欄位（`arn:aws:iam::111122223333:role/...` 中間是空的）；S3 bucket 名稱全球唯一，所以 bucket ARN 連帳號都省略了。
+第 2 章提過的 **ARN（Amazon Resource Name）** 在這裡要看清楚格式了。它是 AWS 用來唯一識別資源的字串，寫成 `arn:partition:service:region:account-id:resource`。IAM 是 global（全域）服務，所以 IAM 資源的 ARN 沒有 Region 欄位（`arn:aws:iam::111122223333:role/...` 中間是空的）；S3 bucket 名稱全球唯一，所以 bucket ARN 連帳號都省略了。
 
 > [!note] IAM 是全域服務，而且是 eventually consistent
 > 在 IAM 建立的 user、role、policy 在所有 Region 都有效，不需要每個 Region 各建一份。但 IAM 的變更會複寫到全球的端點，剛建立或修改的 policy 可能要幾秒後才生效。自動化腳本「建好 role 立刻使用」偶爾失敗，原因常常就是這個，解法是加上重試。
@@ -616,7 +619,7 @@ AWS 用 **`iam:PassRole`** 權限擋住它：把 role 交給某個服務（EC2 i
 
 **IAM Access Analyzer** 是一組分析權限的功能：
 
-- **External access analysis（外部存取分析）**：你選定一個 **zone of trust（信任範圍）**，可以是單一帳號或整個 Organization。Analyzer 會用自動推理檢查 S3 bucket、IAM role trust policy、KMS key、Lambda function、SQS queue、Secrets Manager secret 等資源的 resource-based policy，找出「被信任範圍以外的 principal 可以存取」的資源，產生 finding。這個功能免費，但它是 Regional 的，要在每個使用中的 Region 建立 analyzer。
+- **External access analysis（外部存取分析）**：你選定一個 **zone of trust（信任範圍）**，可以是單一帳號或整個 Organization。Analyzer 不是比對樣板，而是用數學方法把 policy 的所有可能結果算過一遍（AWS 稱為 provable security），因此能檢查 S3 bucket、IAM role trust policy、KMS key、Lambda function、SQS queue、Secrets Manager secret 等資源的 resource-based policy，找出「被信任範圍以外的 principal 可以存取」的資源，產生 finding。這個功能免費，但它是 Regional 的，要在每個使用中的 Region 建立 analyzer。
 - **Unused access analysis（未使用存取分析）**：找出長期未使用的 role、access key、密碼與權限（付費功能）。
 - **Policy validation**：在 console 或 API 撰寫 policy 時檢查語法錯誤、安全警告（例如 `iam:PassRole` 配 `*`）與最佳實務建議。
 - **Policy generation**：依 CloudTrail 活動產生最小權限 policy 草稿（上一節）。
