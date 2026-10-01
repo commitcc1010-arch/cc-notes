@@ -43,22 +43,25 @@ C 源碼視窗。讀者可以先跑懂簡化模型，再在同一頁對照真實
 return code 與生命週期，不必先跳出書外。
 
 `Software Engineering SRE AI/` 是《從 Commit 到可靠服務：Software Engineering
-× SRE × AI》的可重建來源。重建 Markdown、HTML、執行內容品質閘門，再產生 EPUB：
+× SRE × AI》的手寫 Markdown 來源（唯一內容來源；builder 只負責組裝）：
 
 ```bash
-./.venv-epub/bin/python tools/build_swe_sre_ai_book.py
-PYTHONPATH=tools ./.venv-epub/bin/python tools/check_swe_sre_ai_book.py
+PYTHONPATH=tools python3 tools/check_swe_sre_ai_book.py        # 品質閘門（會執行每段 Python）
+PYTHONPATH=tools ./.venv-epub/bin/python tools/build_swe_sre_ai_book.py
 ./.venv-epub/bin/python tools/build_epub.py software-engineering-sre-ai.html
 ./.venv-epub/bin/python tools/check_epub.py epub/software-engineering-sre-ai.epub
 epubcheck epub/software-engineering-sre-ai.epub
 ```
 
-全書含 48 個主章節、195 張章內先備概念卡、48 段可解析的 Python
-coding／實務例子、337 組 Follow-up Q&A、194 個動手驗證步驟，以及 7 份附錄。
-每章固定包含 context、use case、完整 flow、心智模型、implementation walkthrough、
-trade-offs、AI Shift、業界 practices 與 guardrails、domain expert lens。專用
-`check_swe_sre_ai_book.py` 會逐章驗證這些欄位、可見正文深度、內部連結與離線
-自包含性。EPUB builder 會把 337 個 `<details>` 全部改為常駐展開內容。
+全書 9 個 Part、48 章，以虛構線上市集 Harbor 從 8 人新創成長為 200 人組織的故事貫穿；
+每章固定包含故事開場、循序的核心概念、可執行的 Python 模擬（附實際輸出）、
+Trade-offs 與 Failure Modes、AI 時代的分工與 guardrails、專家視角、動手練習、
+重點整理與 8 組延伸問答，另有 7 份附錄（讀書路線、原書概念對照、AI Autonomy
+Maturity Model、工程模板、Reliability Math、術語表、延伸閱讀）。章節順序、檔名與
+必須涵蓋的知識點定義在 `tools/swe_sre_ai_outline.md`；寫作規範與 Harbor 標準設定在
+`tools/swe_sre_ai_style_guide.md`。`check_swe_sre_ai_book.py` 會檢查章節結構、
+禁用的範本化套句、正文深度、問答數量與長度、跨章重複段落、未查證連結，並實際執行
+每一段 Python。
 
 `AWS Solutions Architect/` 是《AWS Solutions Architect 雙證全攻略》的手寫 Markdown 來源
 （資料基準日 2026-10-01，以 SAA-C03 與 SAP-C02 exam guide 為準；SAP-C03 自 2026-10-27
