@@ -108,6 +108,24 @@ epubcheck epub/csapp-系統思維學習手冊.epub
 圖表數量、正文深度、問答，並實際編譯執行範例（標記 `// linux-only` 或 `// not-runnable`
 的除外）。Labs 只提供學習指南，不含解答。
 
+`Networking Book/` 是《從封包到即時影音：工程師的網路全書》的手寫 Markdown 來源：
+
+```bash
+python3 tools/check_network_book.py                   # 品質閘門（會單獨執行每段 Python，全部在 127.0.0.1）
+PYTHONPATH=tools ./.venv-epub/bin/python tools/build_network_book.py
+./.venv-epub/bin/python tools/build_epub.py networking-book.html
+./.venv-epub/bin/python tools/check_epub.py epub/networking-book.epub
+epubcheck epub/networking-book.epub
+```
+
+全書 11 個 Part、46 章與 6 份附錄，以線上家教平台「聲聲 Live」貫穿，從 Ethernet、IP、TCP、DNS、
+TLS、HTTP 一路到 JWT、OAuth、WebSocket、WebRTC、SDP、SRT、WSGI／Werkzeug、ASGI 與雲端網路。每章
+固定包含故事開場、核心概念（位元布局圖、時序圖、狀態機）、只用標準函式庫且在 localhost 離線執行的
+Python 與實際輸出、在工作上怎麼用、常見錯誤與除錯、動手練習、重點整理、8 組延伸問答與延伸閱讀。
+章節定義在 `tools/network_outline.md`，寫作規範在 `tools/network_style_guide.md`，全書共用的網域、
+位址分配與數值在 `tools/network_canon.md`，撰寫 agent 的任務說明在 `tools/network_agent_brief.md`。
+`tools/check_outputs.py <章節檔>` 會比對每段程式與緊接的輸出區塊。
+
 `Agent System Design/` 是《Agent System 設計全書：從 0 到 1 打造 Agent 與 Agentic Framework》的手寫
 Markdown 來源：
 
