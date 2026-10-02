@@ -108,6 +108,28 @@ epubcheck epub/csapp-系統思維學習手冊.epub
 圖表數量、正文深度、問答，並實際編譯執行範例（標記 `// linux-only` 或 `// not-runnable`
 的除外）。Labs 只提供學習指南，不含解答。
 
+`Agent System Design/` 是《Agent System 設計全書：從 0 到 1 打造 Agent 與 Agentic Framework》的手寫
+Markdown 來源：
+
+```bash
+python3 tools/check_agent_system_book.py              # 品質閘門（會單獨執行每段 Python）
+(cd "Agent System Design/code" && python3 -m unittest discover -s tests)   # 隨書 loom 套件
+PYTHONPATH=tools ./.venv-epub/bin/python tools/build_agent_system_book.py
+./.venv-epub/bin/python tools/build_epub.py agent-system-design.html
+./.venv-epub/bin/python tools/check_epub.py epub/agent-system-design.epub
+epubcheck epub/agent-system-design.epub
+```
+
+全書 11 個 Part、46 章與 6 份附錄，以青鳥科技從一個 100 行的 agent loop 長成三個 agent 與自家
+framework `loom` 貫穿。每章固定包含故事開場、核心概念、可離線執行的 Python（統一用
+`ScriptedModel` 假模型，只用標準函式庫）與實際輸出、實務應用、設計檢查清單、常見錯誤與除錯、
+重點整理、8 組延伸問答與延伸閱讀；版本與產品細節集中在標明「2026 現況」的區塊。章節與必須涵蓋的
+知識點定義在 `tools/agent_system_outline.md`，寫作規範在 `tools/agent_system_style_guide.md`，
+全書共用定義在 `tools/agent_system_canon.md`，撰寫 agent 的任務說明在
+`tools/agent_system_agent_brief.md`。隨書程式碼 `Agent System Design/code/` 是第 45 章組裝的
+`loom` v1.0（標準函式庫、附 unittest）。`check_agent_system_book.py` 會檢查章節結構、圖表數量、
+正文深度、問答、中英文空格、URL、第三方 import、性別代名詞與非包容性用語，並執行每段 Python。
+
 `Coding Interview Pattern Playbook/` 是《Coding Interview Pattern Playbook》的手寫 Markdown
 來源（與舊書 `Coding Interview Patterns/` 互相獨立，舊書的工具與輸出不受影響）：
 
