@@ -23,13 +23,13 @@ part: 3
 
 ## 19.1 故事：七週的分支與一個撤不回來的 merge
 
-Harbor 已經有 40 位工程師，分成結帳、金流、搜尋、賣家後台與平台五個團隊，大部分程式碼仍然放在同一個主要的 monolith repository（另外還有十幾個小 repo，19.7 節會談）。年初，產品經理 Lisa 提出「新結帳流程」：把原本四個步驟的結帳頁縮成一頁，支援折價券疊加與分期付款。結帳團隊的 tech lead 美華估計要做七週。
+Harbor 已經有 40 多人、約 30 位工程師，分成結帳（checkout）、金流（payments）、搜尋（search）、賣家後台（seller）與平台（platform）五個團隊，大部分程式碼仍然放在同一個主要的 monolith repository（另外還有 12 個小 repo，19.7 節會談）。第二年夏天，產品經理 Lisa 提出「新結帳流程」：把原本四個步驟的結帳頁縮成一頁，支援折價券疊加與分期付款。結帳團隊的 tech lead 美華估計要做七週。
 
-為了「不要影響 main 的穩定」，團隊開了一條叫 `checkout-v2` 的分支。初階工程師阿凱負責折價券的部分，阿凱很認真，每天都在分支上 commit。前兩週一切順利；第三週，金流團隊把手續費計算從 `calc_fee` 改名成 `compute_fee`，並更新了 main 上所有的呼叫端，但 `checkout-v2` 上新寫的十幾個呼叫端當然沒有被改到。第五週，平台團隊把 web framework 升了一個 major version，路由寫法全部改變。
+為了「不要影響 main 的穩定」，團隊開了一條叫 `checkout-v2` 的分支。seller 團隊的初階工程師阿凱被借調來負責折價券的部分，阿凱很認真，每天都在分支上 commit。前兩週一切順利；第三週，金流團隊把手續費計算從 `calc_fee` 改名成 `compute_fee`，並更新了 main 上所有的呼叫端，但 `checkout-v2` 上新寫的十幾個呼叫端當然沒有被改到。第五週，平台團隊把 web framework 升了一個 major version，路由寫法全部改變。
 
 第七週是「整合週」。阿凱與美華花了四天解決 140 多個檔案的衝突，其中很多不是文字衝突，而是語意上的衝突：程式可以合併、可以編譯，但兩邊對同一個資料結構的假設已經不同。測試終於全綠之後，他們把整條分支用一個巨大的 merge commit 併進 main，週四晚上部署。
 
-週五下午，客服發現有使用者疊了三張折價券後結帳金額變成負數。SRE 志明第一個反應是「revert 剛才那個變更」，但志明很快發現做不到：那個 merge commit 包含七週、兩百多個 commit 的工作，還有整合週裡為了解衝突而改寫的金流與平台程式碼。撤回它等於同時撤回其他團隊這兩個月的部分修正。最後團隊只能在壓力下 roll forward（往前修），一路修到晚上十點。
+週五下午，客服發現有使用者疊了三張折價券後結帳金額變成負數。平台團隊的志明那週負責部署值班，第一個反應是「revert 剛才那個變更」，但志明很快發現做不到：那個 merge commit 包含七週、兩百多個 commit 的工作，還有整合週裡為了解衝突而改寫的金流與平台程式碼。撤回它等於同時撤回其他團隊這兩個月的部分修正。最後團隊只能在壓力下 roll forward（往前修），一路修到晚上十點。
 
 事後檢討時，工程經理 Kevin 問：「我們開分支是為了讓 main 穩定，結果為什麼反而造成了今年最不穩定的一天？」這一章要回答的就是這個問題：版本控制系統不只是存檔工具，分支、commit 與合併的方式，決定了團隊多早發現衝突、出事時能多精準地撤回。
 
@@ -88,8 +88,8 @@ VCS 大致分兩類。**集中式**（centralized）VCS，例如 Subversion（SV
 實務上，要讓 source of truth 真的成立，Harbor 採用了幾條規則：
 
 - **所有會影響 production 的東西都進 VCS**：程式碼、設定檔、資料庫 schema migration、基礎設施定義（infrastructure as code）、alert 規則、runbook。直接登入機器改設定的變更，在 VCS 裡不存在，下一次部署就會被覆蓋，也沒有人能 review。
-- **Production 能追溯到一個 commit**：每個部署出去的 artifact（例如 container image）都記錄它是從哪個 commit 建置的。Git tag（例如 `v2026.03.14`）只是一個可移動的名字，真正證明「這些 bytes 從哪裡來」的是 commit SHA、artifact 的內容雜湊與建置紀錄，第 27 章會講 provenance 的完整做法。
-- **Main 隨時可以建置、可以測試**：如果 main 常常是壞的，大家就會改以「某個自己知道能跑的分支」為準，source of truth 就名存實亡。這也是第 28 章「broken build 優先 rollback」的理由。
+- **Production 能追溯到一個 commit**：每個部署出去的建置產物（artifact，例如 container image）都記錄它是從哪個 commit 建置的。Git tag（例如 `v2024.08.14`）只是一個可移動的名字，真正證明「這些 bytes 從哪裡來」的是 commit SHA、artifact 的內容雜湊與建置紀錄，第 27 章會講 provenance 的完整做法。
+- **Main 隨時可以建置、可以測試**：如果 main 常常是壞的，大家就會改以「某個自己知道能跑的分支」為準，source of truth 就名存實亡。這也是第 28 章「主線壞掉時優先 rollback」的理由。
 
 > [!example] 例子
 > Harbor 在 checkout 服務的 `/version` endpoint 回傳 commit SHA 與建置時間。週五事故時，志明第一步就是比對 production 的 SHA 與 main 的歷史，確認問題版本包含哪些 commit。這個小小的 endpoint，讓「現在跑的是什麼」從猜測變成查詢。
@@ -215,7 +215,7 @@ Feature flag 不是免費的。每個 flag 都讓程式多一條路徑，n 個�
 |---|---|---|---|
 | Release flag | 讓未完成的功能安全地留在 main | 數天到數週，功能全開後立即刪除 | `checkout_v2` |
 | Experiment flag | A/B 測試 | 實驗期間 | 推薦區塊的兩種排序 |
-| Ops flag（kill switch） | 事故時關閉昂貴或有風險的功能 | 長期，但要定期演練 | 關閉 AI 客服 agent 的退款能力 |
+| Ops flag（kill switch） | 事故時關閉昂貴或有風險的功能 | 長期，但要定期演練 | 關閉 AI 客服 agent 送出退款申請的能力 |
 | Permission flag | 依客群開放功能 | 長期，本質上是產品設定 | 企業賣家專屬報表 |
 
 Harbor 的規則是：每個 release flag 建立時必須填 owner 與預計刪除日期；過期的 flag 會在每週的平台報表中列出，並自動開一張清理工單給 owner。
@@ -283,7 +283,7 @@ One Version rule 其實就是「不要有長期分支」在依賴關係上的延
   折價券疊加時先套用百分比折扣，再套用固定金額折扣
 
   原本依加入順序套用，使用者先加固定金額券、再加 9 折券時，
-  會得到比預期更低的金額，三張券疊加時甚至出現負數（事故 #2026-031）。
+  會得到比預期更低的金額，三張券疊加時甚至出現負數（事故 #2024-047）。
   改為固定順序並在最後檢查金額下限為 0。
 
   考慮過：禁止疊加。產品確認疊加是新結帳流程的核心需求，不採用。
@@ -594,7 +594,7 @@ AI coding agent 改變了這一章的兩個基本假設：產生變更的速度�
 >
 > 預防的方法有幾層。小團隊可以要求合併前先 rebase 到最新的 main 並重跑 CI，但 PR 一多就會變成賽跑。較完整的做法是 merge queue：每個 PR 都對「main ＋ 排在它前面的所有 PR」重新測試，通過才合併。另外，函式改名這類變更本身也可以更安全，例如先新增新名稱、保留舊名稱作為轉接一段時間，等所有呼叫端遷移完再刪除（expand / contract），這樣即使有人新增舊名稱的呼叫，也不會立刻壞掉。
 
-> [!question]- Q6. 你是 Harbor 的 SRE 志明。週五下午發現 production 的折價券金額錯誤，最近一次部署包含一個巨大的 merge commit。你會怎麼處理？之後要推動什麼改變？
+> [!question]- Q6. 你是 Harbor 平台團隊負責部署值班的志明。週五下午發現 production 的折價券金額錯誤，最近一次部署包含一個巨大的 merge commit。你會怎麼處理？之後要推動什麼改變？
 > 當下的第一優先是止血，而不是找到完美的修法。我會先看有沒有不需要 revert 程式碼的止血手段：例如有沒有 flag 可以關閉折價券疊加、能不能把 checkout 部署回上一個版本的 artifact（如果上一版沒有相依的資料庫變更）。如果這個功能沒有 flag，而 merge commit 又混合了其他團隊的修正，直接 revert 可能會帶來新的問題，這時要和美華、相關 code owner 一起評估：是部署回舊 artifact、revert 整個 merge，還是針對折價券的十幾行做最小的 roll forward 修正。這個判斷要考慮資料庫 schema 是否已經改變，以及其他團隊的修正是否已經被使用者依賴。
 >
 > 事後在 postmortem 中，我會把「無法精準撤回」列為重要的 contributing factor，而不只是那個計算 bug。行動項目包括：新功能必須放在 release flag 後面；分支超過三天未合併要提醒並說明；採用 squash merge 與一個 PR 一件事的規則；部署系統能一鍵回到上一個 artifact。目標是讓下一次事故的止血手段是「關掉 flag」或「回到上一版」，而不是在壓力下修到晚上十點。

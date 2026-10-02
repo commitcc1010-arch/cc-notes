@@ -43,7 +43,7 @@ my-service-notebook/
 |---|---|---|---|
 | 1 | 第 1、2 章 | 1.13-1（畫出一個功能從需求到上線的真實路徑）；執行 1.9 的程式並做 1.13-3；2.15-1（依賴圖，標硬依賴與軟依賴） | `map/service-map.md`：服務的生命週期路徑與依賴圖 |
 | 2 | 第 3、5 章 | 3.14-1、3.14-2（腳本的壽命與畢業條件）；5.12-1（列出 API 的 10 個可觀察行為並分類） | `map/observable-behaviors.md`：宣告的契約、事實上的契約、實作細節三欄清單 |
-| 3 | 第 7 章 | 7.14-2（假設清單與一個兩天內的 spike）；7.14-5（寫一份 ADR）；7.14-6（請 AI 扮演反方） | `decisions/ADR-001.md`，含被否決的選項與兩個可量測的 revisit trigger |
+| 3 | 第 7 章 | 7.14-2（假設清單與一個兩天內的技術探勘）；7.14-5（寫一份 ADR）；7.14-6（請 AI 扮演反方） | `decisions/ADR-001.md`，含被否決的選項與兩個可量測的 revisit trigger |
 | 4 | 第 8、9 章 | 8.15-5（ownership 地圖）；9.14-4（設計一場 pre-mortem） | `map/ownership.md`：每個元件的 owner、on-call、backup 人數 |
 | 5 | 第 16、19 章 | 16.13-1（把大 PR 拆成 4–6 個小 PR）；19.15-1（盤點未合併分支）；19.15-5（重寫 commit message） | `quality/pr-template.md`：PR 描述模板與 review 留言的分級前綴約定 |
 | 6 | 第 17 章 | 17.15-4（mini design doc）；17.15-3（擴充相容性檢查程式） | `design/mini-design-doc.md` 與 `sims/compat_check.py` |

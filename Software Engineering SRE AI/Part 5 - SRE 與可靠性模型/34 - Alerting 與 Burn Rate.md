@@ -291,7 +291,7 @@ groups:
           job:checkout_errors:ratio_rate5m > (14.4 * 0.001)
         labels:
           severity: page
-          team: payments
+          team: checkout
         annotations:
           summary: "checkout 正以 ≥14.4 倍速度燃燒 error budget（約 2 天燒完 30 天預算）"
           runbook: "runbooks/checkout-slo-burn.md"
@@ -364,7 +364,7 @@ Prometheus 規則評估
 影響    ：checkout 錯誤率 3.1%（1h），burn rate 31；約 23 小時燒完 30 天預算
 範圍    ：全部區域；集中在付款確認步驟
 SLO     ：checkout availability 99.9% / 30d，本月已用 41%
-最近變更：14:02 checkout v2026.10.01-3 部署至 100%；13:40 coupon flag 開啟 50%
+最近變更：14:02 checkout v2025.07.24-3 部署至 100%；13:40 coupon flag 開啟 50%
 連結    ：SLO dashboard、相關 trace 查詢、runbook
 第一步  ：若與最近部署時間吻合，先 rollback 再調查（runbook 第 2 節）
 ```
@@ -404,7 +404,7 @@ SRE 原書在〈Being On-Call〉中提到，Google 的經驗是處理一次事�
 檢討時最有用的單一問題是：「**這個 page 讓值班者做了什麼？**」如果答案是「什麼都沒做」，它就不是 page。如果答案是「每次都做同一件事」，它應該變成自動化。如果答案是「做了，但其實可以等到早上」，它應該是 ticket。
 
 > [!example] 例子
-> Harbor 第一次檢討時，把 37 條會 page 的規則降到 9 條：checkout、search、cart、payments 各 2 條 burn rate page（fast 與 slow），加上一條「磁碟 4 小時內會滿」的預測性 page。CPU、記憶體、單次 pod 重啟全部移到 dashboard；憑證到期與 3 天 slow burn 改成 ticket。下一個月的 page 數從每週 37 次降到每週 3 次，而折價券那類的慢性問題會在大約 4–5 小時內觸發 6× 規則。
+> Harbor 第一次檢討時，先盤點出那一週 37 次 page 背後一共有 26 條會 page 的規則，再把它們降到 9 條：checkout、search、cart、payments 各 2 條 burn rate page（fast 與 slow），加上一條「磁碟 4 小時內會滿」的預測性 page。CPU、記憶體、單次 pod 重啟全部移到 dashboard；憑證到期與 3 天 slow burn 改成 ticket。下一個月的 page 數從每週 37 次降到每週 3 次，而折價券那類的慢性問題會在大約 4–5 小時內觸發 6× 規則。
 
 ## 34.10 動手寫：模擬三種告警策略
 
@@ -517,6 +517,7 @@ run("E. 沒有事故，只有每天 4 次 1–2 分鐘的 1% 抖動", [], blips_
 執行結果：
 
 ```text
+
 == A. 全面中斷 100% × 15 分鐘
   naive 5m>SLO   page 第 0 分（已燒 2.3%），結束後 3 分才解除；ticket 無
   1h burn>=14.4  page 第 0 分（已燒 2.3%），結束後 58 分才解除；ticket 無
@@ -581,7 +582,7 @@ AI 在告警上的影響分成兩面：AI 可以讓告警系統更好用，但 A
 **第四，AI 產品本身需要新的告警設計。** 第 32 章為 Harbor 的 AI 客服 agent 定義了 task success、groundedness、unsafe action rate 等 SLI。它們在告警上的特性很不一樣：
 
 - **品質類 SLI 通常有延遲**：groundedness 靠抽樣標註或 LLM-as-judge 評分，可能晚幾小時才有資料。這類 SLI 不適合 fast burn page，比較適合 6× 或 1× 的 slow burn 與 ticket。
-- **安全類事件適合計數告警**：「agent 嘗試超出授權的退款」即使比例很低也不能接受，適合用「窗口內出現 N 次」直接 page，而不是用比例的 burn rate。
+- **安全類事件適合計數告警**：「agent 嘗試超出授權的動作」（例如試圖繞過客服人員核准、直接執行退款）即使比例很低也不能接受，適合用「窗口內出現 N 次」直接 page，而不是用比例的 burn rate。
 - **成本也可以有 burn rate**：如果 AI 客服每月有固定的模型呼叫預算，同一套 `b = f × T / w` 的邏輯可以用在 token 花費上，例如「1 小時內燒掉月預算的 2%」就通知，用來抓 prompt 迴圈或被濫用的情況。
 - **快速訊號仍然來自傳統指標**：tool 呼叫錯誤率、guardrail 阻擋率、回應延遲，這些都是即時可得的，應該和一般服務一樣用 multi-window burn rate。
 
@@ -655,7 +656,7 @@ AI 在告警上的影響分成兩面：AI 可以讓告警系統更好用，但 A
 >
 > 修法有兩個方向。第一是重新推導門檻：用 b = f × T / w，決定「多快燒掉多少預算值得 page」，例如改成 1 小時燒掉 1%（b = 7.2）或更短窗口，並確認門檻低於最大 burn rate 10。第二是檢討 SLO 本身：一個允許 10% 失敗的 SLO 是否真的代表使用者需要的品質？如果服務掛掉兩小時大家都覺得是事故，SLO 可能訂得太鬆，應該和使用者一起重新討論。
 
-> [!question]- Q5. Harbor 的上游 payments 中斷時，checkout、訂單、通知、AI 客服四個團隊同時被 page，四個值班者都在查同一個問題。要怎麼設計才能避免這種 page storm？
+> [!question]- Q5. Harbor 的上游 payments 中斷時，checkout、訂單、通知、AI 客服四個服務的值班者同時被 page，四個值班者都在查同一個問題。要怎麼設計才能避免這種 page storm？
 > 第一層是 inhibition：當 payments 的 SLO 告警觸發時，自動抑制下游服務中「依賴 payments 失敗」所造成的告警，或把它們降級為資訊性通知。抑制的範圍要基於明確的依賴關係，例如只抑制錯誤類型為「payments 呼叫失敗」的部分，避免把下游自己獨立的故障也一起藏起來。
 >
 > 第二層是 routing 與溝通：只叫醒 payments 的 owner，下游團隊收到「上游事故進行中」的通知與事故頻道連結，需要時再加入。第三層是設計：下游服務若能對 payments 的失敗做降級（例如訂單先接受、付款稍後重試），它們的 SLI 受影響會較小，本來就不會那麼多 page。最後，被抑制的告警仍然要記錄下來，事故結束後可以完整評估各服務受到的影響與 error budget 消耗。

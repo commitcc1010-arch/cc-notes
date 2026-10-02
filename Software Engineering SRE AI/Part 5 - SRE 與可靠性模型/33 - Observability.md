@@ -189,14 +189,14 @@ Harbor 的組合包問題剛好卡在第二類：`coupon_type` 只有幾種值�
 Harbor 早期的日誌長這樣：
 
 ```text
-2026-05-02 20:14:03 reserve ok for order A123 took 1332ms
-2026-05-02 20:14:03 [WARN] payment slow?? A123
+2025-05-02 20:14:03 reserve ok for order A123 took 1332ms
+2025-05-02 20:14:03 [WARN] payment slow?? A123
 ```
 
 人讀得懂，機器很難讀。要找出「所有超過 1 秒的庫存保留」，得寫正規表示式去解析每種格式，而每個工程師寫日誌的習慣都不同。**Structured logging**（結構化日誌）的做法是把每筆日誌寫成固定欄位的資料，最常見的格式是每行一個 JSON 物件：
 
 ```text
-{"ts":"2026-05-02T20:14:03.412Z","level":"INFO","service":"inventory",
+{"ts":"2025-05-02T20:14:03.412Z","level":"INFO","service":"inventory",
  "msg":"stock reserved","order_id":"A123","items":3,"duration_ms":1332,
  "trace_id":"eec55b7a05118d10...","span_id":"4f1c...","version":"inv-2.8.1"}
 ```
@@ -341,7 +341,7 @@ Harbor 在組合包事故時有四十幾個 dashboard，大部分是不同人在
 
 ## 33.10 AI 與 LLM 應用的 Observability
 
-Harbor 的 AI 客服 agent 讓 observability 面對一種新的系統：它的「請求」是一段對話，「處理」包括呼叫模型、檢索知識庫、呼叫內部工具（查訂單、發起退款），而「錯誤」常常不會有任何錯誤碼：回答錯了、引用了不存在的退款規則、做了不該做的動作，HTTP 狀態仍然是 200。
+Harbor 的 AI 客服 agent 讓 observability 面對一種新的系統：它的「請求」是一段對話，「處理」包括呼叫模型、檢索知識庫、呼叫內部工具（查訂單、送出退款申請給客服人員核准），而「錯誤」常常不會有任何錯誤碼：回答錯了、引用了不存在的退款規則、做了不該做的動作，HTTP 狀態仍然是 200。
 
 ### 要多記錄什麼
 
@@ -364,14 +364,14 @@ Harbor 的 AI 客服 agent 讓 observability 面對一種新的系統：它的�
 ```text
 conversation c-8812（使用者：「我的組合包可以退一件嗎？」）
 ├─ llm.call  model=…  prompt=v14  in=1,850 tok  out=120 tok   820 ms
-├─ retrieval kb=2026-05-01  docs=[refund-policy#3, bundle-faq#1]   45 ms
+├─ retrieval kb=2025-05-01  docs=[refund-policy#3, bundle-faq#1]   45 ms
 ├─ tool.call get_order(order_id=A123)  → ok                       60 ms
 ├─ llm.call  in=2,400 tok  out=210 tok                           1,100 ms
-├─ policy    refund_partial(amount=320)  → allowed（≤ 上限 1,000）
-└─ tool.call create_refund(order_id=A123, amount=320)  → ok       180 ms
+├─ policy    refund_request(amount=320)  → allowed（符合部分退款資格）
+└─ tool.call submit_refund_request(order_id=A123, amount=320)  → queued  180 ms
 ```
 
-這條 trace 讓你能回答「agent 為什麼退了這筆錢」：它看了哪些文件、查了哪些資料、policy 為什麼允許。當使用者投訴「客服說可以退，結果沒退成」時，工程師可以直接找到那段對話的 trace，而不是猜。OpenTelemetry 已經有針對生成式 AI 的 semantic conventions（規範狀態仍標為 Development，名稱可能再調整），定義了模型名稱、token 用量等屬性的標準名稱，例如 `gen_ai.request.model` 與 `gen_ai.usage.input_tokens`，讓不同框架產生的資料可以用同樣的方式查詢。
+這條 trace 讓你能回答「agent 為什麼替這筆訂單送出退款申請」：它看了哪些文件、查了哪些資料、policy 為什麼允許。申請送出後仍要由客服人員核准，所以 trace 也要能連到核准紀錄。當使用者投訴「客服說可以退，結果沒退成」時，工程師可以直接找到那段對話的 trace，而不是猜。OpenTelemetry 已經有針對生成式 AI 的 semantic conventions（規範狀態仍標為 Development，名稱可能再調整），定義了模型名稱、token 用量等屬性的標準名稱，例如 `gen_ai.request.model` 與 `gen_ai.usage.input_tokens`，讓不同框架產生的資料可以用同樣的方式查詢。
 
 ### 隱私與保存
 
@@ -643,7 +643,7 @@ Tail sampling   ：保留 172 條，其中值得看的 65 條
 > [!question]- Q7. Harbor 的 AI 客服 agent 被投訴「說可以退款，結果沒退」。你需要什麼樣的 observability 才能在十分鐘內查清楚？
 > 需要一條完整的 prompt trace：以這段對話為根 span，依序記錄每次模型呼叫（模型與 prompt 版本、token 數）、每次知識庫檢索（檢索到哪些文件、知識庫版本）、每次工具呼叫（工具名稱、參數摘要、結果），以及每次 policy 檢查的判斷結果。對話 ID 要能從客服系統或使用者的訂單直接查到，trace ID 要能連到 refund 服務的 logs。
 >
-> 有了這些資料，調查會很直接：找到這段對話的 trace，看 agent 的回答依據是哪份文件、它有沒有真的呼叫 `create_refund`、呼叫的結果是什麼、policy 有沒有擋下。常見的答案包括：agent 檢索到過期的退款規則、agent 口頭答應但沒有呼叫工具、工具呼叫被 policy 擋下但 agent 沒有告訴使用者。同時要注意隱私：完整對話內容只在授權與遮罩下才能查看，日常的 trace 以 metadata 為主。
+> 有了這些資料，調查會很直接：找到這段對話的 trace，看 agent 的回答依據是哪份文件、它有沒有真的呼叫 `submit_refund_request`、呼叫的結果是什麼、policy 有沒有擋下，以及申請在客服人員那裡是被核准、退回還是還在排隊。常見的答案包括：agent 檢索到過期的退款規則、agent 口頭答應但沒有呼叫工具、工具呼叫被 policy 擋下但 agent 沒有告訴使用者、agent 把「已送出申請」說成「已經退款」。同時要注意隱私：完整對話內容只在授權與遮罩下才能查看，日常的 trace 以 metadata 為主。
 
 > [!question]- Q8. 面試題：如果你要為一個沒有任何 observability 的既有系統導入 OpenTelemetry，你會怎麼排優先順序？
 > 第一步是確保能看到使用者的症狀：在入口（load balancer 或 API gateway）與最重要的服務上取得 RED metrics，並建立第一個 SLO，讓團隊知道什麼時候該開始調查。接著在入口與關鍵路徑上的服務啟用 OpenTelemetry 的自動 instrumentation，因為它不需要大量改程式，就能得到 HTTP 與資料庫呼叫的 span 以及 context propagation。所有資料先送到一個 Collector，之後的遮罩、取樣與後端選擇都在那裡調整。

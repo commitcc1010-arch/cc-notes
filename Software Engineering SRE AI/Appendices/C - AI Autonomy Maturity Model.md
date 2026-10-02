@@ -81,7 +81,7 @@ L2 是 coding agent 最主要的等級，也是累積升級證據的地方。**S
 | 定義 | 產生可被採用的產物；任何寫入都要經過人審查，並由人或既有流程（CI／CD）執行 |
 | Coding agent | 開 PR，由 reviewer 與 code owner 核准合併（第 16、48 章的 PR #2317）；第 2 章的 policy：只能在分支上工作、不能直接合併到主線 |
 | 維運 agent | Shadow mode 中記錄它對每件 toil 的判斷；針對 `db-failover × prod` 只能提出建議與指令（第 47 章 47.10） |
-| 客服 agent | Rollout 階段 2（agent shadow）：處理真實對話並提出 refund intent，不回覆買家、不執行（第 48 章） |
+| 客服 agent | 第 4 年的退款預審（第 46 章 46.8）：預審退款申請、預填金額與理由、標記「建議核准」或「建議駁回」，每一筆仍由客服核准；第 5 年 rollout 階段 2（agent shadow）：處理真實對話並提出 refund intent，不回覆買家、不執行（第 48 章） |
 | 升到 L3 的證據 | Shadow 期間有足夠樣本、與人的決定高度一致，而且零次不安全的建議；離線 eval 通過 |
 | Guardrails | Agent 不能核准自己開的 PR，也不能由同一個 agent 的另一個實例核准；PR 描述揭露 AI 參與範圍（附錄 D 的 PR 模板）；agent PR 遵守同樣的大小限制；CI 的依賴 allowlist 擋下不存在或未核可的套件（第 20、48 章）；shadow 的每一筆不一致都要被檢視 |
 | 降級觸發 | 本書沒有規定 L2 以下的自動降級。建議做法：抽查正確率明顯下降，或產物持續無法通過 review 與 CI 時退回 L1 |
@@ -144,7 +144,7 @@ L5 的人不再看個別動作，所以它的安全性幾乎完全來自環境�
 | L3 → L4 | 一段時間內核准後執行零事故、被人否決的比例低；邊界寫成 policy 並由工具強制 | 同上，另加 L3 期間的否決比例 |
 | L4 → L5 | 環境的所有動作可完全回復；架構審查與工程副總簽核；只限非 production 或被環境本身限制的範圍 | 不由程式判斷，一律需要人簽核 |
 
-這張表有兩件事值得強調。第一，**一次不安全的行為就足以擋下升級**，平均表現再好也一樣；第 31 章 31.10 的例子中，58 筆有 55 筆一致，但其中一筆是「在資料庫遷移進行中建議重啟節點」，那一筆比 95% 的一致率更重要。第二，升級由 owner 申請、由指定的審查者核准（第 47 章 47.12），agent 不能修改自己的等級，「治理 agent」也不應該自動調整其他 agent 的等級：授權模型是整套架構中最需要確定性的部分。
+這張表有兩件事值得強調。第一，**一次不安全的行為就足以擋下升級**，平均表現再好也一樣；第 31 章 31.10 的例子中，58 筆有 55 筆一致（94.8%），但其中一筆是「在資料庫遷移進行中建議重啟節點」，那一筆比接近 95% 的一致率更重要。第二，**升級由該 agent 的 owner 提出申請，由 owner 以外的指定審查者核准**（第 47 章 47.12），agent 不能修改自己的等級，「治理 agent」也不應該自動調整其他 agent 的等級：授權模型是整套架構中最需要確定性的部分。
 
 ### 兩種降級：止血與授權
 
@@ -153,20 +153,20 @@ L5 的人不再看個別動作，所以它的安全性幾乎完全來自環境�
 - **執行期降級（止血）**：在事故或異常中，用預先準備好的開關立刻縮小 agent 的動作能力，不需要先知道原因。例如第 48 章 refund-assistant 的 `refund_assistant.mode` 可以從 `auto` 切到 `approval`（全部人工核准）、`lookup_only`（只查詢）或 `off`，30 秒內生效；rollout 計畫中的 SLO fast burn、invariant 違反、核准佇列等待超過 30 分鐘都會自動停止。這是 runbook 的動作，由值班者或自動化執行（第 44 章的先止血再修復）。
 - **授權降級**：事後把 workflow 的等級往下調，要求重新累積證據。這是 policy 的動作，由 gateway 依事先寫好的條件自動執行，不是臨時開會討論。
 
-第 47 章規定，以下任一情況會讓相關 workflow 的等級**立刻降回 L2**，重新累積證據：
+第 47 章規定，以下任一情況會讓相關 workflow 的等級**立刻降回 L2 提案**。注意是直接降到 L2，不是只退一階：一旦證據失效，原本累積的信任都要重新驗證，之後再依 C.4 的門檻逐級回升（第 31 章 31.9 寫的是同一條規則）。
 
 1. Agent 的模型、prompt、工具或資料來源有重大變更（第 47 章 47.10 的 `on_version_change`：所有 L3 以上的授權降到 L2）。
 2. Agent 造成或延長了一次事故。
 3. 被人否決的比例突然上升。
 4. Agent 的 owner 離職或轉調，而沒有新的 owner；agent 會維持降級，直到有人認領。
 
-第 48 章的事故顯示「資料來源」要包含知識庫：INC-0611 之後，Harbor 把知識庫以快照版本納入 agent bundle，知識庫變更就是一次版本變更，走同樣的 eval、canary 與降級規則。
+第 48 章的事故顯示「資料來源」要包含知識庫：INC-2027-0611 之後，Harbor 把知識庫以快照版本納入 agent bundle（ADR-047），知識庫變更就是一次版本變更，走同樣的 eval、canary 與降級規則。那次事故也示範了降級的粒度：牽涉事故的只有「瑕疵」原因碼這個 workflow，所以只有它退回 L2 重新跑 shadow，另外兩類原因碼不受影響（第 48 章 48.12 的 action item 7）。
 
 ## C.5 和第 31 章授權階梯、第 48 章 rollout 階段的對照
 
 第 31 章為 SRE 的維運 agent 訂了五個階段，第 47 章把它推廣成全公司的 L0–L5，第 48 章的 refund-assistant rollout 又沿用了第 31 章的階段編號。三者的對應如下：
 
-| 第 31 章的階段 | 第 47 章的等級 | 第 48 章 refund-assistant 的 rollout 階段 | 說明 |
+| 第 31 章的階段 | 第 47 章的等級 | 第 48 章 refund-assistant（第 5 年）的 rollout 階段 | 說明 |
 |---|---|---|---|
 | （未列出） | L0 無存取 | 階段 0 之前：`refund_assistant.mode = off` | 階段 0 是 gateway 本身的 shadow（人工退款同時送 gateway 判斷但不執行），驗證的是確定性程式，此時 agent 尚未接上 |
 | 階段 0　唯讀觀察 | L1 唯讀輔助 | （上線前已存在）查詢訂單 | AI 客服從 Part 0 起就能查訂單 |
@@ -178,6 +178,20 @@ L5 的人不再看個別動作，所以它的安全性幾乎完全來自環境�
 
 對照表的實用意義是：當你在某份文件看到「階段 3」，要先確認它指的是第 31 章的階梯（等於 L3），還是某個 rollout 計畫自己的編號。Harbor 的做法是在 rollout 計畫中沿用第 31 章的編號，並在 agent policy 中一律以 L0–L5 記錄，避免同一個詞有兩種意思。
 
+### 退款能力分成兩次 launch
+
+這張表對應的是第 5 年「agent 在額度內直接執行退款」那一次 launch。AI 客服的退款能力其實分兩次上線，讀第 46 與第 48 章時不要把它們看成同一件事：
+
+| | 第 4 年：退款預審（第 46 章 46.8） | 第 5 年：自動執行退款（第 48 章） |
+|---|---|---|
+| Agent 做什麼 | 預審退款申請、預填金額與理由、標記「建議核准」或「建議駁回」 | 提出 refund intent，由確定性的 refund-gateway 執行 |
+| 人的位置 | 客服核准每一筆退款 | 階段 3 核准每一筆；階段 4 只核准超出邊界的例外 |
+| 等級 | 全程 L2 提案 | 階段 2 為 L2、階段 3 為 L3、階段 4 為 L4 |
+| 開關 | flag `ai_refund_precheck`（關閉後仍可回答，只是不預填、不標記） | flag `refund_assistant.mode`：auto → approval → lookup_only → off，30 秒內生效；rollout 期間另有 shadow |
+| 上線門檻 | 離線 eval 1,200 筆歷史對話，含 150 筆刻意構造的攻擊；與客服最終決定的一致率 ≥ 98%；不安全的建議 0 次 | 階段 2 線上 shadow 與人工決定一致率 ≥ 97%、零次越權嘗試、各族群層差距 ≤ 3 點；階段 3 核准率 ≥ 97%；階段 4 ≤ 1,000 元且原因碼屬於自動清單 |
+
+兩個一致率門檻不一樣，不是前後矛盾：98% 是第 4 年在固定資料集上跑離線 eval 的門檻，97% 是第 5 年用真實流量做 agent shadow 的晉升條件，而且 97% 後面還接著階段 3 的核准率與階段 4 的金額與原因碼邊界。第 46 章 46.8 的八項額外檢查在第 5 年全部沿用，只是門檻更嚴，而且因為人工核准這道防線被拿掉，game day 的劇本必須在新的授權等級下重跑一次（第 48 章 48.10）。
+
 ## C.6 審計紀錄的最低欄位
 
 不論等級，每一個經過 tool gateway 的請求都要留下一筆紀錄，包括被拒絕的請求。欄位依第 47 章 47.7：
@@ -186,7 +200,7 @@ L5 的人不再看個別動作，所以它的安全性幾乎完全來自環境�
 |---|---|---|
 | Agent 身份與 owner | `reco-cleaner`／柏翰（search） | 這是哪個 agent？出事找誰？ |
 | 委派者 | 無（排程觸發）或某位工程師、某位登入的買家 | 代表誰在行動？ |
-| 版本 | 模型、prompt、工具版本；Harbor 第 5 年起含知識庫快照 | 行為改變時，是哪個版本開始的？ |
+| 版本 | 模型、prompt、工具版本；Harbor 自 INC-2027-0611 之後另含知識庫快照 | 行為改變時，是哪個版本開始的？ |
 | Workflow、環境與等級 | `feature-table-cleanup`／prod／L2 | 當時被授權到哪裡？ |
 | 工具與參數 | `delete_rows(table=..., where=...)` | 實際嘗試做什麼？ |
 | Policy 決定與理由 | deny：L2 以下不能直接寫入 | 為什麼被允許或拒絕？ |
@@ -324,7 +338,7 @@ review:
 
 ### Harbor 範例：refund-assistant（第 5 年 5 月下旬，100% 買家）
 
-下面是第 48 章 AI 退款助理推到 100% 買家時的 policy。數字都取自第 48 章的 design doc、rollout 計畫、容量估算與 runbook；以 `# INC-0611 後` 開頭的註解，標出 48.12 的 action items 改變了哪些欄位。
+下面是第 48 章 AI 退款助理（第 5 年、agent 可在額度內直接執行退款的那一次 launch）推到 100% 買家時的 policy。數字都取自第 48 章的 design doc、rollout 計畫、容量估算與 runbook；以 `# INC-2027-0611 後` 開頭的註解，標出 48.12 的 action items 改變了哪些欄位。
 
 ```yaml
 agent_id: refund-assistant
@@ -342,7 +356,7 @@ version_bundle:
   prompt: refund-assistant prompt（版本號隨 bundle）
   tools: propose_refund、get_order 的 JSON schema 版本
   rules: 規則引擎版本（寫入每筆 audit log）
-  knowledge_base: policy-kb        # INC-0611 後：改為 policy-kb@v57 這類快照（ADR-047）
+  knowledge_base: policy-kb        # INC-2027-0611 後：改為 policy-kb@v57 這類快照（ADR-047）
 
 workflows:
   - workflow: order-lookup
@@ -356,9 +370,10 @@ workflows:
     boundaries:
       max_amount: 1000                # I3：超過轉人工核准
       auto_reason_codes: [未出貨取消, 物流遺失, 商品瑕疵]
+      # INC-2027-0611 後：「商品瑕疵」退回 L2，先 shadow 一週、再 L3 一週，依晉升條件回升（action item 7）
       per_conversation: {tokens: 40000, tool_calls: 15, minutes: 10}
       per_buyer: 每小時 ≤ 3 次新對話
-      # INC-0611 後：gateway 增加每小時自動退款預算，超過的案件轉人工（action item 4）
+      # INC-2027-0611 後：gateway 增加每小時自動退款預算，超過的案件轉人工（action item 4）
     on_exceed: escalate
     approvers: [客服當班人員]
   - workflow: refund-intent-approval
@@ -387,12 +402,12 @@ runtime_degradation:
     - 模型供應商連續失敗            # circuit breaker 切到 lookup_only
 
 promotion:
-  requested_by: 阿凱（附數據連結）
-  reviewed_by: [美華（payments owner）, 志明（SRE）]
+  requested_by: 阿凱（owner，附數據連結）
+  reviewed_by: [志明（SRE，各階段晉升的核准者）, 美華（staff engineer）, 小林（payments，refund-service owner）]
   evidence_required: 依 rollout 計畫各階段的晉升條件；L4 由 Kevin 在 launch checklist 簽核
 
 demotion:
-  - version_bundle_changed            # INC-0611 後：知識庫快照變更也算
+  - version_bundle_changed            # INC-2027-0611 後：知識庫快照變更也算
   - caused_or_prolonged_incident
   - override_rate_spike               # 客服駁回比例突然上升
   - owner_missing
@@ -401,7 +416,7 @@ eval_gates:
   capability: 一般案例 600 題 × 5 次，通過率 ≥ 95%，且比上一版退步 ≤ 1 個百分點
   safety: 對抗性案例 120 題，每題 5 次全部通過；任一題嘗試越權工具呼叫即擋下發布
   fairness: 依書寫流暢度與語言分層，各層通過率差距 ≤ 3 個百分點
-  regression: 事故案例集          # INC-0611 後：新增 40 題被誘導成瑕疵的案例與政策互相矛盾的案例
+  regression: 事故案例集          # INC-2027-0611 後：新增 40 題被誘導成瑕疵的案例與政策互相矛盾的案例
   run_on: [model, prompt, tools, rules, knowledge_base]
 
 audit:

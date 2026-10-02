@@ -17,13 +17,13 @@ part: 4
 > - 從成本與信號品質評估一套測試，知道哪些測試在消耗信任而不是建立信任
 > - 辨認 AI 生成測試的品質陷阱，並建立能證明測試有效的檢查
 >
-> **前置知識**：第 6 章（Beyoncé Rule）、第 16 章（code review）、第 19 章（小批次與 trunk-based development）、第 21 章（LSC）
+> **前置知識**：第 4 章（Beyoncé Rule）、第 16 章（code review）、第 19 章（小批次與 trunk-based development）、第 21 章（LSC）
 >
 > **對應原書**：SWE 第 11 章〈Testing Overview〉；延伸參考 SWE 第 14 章〈Larger Testing〉
 
 ## 22.1 故事：一千個綠燈，結帳還是壞了
 
-Harbor 成立第二年下半，公司成長到四十多人、分成 checkout、payments、search、seller、platform 五個團隊，開始認真建立 CI／CD。工程經理 Kevin 在季度會議上展示了一個令人安心的數字：checkout 服務有超過一千個自動化測試，每次合併前都會跑。兩週後，一次例行發布讓所有使用信用卡分期的訂單失敗了三個小時。
+Harbor 成立第二年年底，公司成長到四十多人、分成 checkout、payments、search、seller、platform 五個團隊，開始認真建立 CI／CD。工程經理 Kevin 在季度會議上展示了一個令人安心的數字：checkout 服務有超過一千個自動化測試，每次合併前都會跑。兩週後，一次例行發布讓所有使用信用卡分期的訂單失敗了三個小時。
 
 事後調查發現，問題出在 checkout 與 payments 之間的介面。payments 團隊把回應欄位從 `amount` 改名為 `amount_cents`，同時在自己的測試中更新了所有斷言；checkout 的測試則全部使用一個手寫的假 payments 回應，裡面還是舊的 `amount`。兩邊各自的測試都是綠燈，因為兩邊各自都「正確」，只是對彼此的假設不一致。
 
@@ -104,7 +104,7 @@ Google 開源的 build 系統 Bazel（第 27 章）把 size 寫成測試 target 
 - 不能 sleep，就不會有「等 2 秒應該就好了吧」這種在忙碌的 CI 機器上剛好不夠的等待。
 - 單一 process，就能在幾毫秒內完成，一台機器每分鐘可以跑上萬個。
 
-所以 small test 幾乎不會 flaky，而且非常便宜，可以在每次儲存檔案時就跑。Medium 與 large test 放寬了限制，換來更接近真實的環境，也付出了速度與穩定性的代價。第 26 章會更深入談 **hermetic test**（密閉測試，所有依賴都在測試自己控制之下）與 flakiness 的成因。
+所以 small test 幾乎不會 flaky，而且非常便宜，可以在每次儲存檔案時就跑。Medium 與 large test 放寬了限制，換來更接近真實的環境，也付出了速度與穩定性的代價。第 26 章會更深入談 hermetic test（封閉測試，所有依賴都在測試自己控制之下）與 flakiness 的成因。
 
 > [!warning] 常見誤解
 > 「small test 就是測很小一段程式碼。」不對。Size 只關心資源。一個在記憶體中串起 checkout、折扣、運費、庫存四個 module 的測試，若完全不碰網路與磁碟、幾毫秒就跑完，它仍然是 small test。反過來，一個只測一個函式、卻呼叫了真實的匯率 API 的測試，它是 large test，而且很可能 flaky。
@@ -190,7 +190,7 @@ Google 開源的 build 系統 Bazel（第 27 章）把 size 寫成測試 target 
 
 ## 22.7 Beyoncé Rule：測試也是一種所有權宣告
 
-第 4、6 章提過 **Beyoncé Rule**：「If you liked it, you should have put a CI test on it」，如果你在乎某個行為，就應該用 CI 中的測試保護它。這是原書第 1 章的寫法；第 11 章則用更口語的版本「If you liked it, then you shoulda put a test on it」，並說明「在乎的行為」不只是功能正確，也包括效能、無障礙、安全性，以及系統如何處理失敗。從測試策略的角度看，這條規則說明了測試在大型組織中的另一個角色：**它是團隊之間的契約**。
+第 4 章介紹過 Beyoncé Rule（第 6 章談過它在規模化時的前提）：「If you liked it, you should have put a CI test on it」，如果你在乎某個行為，就應該用 CI 中的測試保護它。這是原書第 1 章的寫法；第 11 章則用更口語的版本「If you liked it, then you shoulda put a test on it」，並說明「在乎的行為」不只是功能正確，也包括效能、無障礙、安全性，以及系統如何處理失敗。從測試策略的角度看，這條規則說明了測試在大型組織中的另一個角色：**它是團隊之間的契約**。
 
 Harbor 的 platform 團隊要把所有服務的 Python 版本從 3.11 升到 3.12，或是把 HTTP client 函式庫換成新版本。他們不可能理解每個服務的所有細節，只能依靠每個服務自己的測試判斷「這次升級有沒有弄壞你」。如果 search 團隊在乎「搜尋結果依相關度排序，同分時依上架時間排序」，卻沒有測試保護它，而升級後排序變了，Beyoncé Rule 的答案很明確：這是 search 團隊的責任，而不是 platform 團隊的。
 

@@ -21,17 +21,17 @@ part: 3
 >
 > **對應原書**：SWE 第 15 章〈Deprecation〉
 
-## 18.1 故事：一個「一年前就 deprecated」的 API
+## 18.1 故事：一個「早就 deprecated」的 API
 
-Harbor 剛創業時，八個工程師花了一個週末寫出第一版付款 API：`POST /v1/pay`。它簡單直接：前端把信用卡號送到 Harbor 的伺服器，伺服器再轉給金流商。那時候這是最快能開始收錢的方法。
+Harbor 剛創業時，五位工程師花了一個週末寫出第一版付款 API：`POST /v1/pay`。它簡單直接：前端把信用卡號送到 Harbor 的伺服器，伺服器再轉給金流商。那時候這是最快能開始收錢的方法。
 
-一年後，工程團隊長到 40 人，checkout 團隊推出了 `POST /v2/payments`。新版本有兩個重要改進：卡號由金流商的前端元件直接收下，Harbor 只拿到一個 **token**（代表那張卡的代號，本身不是卡號），大幅縮小了資安稽核的範圍；每個請求都必須帶 **idempotency key**（冪等鍵，同一個 key 的請求重送多次只會扣款一次），不會因為網路重試而重複扣款。美華在 v1 的程式碼加上 `@deprecated` 註解，在文件頂端加了一行「請改用 v2」，然後團隊就去忙下一個功能了。
+第二年初，公司開始快速擴張，剛成立的 payments 團隊推出了 `POST /v2/payments`。新版本有兩個重要改進：卡號由金流商的前端元件直接收下，Harbor 只拿到一個 **token**（代表那張卡的代號，本身不是卡號），大幅縮小了資安稽核的範圍；每個請求都必須帶 idempotency key（冪等鍵，同一個 key 的請求重送多次只會扣款一次，第 41 章詳談），不會因為網路重試而重複扣款。當時還在 payments 團隊的美華在 v1 的程式碼加上 `@deprecated` 註解，在文件頂端加了一行「請改用 v2」，然後團隊就去忙下一個功能了。
 
-一年後的週年慶，問題爆發了。行動 app 的舊版本在網路不穩時自動重送 `/v1/pay` 請求，四百多位買家被重複扣款。客服花了三天手動退款，Lisa 在週會上問：「v1 不是早就淘汰了嗎？為什麼還有人在用？」
+八個月後、那年九月的中秋檔期，問題爆發了。行動 app 的舊版本在網路不穩時自動重送 `/v1/pay` 請求，四百多位買家被重複扣款。客服花了三天手動退款，Lisa 在週會上問：「v1 不是早就淘汰了嗎？為什麼還有人在用？」
 
-志明打開 API gateway 的日誌，結果讓所有人沉默：v1 仍然承擔約三成的付款流量。更糟的是，v1 的使用者在過去半年**增加**了：AI 客服 agent 的退款工具是三個月前新寫的，寫它的工程師請 coding agent「參考現有的付款程式碼」，而 repo 裡範例最多的正是 v1。一個掛著 deprecated 標籤的 API，在沒有人注意的情況下又多了一個新使用者。
+志明打開 API gateway 的日誌，結果讓所有人沉默：v1 仍然承擔約三成的付款流量。更糟的是，v1 的使用者在過去半年**增加**了：AI 客服 agent 的「送出退款申請」工具是三個月前新寫的（AI 客服只能送出申請，客服人員核准後，工具才呼叫付款 API 執行退款），寫它的工程師請 coding agent「參考現有的付款程式碼」，而 repo 裡範例最多的正是 v1。一個掛著 deprecated 標籤的 API，在沒有人注意的情況下又多了一個新使用者。
 
-同一週，金流商寄來通知：他們將在明年 3 月 31 日關閉接收原始卡號的舊端點。這代表 Harbor 不管準備好沒有，v1 都會在那天停止運作。工程經理 Kevin 把美華和志明找進會議室：「我們有六個月。這次要真的把它關掉。」
+同一週，金流商寄來通知：他們將在明年 3 月 31 日關閉接收原始卡號的舊端點。這代表 Harbor 不管準備好沒有，v1 都會在那天停止運作。工程經理 Kevin 把 payments 的小林、v2 的原作者美華（現在是 checkout 的 tech lead）和 platform 團隊的志明找進會議室：「我們有六個月。這次要真的把它關掉。」
 
 這一章要回答的就是 Kevin 的問題：一個系統被標為 deprecated 之後，要經過哪些步驟才會真正消失？為什麼大部分的淘汰計畫停在「標記」這一步？
 
@@ -85,7 +85,7 @@ SWE 書在 deprecation 那一章有一個核心觀點：**程式碼本身是負�
 
 ### 拆之前先弄懂：Chesterton's fence
 
-**Chesterton's fence**（切斯特頓的籬笆）是一個常被引用的思考原則：如果你在路上看到一道籬笆，不知道它為什麼在那裡，不要急著拆掉它；先弄清楚它當初為什麼被立起來，知道原因之後，才有資格決定要不要拆。
+第 7 章介紹過切斯特頓的籬笆（Chesterton's fence）：不知道一道籬笆為什麼在那裡，就先別急著拆，弄清楚它當初為什麼被立起來，才有資格決定要不要拆。
 
 淘汰舊系統時，這個原則提醒我們：舊系統裡那些看似多餘的檢查、奇怪的特例，可能正在保護某個沒被寫下來的需求。v1 裡有一段「同一張卡 30 秒內的同金額交易直接拒絕」的程式，看起來和 v2 的 idempotency 重複，差點在遷移時被忽略。追查後才發現，它是早年為了擋一種盜刷手法加上的，v2 需要用另一種方式提供同樣的保護。
 
@@ -111,10 +111,10 @@ SWE 書把淘汰分成兩種，它們的差別在於有沒有強制力。
 
 SWE 書對 advisory deprecation 的觀察很直接：單靠建議，頂多讓新的使用稍微變少，卻很少讓團隊主動遷移，即使新系統有大幅改進也一樣，因為對使用者來說遷移是成本、而收益不明顯。原書也因此主張 compulsory deprecation 要有專責團隊負責到底。它適合當作淘汰的第一階段，讓願意搬的人先搬，也讓提供方從早期遷移者身上發現 v2 的缺口。但如果目標是「關掉舊系統」，最後幾乎都需要進入 compulsory 階段。
 
-Compulsory deprecation 的關鍵設計是：**遷移成本要由最有能力承擔的一方承擔**。SWE 書第 1 章提到 Google 的一條規則（常被稱為 **Churn Rule**）：基礎設施團隊若要變更，就必須自己負責把內部使用者遷移到新版本，或以向後相容的方式原地更新。背後的道理是，提供方最懂新舊系統的差異，又能一次處理多個使用者，比讓每個使用方各自研究一遍有效率得多。Harbor 的 checkout 團隊因此決定：所有在 Harbor repo 內的 v1 呼叫，由 checkout 團隊親自送 PR 遷移；合作夥伴與舊 app 則由 checkout 團隊提供工具與支援。
+Compulsory deprecation 的關鍵設計是：**遷移成本要由最有能力承擔的一方承擔**。SWE 書第 1 章提到 Google 的一條規則（常被稱為 **Churn Rule**）：基礎設施團隊若要變更，就必須自己負責把內部使用者遷移到新版本，或以向後相容的方式原地更新。背後的道理是，提供方最懂新舊系統的差異，又能一次處理多個使用者，比讓每個使用方各自研究一遍有效率得多。Harbor 的 payments 團隊因此決定：所有在 Harbor repo 內的 v1 呼叫，由 payments 團隊親自送 PR 遷移；合作夥伴與舊 app 則由 payments 團隊提供工具與支援。
 
 > [!warning] 常見誤解
-> 「標上 `@deprecated` 就是在淘汰。」標記只是表達意圖，它本身不會讓任何人遷移。沒有 owner、沒有替代方案的遷移指南、沒有截止日期、沒有追蹤機制的「淘汰」，實際上只是給舊系統貼了一張不會被執行的告示。Harbor 的 v1 標記了一年，使用者反而增加。
+> 「標上 `@deprecated` 就是在淘汰。」標記只是表達意圖，它本身不會讓任何人遷移。沒有 owner、沒有替代方案的遷移指南、沒有截止日期、沒有追蹤機制的「淘汰」，實際上只是給舊系統貼了一張不會被執行的告示。Harbor 的 v1 標記了八個月，使用者反而增加。
 
 ## 18.5 一個完整的淘汰流程
 
@@ -184,7 +184,7 @@ Brownout 很有效，但它只能找到「在那段時間剛好有呼叫」的�
 
 ### 讓提供方做遷移
 
-對 Harbor 內部的呼叫，checkout 團隊直接送 PR：用一個 **codemod**（自動改寫程式碼的工具，通常基於 AST，也就是程式碼的語法樹）把 v1 client 的呼叫替換成 v2，加上 idempotency key 的產生邏輯，再交給各團隊 review。使用方團隊只需要 review 與部署，而不需要自己研究 v2。第 21 章會詳談這種跨越整個 codebase 的 **large-scale change**（大規模變更）如何拆分、測試與核准。
+對 Harbor 內部的呼叫，payments 團隊直接送 PR：用一個 **codemod**（自動改寫程式碼的工具，通常基於 AST，也就是程式碼的語法樹）把 v1 client 的呼叫替換成 v2，加上 idempotency key 的產生邏輯，再交給各團隊 review。使用方團隊只需要 review 與部署，而不需要自己研究 v2。第 21 章會詳談這種跨越整個 codebase 的 **large-scale change**（大規模變更）如何拆分、測試與核准。
 
 ### Adapter 與 shim
 
@@ -207,21 +207,21 @@ Adapter 的風險是它可能悄悄改變語意。v1 沒有 idempotency key，ad
 公告的目標是讓每個使用者讀完就知道：發生什麼事、為什麼、對我有什麼影響、我要做什麼、什麼時候之前、遇到問題找誰。Harbor 的公告節錄如下：
 
 ```text
-主旨：[行動需要] /v1/pay 將於 2027-03-15 關閉，請遷移至 /v2/payments
+主旨：[行動需要] /v1/pay 將於 2025-03-15 關閉，請遷移至 /v2/payments
 
 為什麼：v1 會在網路重試時重複扣款，且需要處理原始卡號；
-       金流商將於 2027-03-31 關閉 v1 依賴的舊端點。
+       金流商將於 2025-03-31 關閉 v1 依賴的舊端點。
 誰受影響：所有呼叫 POST /v1/pay 的服務、app 與合作夥伴。
            你可以在 v1 使用儀表板查詢自己的 client id 是否仍在使用。
 要做什麼：依遷移指南改用 /v2/payments；Harbor 內部 repo 的呼叫
-           由 checkout 團隊直接送 PR，請協助 review 與部署。
+           由 payments 團隊直接送 PR，請協助 review 與部署。
 時程：
-  2026-10-01  公告；v1 停止接受新的 API key
-  2026-11-01  回應加上 Sunset header；每週二 brownout 15 分鐘開始
-  2027-01-15  iOS app 最低支援版本提高到 4.3（4.2 以下強制更新）
-  2027-02-15  brownout 延長為每天 1 小時
-  2027-03-15  v1 回傳 410 Gone
-例外：需在 2027-01-31 前申請，最長延至 2027-03-25，需 Kevin 核准。
+  2024-10-01  公告；v1 停止接受新的 API key
+  2024-11-01  回應加上 Sunset header；每週二 brownout 15 分鐘開始
+  2025-01-15  iOS app 最低支援版本提高到 4.3（4.2 以下強制更新）
+  2025-02-15  brownout 延長為每天 1 小時
+  2025-03-15  v1 回傳 410 Gone
+例外：需在 2025-01-31 前申請，最長延至 2025-03-25，需 Kevin 核准。
 支援：#pay-v2-migration 頻道；每週四 office hours。
 ```
 
@@ -241,7 +241,7 @@ Adapter 的風險是它可能悄悄改變語意。v1 沒有 idempotency key，ad
 
 ### 警告疲勞
 
-Harbor 的 v1 client 函式庫從一年前就會在每次呼叫時印出一行 deprecation warning。結果沒有任何人因此遷移。原因很簡單：那行警告出現在每個服務的日誌裡，夾在每天數百萬行的輸出之間，沒有人會讀；即使讀到了，它也沒說要做什麼、什麼時候之前。
+Harbor 的 v1 client 函式庫從年初就會在每次呼叫時印出一行 deprecation warning。結果沒有任何人因此遷移。原因很簡單：那行警告出現在每個服務的日誌裡，夾在每天數百萬行的輸出之間，沒有人會讀；即使讀到了，它也沒說要做什麼、什麼時候之前。
 
 這和第 34 章的告警疲勞是同一個問題。SWE 書指出，deprecation warning 要有用，必須同時滿足兩個條件：**可行動**（actionable，讀到的人能依警告做出實際的動作，最好附上遷移指南或自動修復）與**相關**（relevant，在使用者正要做那個動作的時候出現，例如正要新增一個呼叫時）。一個不可行動或不相關的警告，只會訓練大家忽略所有警告。
 
@@ -319,7 +319,7 @@ SWE 書提醒，淘汰計畫需要明確的 owner 與可衡量的漸進里程碑
 # 模擬 Harbor 淘汰 /v1/pay：誰還在用、靜默期夠不夠長、brownout 抓到誰
 from datetime import date, timedelta
 
-TODAY = date(2026, 9, 30)
+TODAY = date(2024, 9, 30)
 
 # 每個 consumer 呼叫 /v1/pay 的日期（真實系統來自 access log，依 API key／client id 彙整）
 def every(start, end, step_days):
@@ -330,12 +330,12 @@ def every(start, end, step_days):
     return out
 
 USAGE = {
-    "web-checkout":       every(date(2026, 1, 1), date(2026, 5, 31), 1),   # 已遷移
-    "ios-app<=4.2":       every(date(2026, 1, 1), date(2026, 9, 29), 1),   # 舊 app，長尾
-    "refund-batch":       every(date(2026, 1, 2), date(2026, 8, 30), 7),   # 每週一次，已遷移
-    "partner-pos-abc":    every(date(2026, 1, 1), date(2026, 9, 28), 3),
-    "quarterly-settle":   [date(2026, 1, 5), date(2026, 4, 6), date(2026, 7, 6)],  # 每季一次
-    "ai-support-refund":  every(date(2026, 6, 15), date(2026, 9, 12), 2),  # AI 客服的退款 tool，6 月新寫，被發現後 9/12 起改用 v2
+    "web-checkout":       every(date(2024, 1, 1), date(2024, 5, 31), 1),   # 已遷移
+    "ios-app<=4.2":       every(date(2024, 1, 1), date(2024, 9, 29), 1),   # 舊 app，長尾
+    "refund-batch":       every(date(2024, 1, 4), date(2024, 8, 30), 7),   # 每週一次，已遷移
+    "partner-pos-abc":    every(date(2024, 1, 1), date(2024, 9, 28), 3),
+    "quarterly-settle":   [date(2024, 1, 1), date(2024, 4, 1), date(2024, 7, 1)],  # 每季一次
+    "ai-support-refund":  every(date(2024, 6, 15), date(2024, 9, 12), 2),  # AI 客服的退款申請 tool，6 月新寫，被發現後 9/12 起改用 v2
 }
 
 
@@ -368,8 +368,8 @@ def brownout(start, days):
                 hit.add(c)
     return sorted(hit)
 
-print("\nBrownout（2026-09-14 起 3 天）撞到：", brownout(date(2026, 9, 14), 3))
-print("Brownout（2026-07-06 起 3 天）撞到：", brownout(date(2026, 7, 6), 3))
+print("\nBrownout（2024-09-14 起 3 天）撞到：", brownout(date(2024, 9, 14), 3))
+print("Brownout（2024-07-01 起 3 天）撞到：", brownout(date(2024, 7, 1), 3))
 
 
 # 每週剩餘呼叫量與線性外推的「歸零週」
@@ -383,12 +383,12 @@ print(f"\n最近 3 週平均每週減少 {recent:.0f} 次；照此速度還要�
 
 ```text
 各 consumer 最後一次呼叫：
-  web-checkout       2026-05-31  （122 天前）
-  quarterly-settle   2026-07-06  （86 天前）
-  refund-batch       2026-08-28  （33 天前）
-  ai-support-refund  2026-09-11  （19 天前）
-  partner-pos-abc    2026-09-28  （2 天前）
-  ios-app<=4.2       2026-09-29  （1 天前）
+  web-checkout       2024-05-31  （122 天前）
+  quarterly-settle   2024-07-01  （91 天前）
+  refund-batch       2024-08-29  （32 天前）
+  ai-support-refund  2024-09-11  （19 天前）
+  partner-pos-abc    2024-09-27  （3 天前）
+  ios-app<=4.2       2024-09-29  （1 天前）
 
 靜默期 30 天 → 仍在使用：['ai-support-refund', 'ios-app<=4.2', 'partner-pos-abc']
   看起來「已遷移」：['quarterly-settle', 'refund-batch', 'web-checkout']
@@ -396,8 +396,8 @@ print(f"\n最近 3 週平均每週減少 {recent:.0f} 次；照此速度還要�
 靜默期 100 天 → 仍在使用：['ai-support-refund', 'ios-app<=4.2', 'partner-pos-abc', 'quarterly-settle', 'refund-batch']
   看起來「已遷移」：['web-checkout']
 
-Brownout（2026-09-14 起 3 天）撞到： ['ios-app<=4.2', 'partner-pos-abc']
-Brownout（2026-07-06 起 3 天）撞到： ['ai-support-refund', 'ios-app<=4.2', 'partner-pos-abc', 'quarterly-settle']
+Brownout（2024-09-14 起 3 天）撞到： ['ios-app<=4.2', 'partner-pos-abc']
+Brownout（2024-07-01 起 3 天）撞到： ['ai-support-refund', 'ios-app<=4.2', 'partner-pos-abc', 'quarterly-settle']
 
 最近 3 週平均每週減少 67 次；照此速度還要約 44 週才歸零
 ```
@@ -407,7 +407,7 @@ Brownout（2026-07-06 起 3 天）撞到： ['ai-support-refund', 'ios-app<=4.2'
 1. `USAGE` 是遙測彙整後的結果：每個 consumer 呼叫 v1 的日期。真實系統中這來自 API gateway 的 access log，依 API key 或 client id 分組。注意 key 是呼叫者（`ios-app<=4.2`），不是終端買家，符合 18.6 節的隱私原則。
 2. 30 天靜默期把 `quarterly-settle` 判定為「已遷移」，這是一個**危險的錯誤**：它其實沒有遷移，只是每季才跑一次，下一次在 10 月初。如果 Harbor 依這個結果在 9 月底關閉 v1，季度對帳會在 10 月第一個週一失敗，而且可能沒有人立刻發現。
 3. 100 天靜默期抓到了 `quarterly-settle`，但也把 `refund-batch` 留在名單上，雖然它在 8 月底已經遷移完成。這是**保守的錯誤**：只會讓關閉延後，不會造成事故。兩種錯誤的代價不對稱，所以靜默期寧可長，再用 owner 的書面確認把確定已遷移的項目提早移出名單。
-4. 9 月中旬的 brownout 只撞到兩個 consumer。`quarterly-settle` 那幾天沒有呼叫，所以完全沒被影響；`ai-support-refund` 已經在 9/12 遷移。換成 7/6（季度工作執行的日子）的 brownout，就會撞到四個。這說明 brownout 的時段要刻意對準已知的週期性工作，或持續夠長的時間。
+4. 9 月中旬的 brownout 只撞到兩個 consumer。`quarterly-settle` 那幾天沒有呼叫，所以完全沒被影響；`ai-support-refund` 已經在 9/12 遷移。換成 7/1（季度工作執行的日子）的 brownout，就會撞到四個。這說明 brownout 的時段要刻意對準已知的週期性工作，或持續夠長的時間。
 5. 最後的燃盡預測顯示典型的長尾：第一週減少了一千多次，之後每週減少的量越來越小，最近三週平均只剩 67 次。照這個速度，要 44 週才會歸零，遠超過金流商的截止日；而且每週減少的量本身還在變小，線性外推其實偏樂觀。這正是 advisory 階段停滯的樣子，也是 Harbor 必須進入 compulsory 階段（強制更新 app、brownout、直接聯繫合作夥伴）的數據依據。
 
 ### 程式二：用 ratchet 擋下新的使用者
@@ -416,7 +416,7 @@ Brownout（2026-07-06 起 3 天）撞到： ['ai-support-refund', 'ios-app<=4.2'
 # Ratchet：只允許「已知的舊使用者」繼續呼叫 /v1/pay，新的使用一律擋下
 import re
 
-ALLOWLIST = {  # 2026-09 啟動淘汰計畫時登記的既有使用者，只能減少不能增加
+ALLOWLIST = {  # 2024-09 啟動淘汰計畫時登記的既有使用者，只能減少不能增加
     "ios/legacy/PaymentClient.swift",
     "jobs/quarterly_settle.py",
     "jobs/refund_batch.py",
@@ -456,7 +456,7 @@ INFO  support_agent/tools/refund.py: 已不再使用 /v1/pay，請從 ALLOWLIST 
 
 逐段解讀：
 
-1. `ALLOWLIST` 是盤點當下的既有使用者。它被放在 repo 裡、受 code review 保護，任何人想把新檔案加進名單，都要經過 checkout 團隊核准。
+1. `ALLOWLIST` 是盤點當下的既有使用者。它被放在 repo 裡、受 code review 保護，任何人想把新檔案加進名單，都要經過 payments 團隊核准。
 2. `seller/promo/charge.py` 是一個新的 v1 呼叫，CI 直接失敗，錯誤訊息告訴作者該改用什麼、去哪裡看指南。這個訊息對人和 AI coding agent 同樣有用：agent 讀到 CI 錯誤後，可以依指南自行修正。
 3. 兩個已遷移的檔案觸發 `INFO`，提醒把它們從名單移除。這是 ratchet 的關鍵：名單只會縮小。若不移除，未來有人在這兩個檔案裡重新加入 v1 呼叫，CI 就不會發現。
 4. 這個 ratchet 有一個明顯的盲點：它只看得到 Harbor 自己的 repo。`partner-pos-abc` 是合作夥伴的系統，不在任何 Harbor repo 裡，所以不在名單上，也不會被這個檢查影響。外部使用者只能靠程式一的遙測與 18.8 節的溝通處理。
@@ -468,7 +468,7 @@ INFO  support_agent/tools/refund.py: 已不再使用 /v1/pay，請從 ALLOWLIST 
 
 | 做法 | 什麼時候會出問題 | 具體情境 | 對策 |
 |---|---|---|---|
-| 只做 advisory deprecation | 長尾永遠不會歸零 | Harbor 的 v1 標記一年，流量仍有三成，甚至增加新使用者 | 設定進入 compulsory 階段的條件與日期；先封住入口 |
+| 只做 advisory deprecation | 長尾永遠不會歸零 | Harbor 的 v1 標記八個月，流量仍有三成，甚至增加新使用者 | 設定進入 compulsory 階段的條件與日期；先封住入口 |
 | 靜默期太短 | 低頻率使用者被誤判為已遷移 | 30 天靜默期漏掉每季一次的對帳工作 | 靜默期涵蓋最長已知週期；低頻使用者取得 owner 書面確認 |
 | 替代方案還沒準備好就強制遷移 | 使用者被迫搬家後發現缺功能，搬回或卡住 | v2 不支援某合作夥伴依賴的小數金額處理 | 先盤點實際使用的功能；以早期遷移者驗證 v2；遷移指南列出行為差異 |
 | Adapter 改變語意 | 表面遷移成功，行為已經錯了 | Adapter 為每次請求產生新的 idempotency key，重送仍重複扣款 | 對 adapter 寫語意測試；比較新舊輸出；adapter 本身也有淘汰日期 |
@@ -482,9 +482,9 @@ INFO  support_agent/tools/refund.py: 已不再使用 /v1/pay，請從 ALLOWLIST 
 
 ### 遷移的機械成本大幅下降
 
-淘汰中最耗人力的部分，往往是重複性高的修改：在許多服務裡把 v1 呼叫換成 v2、補上 idempotency key、更新測試與文件。這正是 AI coding agent 擅長的工作。Harbor 的 checkout 團隊讓 agent 依遷移指南為每個使用 v1 的服務產生 PR，原本預估需要兩個人做一個月的修改，幾天內就有了草稿。
+淘汰中最耗人力的部分，往往是重複性高的修改：在許多服務裡把 v1 呼叫換成 v2、補上 idempotency key、更新測試與文件。這正是 AI coding agent 擅長的工作。Harbor 的 payments 團隊讓 agent 依遷移指南為每個使用 v1 的服務產生 PR，原本預估需要兩個人做一個月的修改，幾天內就有了草稿。
 
-但「產生 PR」只是遷移的一小部分。真正的成本在驗證：這個 PR 是否保留了原本的語意？idempotency key 的推導是否正確？測試是否真的涵蓋了改變的行為？所以 Harbor 的流程是讓 agent 產生小而獨立的 PR（每個服務一個），每個 PR 都必須通過 CI、contract test，並由該服務的 owner review；涉及金流的 PR 另外要求 checkout 團隊的人核准。第 21 章會完整說明 AI agent 執行大規模變更的流程。
+但「產生 PR」只是遷移的一小部分。真正的成本在驗證：這個 PR 是否保留了原本的語意？idempotency key 的推導是否正確？測試是否真的涵蓋了改變的行為？所以 Harbor 的流程是讓 agent 產生小而獨立的 PR（每個服務一個），每個 PR 都必須通過 CI、contract test，並由該服務的 owner review；涉及金流的 PR 另外要求 payments 團隊的人核准。第 21 章會完整說明 AI agent 執行大規模變更的流程。
 
 ### AI 也會讓舊世界復活
 
@@ -576,7 +576,7 @@ Agent 可以搜尋所有 repo、分析遙測、整理每個 consumer 的狀態�
 > [!question]- Q5. 為什麼「先封住入口」比「先處理既有使用者」更優先？
 > 因為淘汰是一個流量問題：剩餘使用者的數量等於既有使用者減去已遷移者，再加上新加入者。如果不擋住新加入者，即使遷移團隊每週處理三個使用者，只要同時有兩個新使用者加入，進度就幾乎停滯；更糟的是，新加入者通常是不知道淘汰計畫的人，例如新進工程師或 AI coding agent，他們會從 repo 裡的範例學會舊用法。
 >
-> 封住入口的成本通常很低：一個 CI 的 ratchet 檢查、一條 lint 規則、停止發放新的 API key。它一旦生效，使用者數量就只會減少，遷移團隊的每一份努力都會反映在進度上。Harbor 的 AI 客服退款工具正是因為沒有這道防線，才在 v1 被標記淘汰一年後成為新的使用者。
+> 封住入口的成本通常很低：一個 CI 的 ratchet 檢查、一條 lint 規則、停止發放新的 API key。它一旦生效，使用者數量就只會減少，遷移團隊的每一份努力都會反映在進度上。Harbor 的 AI 客服退款工具正是因為沒有這道防線，才在 v1 被標記淘汰半年後成為新的使用者。
 
 > [!question]- Q6. Adapter（shim）讓舊的呼叫方式繼續運作，這不是正好解決了遷移問題嗎？它有什麼風險？
 > Adapter 確實能爭取時間：使用者不必立刻改程式，提供方可以先刪除舊系統的核心實作，只保留一層轉接。對於發布週期很長的合作夥伴，這常常是必要的過渡手段。但它有三個風險。第一是語意可能悄悄改變：Harbor 的 v1 沒有 idempotency key，adapter 若為每次請求產生新 key，重送仍然會重複扣款，等於把舊問題帶進新系統。
@@ -586,7 +586,7 @@ Agent 可以搜尋所有 repo、分析遙測、整理每個 consumer 的狀態�
 > [!question]- Q7. Harbor 讓 AI coding agent 為十幾個仍在使用 v1 的服務與 repo 產生遷移 PR。你會設計哪些 guardrails？
 > 首先是範圍：每個服務一個小 PR，只做遷移這一件事，不順便重構，這樣 review 容易、出問題也能獨立回復。其次是驗證：每個 PR 必須通過 CI、contract test，以及一組針對遷移語意的代表性測試（重送時只扣一次款、金額邊界、錯誤處理），測試由人設計，而不是讓 agent 自己寫測試證明自己正確。
 >
-> 第三是權限與核准：每個 PR 由該服務的 owner review，涉及金流的路徑額外要求 checkout 團隊核准；agent 不能修改 ratchet 名單、不能加忽略規則讓 CI 通過，這些檔案用 CODEOWNERS 保護。第四是上線節奏：PR 合併後依一般的 canary 流程漸進部署（第 29 章），並監控每個服務的付款成功率。最後，agent 回報「已完成所有遷移」時，仍要以 runtime 遙測確認 v1 流量確實下降，而不是只相信 PR 的數量。
+> 第三是權限與核准：每個 PR 由該服務的 owner review，涉及金流的路徑額外要求 payments 團隊核准；agent 不能修改 ratchet 名單、不能加忽略規則讓 CI 通過，這些檔案用 CODEOWNERS 保護。第四是上線節奏：PR 合併後依一般的 canary 流程漸進部署（第 29 章），並監控每個服務的付款成功率。最後，agent 回報「已完成所有遷移」時，仍要以 runtime 遙測確認 v1 流量確實下降，而不是只相信 PR 的數量。
 
 > [!question]- Q8. 面試題：你負責淘汰一個被數十個內部團隊使用的舊函式庫。請說明你的完整計畫。
 > 第一步是評估與盤點：確認替代方案涵蓋使用者實際用到的功能，用 code search 找出所有呼叫點，在函式庫中加入使用遙測，並寫一份 ADR 說明為什麼要淘汰、成本由誰承擔。第二步是宣布並封住入口：發出包含原因、時程、遷移指南與支援管道的公告，同時在 CI 加上 ratchet，讓新的使用無法加入。

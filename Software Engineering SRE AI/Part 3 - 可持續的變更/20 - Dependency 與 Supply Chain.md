@@ -25,11 +25,11 @@ part: 3
 
 一個週一早上，資安社群公布了一個 HTTP 函式庫的嚴重漏洞，這裡叫它 `httpkit`。只要攻擊者能控制某個 HTTP header，就可能在伺服器上執行任意程式。修補版本已經發布：2.x 系列修在 2.7.2，3.x 系列修在 3.1.0。工程經理 Kevin 在群組裡只問了一句：「我們有沒有用到？」
 
-沒有人能立刻回答。結帳服務的 `requirements.txt` 裡沒有 `httpkit`，搜尋服務的也沒有。初階工程師阿凱翻了半天才發現，`httpkit` 是被兩個套件間接帶進來的：外部金流商提供的 `payments-sdk`，以及推播服務用的 `notify-client`。結帳服務 14 個月前產生的 lock file 把 `httpkit` 釘在 2.4.1，從那之後沒有人更新過，因為「它一直都能跑」。最後花了一天半，才把五個服務、三個行動 app 後端與兩個批次工作全部確認完。
+沒有人能立刻回答。結帳服務的 `requirements.txt` 裡沒有 `httpkit`，搜尋服務的也沒有。seller 團隊的初階工程師阿凱翻了半天才發現，`httpkit` 是被兩個套件間接帶進來的：外部金流商提供的 `payments-sdk`，以及 seller 團隊的推播服務用的 `notify-client`。結帳服務 14 個月前產生的 lock file 把 `httpkit` 釘在 2.4.1，從那之後沒有人更新過，因為「它一直都能跑」。最後花了一天半，才把五個服務、三個行動 app 後端與兩個批次工作全部確認完。
 
 更糟的是升級本身。阿凱想一併把 `notify-client` 升到 1.5，因為新版才支援 Lisa 要的 LINE 推播；但 `notify-client` 1.5 要求 `httpkit` 3.x，而結帳用的 `payments-sdk` 2.x 只能接受 `httpkit` 2.x。同一個程式裡不能同時裝兩個版本的 `httpkit`，套件管理工具直接回報「無法解析」。團隊只能先把 `httpkit` 修到 2.7.2，LINE 推播延到金流商出 3.x 版 SDK 之後。
 
-同一週還發生了另一件事。阿凱請 AI coding agent 幫忙找一個「解析台灣地址」的 Python 套件，agent 建議了一個看起來很合理的名稱，並在 PR 裡直接加上 `pip install`。SRE 志明在 review 時順手查了一下：這個套件在公開 registry 上根本不存在。如果有人事先註冊了這個名稱並放進惡意程式，CI 會毫不猶豫地把它下載、安裝、執行。
+同一週還發生了另一件事。阿凱請 AI coding agent 幫忙找一個「解析台灣地址」的 Python 套件，agent 建議了一個看起來很合理的名稱，並在 PR 裡直接加上 `pip install`。platform 團隊的志明在 review 時順手查了一下：這個套件在公開 registry 上根本不存在。如果有人事先註冊了這個名稱並放進惡意程式，CI 會毫不猶豫地把它下載、安裝、執行。
 
 這一章要處理的，就是這三個問題：我們依賴了什麼、依賴之間的版本要怎麼協調，以及如何確保進到 build 裡的程式碼真的是我們以為的那一份。
 
@@ -217,7 +217,7 @@ Harbor 最後採用混合模型：內部的 `harbor-common` 朝 live at head 靠
 
 ### 什麼是軟體供應鏈
 
-**Software supply chain**（軟體供應鏈）是從原始碼到 production artifact 之間的所有環節：你的程式碼、你的依賴、依賴的作者與他們的帳號、套件 registry、build 系統、container base image、簽章與部署工具。任何一個環節被攻破，惡意程式就能進入你的產品，而且看起來像是「正常的依賴」。
+**Software supply chain**（軟體供應鏈）是從原始碼到 production 建置產物（artifact）之間的所有環節：你的程式碼、你的依賴、依賴的作者與他們的帳號、套件 registry、build 系統、container base image、簽章與部署工具。任何一個環節被攻破，惡意程式就能進入你的產品，而且看起來像是「正常的依賴」。
 
 供應鏈攻擊特別危險的原因是它繞過了你所有的程式碼審查：你 review 了自己的每一行程式，但你不會 review 幾百個間接依賴的每一次更新。而很多套件管理工具在安裝時就會執行套件自帶的腳本（例如 npm 的 `postinstall`、Python 套件的建置腳本），所以惡意程式不需要等到 production，在開發者筆電或 CI 上安裝時就已經執行了，那裡通常有 cloud credential 與 deploy key。
 
@@ -231,7 +231,7 @@ Harbor 最後採用混合模型：內部的 `harbor-common` 朝 live at head 靠
 
 **已知漏洞**：不是攻擊者埋的，而是普通的 bug。2021 年底的 Log4Shell（CVE-2021-44228）是 Java 日誌函式庫 Log4j 2 的一個遠端執行漏洞，因為 Log4j 被大量專案間接依賴，許多組織和 Harbor 一樣，花了好幾天才搞清楚自己哪裡用到了它。
 
-**Build 系統被入侵**：原始碼是乾淨的，但 build 過程被竄改，產出的 artifact 和原始碼不一致。這類攻擊要靠第 27 章的 hermetic build 與 provenance 來防禦。
+**Build 系統被入侵**：原始碼是乾淨的，但 build 過程被竄改，產出的 artifact 和原始碼不一致。這類攻擊要靠第 27 章的封閉式建置（hermetic build）與 provenance 來防禦。
 
 ```text
   開發者 ──▶ 原始碼 repo ──▶ build 系統 ──▶ artifact registry ──▶ production
@@ -273,7 +273,7 @@ SBOM 只是清單，不是防禦本身。一份從來沒有人查詢的 SBOM，�
 | Build L2 | 在託管的 build 平台上建置，provenance 由平台產生並簽章，使用者驗證簽章 | 簽章防止 build 完成後竄改 provenance 或 artifact |
 | Build L3 | Build 平台經過強化：不同 build（即使是同一個專案）互相隔離，使用者定義的 build 步驟拿不到簽 provenance 的密鑰 | 防止 build 過程被內部人員、外洩的 credential 或同平台上的其他工作竄改 |
 
-SLSA 把「我們的 build 安不安全」從一個模糊的問題，變成可以逐級檢查的清單。Provenance 的產生與驗證、hermetic build 與 reproducible build 的細節在第 27 章。
+SLSA 把「我們的 build 安不安全」從一個模糊的問題，變成可以逐級檢查的清單。Provenance 的產生與驗證、封閉式建置與 reproducible build 的細節在第 27 章。
 
 ### 簽章與 Sigstore
 
@@ -622,7 +622,7 @@ Harbor 據此調整了政策：agent 不能直接修改 manifest 或 lock file �
 >
 > 防禦的核心是讓內部名稱不可能從公開來源解析。具體做法包括：所有內部套件使用固定前綴或 scope（例如 npm 的 `@harbor/`），並設定該前綴只能從內部 registry 解析；所有 build 只透過內部鏡像安裝，鏡像本身也遵守這個規則；必要時在公開 registry 先註冊這些名稱佔位；lock file 記錄雜湊，任何來源不同的內容都會被拒絕。20.12 的程式把「內部前綴必須來自內部」放在 gate 的第一條，就是因為這一條規則可以完全消除這類攻擊，而不必依賴版本比較。
 
-> [!question]- Q6. 你是 Harbor 的 SRE 志明。一個嚴重漏洞剛被公布，影響一個常見的間接依賴。請描述你接下來 24 小時的行動。
+> [!question]- Q6. 你是 Harbor platform 團隊的志明。一個嚴重漏洞剛被公布，影響一個常見的間接依賴。請描述你接下來 24 小時的行動。
 > 第一步是確認影響範圍。如果 Harbor 有集中存放的 SBOM，我會直接查詢「哪些 production artifact 包含這個套件的受影響版本」，得到服務清單、版本與 owner；如果沒有，就只能逐一在各 repo 執行依賴樹指令並檢查 lock file，這也是事後要補的能力。同時我會閱讀漏洞公告，確認攻擊條件，例如是否需要特定設定、是否需要外部可控的輸入，這決定了哪些服務真的暴露在風險中。
 >
 > 第二步是止血與修補並行。對直接暴露在網際網路、且確定可達的服務，如果修補需要時間，先考慮暫時的緩解措施，例如在 WAF 或設定中關閉受影響的功能。修補時優先升級到修正版本；如果被 diamond dependency 卡住，就評估是否有修正版的同 major 版本，或暫時使用 override 強制指定。修補 PR 走一般的 CI 與 canary，但優先排程。第三步是溝通：在 incident 頻道定期更新哪些服務已修補、哪些還在處理。事後的 postmortem 要回答：我們花了多久知道自己受影響？為什麼這個依賴落後那麼多版本？要補上哪些 SBOM、自動更新或掃描的能力。

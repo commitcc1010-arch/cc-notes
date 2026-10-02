@@ -23,9 +23,9 @@ part: 3
 
 ## 21.1 故事：一行少了 timeout 的程式碼
 
-Harbor 成長到 40 位工程師、五個團隊（checkout、payments、search、seller、platform）的那年秋天，發生了一次讓所有人印象深刻的事故。inventory 服務會向供應商查詢即時庫存，那段程式碼是三年前寫的：`requests.get(url)`，沒有設定 timeout。某天晚上供應商的 API 沒有回錯誤，而是「接受連線、然後什麼都不回」。Python 的 requests 函式庫在沒有 timeout 時會一直等下去，inventory 的 worker thread 一個接一個卡住，checkout 呼叫 inventory 也跟著卡住，四十分鐘內整個結帳流程幾乎停擺。
+Harbor 成長到 40 多人（約 30 位工程師）、五個團隊（checkout、payments、search、seller、platform）的那年秋天，發生了一次讓所有人印象深刻的事故。inventory 服務會向供應商查詢即時庫存，那段程式碼是創業初期寫的：`requests.get(url)`，沒有設定 timeout。某天晚上供應商的 API 沒有回錯誤，而是「接受連線、然後什麼都不回」。Python 的 requests 函式庫在沒有 timeout 時會一直等下去，inventory 的 worker thread 一個接一個卡住，checkout 呼叫 inventory 也跟著卡住。那是一個平日的週三晚上，結帳沒有完全中斷，而是越來越慢：將近兩個小時裡，大約七成的結帳請求逾時失敗，直到供應商重啟服務才恢復。
 
-SRE 志明在 postmortem 寫下一條 action item：「所有對外的 HTTP 呼叫都必須設定 timeout。」工程經理 Kevin 把它指派給初階工程師阿凱。阿凱很認真，打開終端機在主要的 monolith repo 跑 `grep -rn "requests.get("`，得到四百多筆結果。一筆一筆看下去，發現有些是註解、有些是測試、有些是早就沒人用的腳本；更糟的是，有些服務寫的是 `import requests as rq`，有些是 `from requests import get`，這個 grep 完全沒找到；而 monolith 之外那十幾個小 repo（第 19 章 19.7 節），阿凱根本沒有 clone 下來。
+platform 團隊的志明在 postmortem 寫下一條 action item：「所有對外的 HTTP 呼叫都必須設定 timeout。」工程經理 Kevin 把它指派給 seller 團隊的初階工程師阿凱。阿凱很認真，打開終端機在主要的 monolith repo 跑 `grep -rn "requests.get("`，得到四百多筆結果。一筆一筆看下去，發現有些是註解、有些是測試、有些是早就沒人用的腳本；更糟的是，有些服務寫的是 `import requests as rq`，有些是 `from requests import get`，這個 grep 完全沒找到；而 monolith 之外那 12 個小 repo（第 19 章 19.7 節），阿凱根本沒有 clone 下來。
 
 阿凱花了兩週，開了一個改動 monolith 裡 120 個檔案的 PR。這個 PR 牽涉全部五個團隊，沒有人敢 approve；三個團隊說「下個 sprint 再看」，一個團隊發現其中一處改錯：那是下載大型商品圖檔的呼叫，10 秒的 timeout 讓它每次都失敗。一個月後 PR 還沒合併，而同一段時間裡，codebase 又新增了七個沒有 timeout 的呼叫。
 
@@ -66,7 +66,7 @@ trigram ：rq.  q.g  .ge  get  et(  t(u  (ur  url  rl)
 
 ### 實務上怎麼做
 
-一個 40 人的團隊不需要自己蓋搜尋引擎，但需要做出明確的選擇：
+一個 40 多人的組織不需要自己蓋搜尋引擎，但需要做出明確的選擇：
 
 | 需求 | 常見做法 | 限制 |
 |---|---|---|
@@ -171,7 +171,7 @@ Harbor 的做法是：寫一條自訂規則「`requests` 的 HTTP 呼叫必須�
 
 Google 的做法相反：**由最懂這個變更的人（通常是推出新 API 的團隊）集中負責遷移所有使用者**。他們寫一次自動化工具，就能套用到幾千個呼叫點；他們最清楚邊界情況，也能一致地處理。各團隊的角色從「執行遷移」變成「review 屬於自己的那一小塊」。原書還給了兩個理由：沒有人喜歡沒有附帶資源的強制要求（unfunded mandate），新系統的好處分散在全組織，對單一團隊來說往往不值得主動升級；而且靠各團隊自發完成的遷移很少真正做完，因為工程師寫新程式時會拿既有程式碼當範例，舊寫法會一直被複製。這也呼應第 6 章的 churn rule：與 codebase 規模成線性成長的人工工作，就是應該被集中化與自動化的訊號。原書的說法是，產生變更所需的人力應該隨 codebase 規模次線性成長。
 
-這個做法有一個前提：第 6 章介紹過的 **Beyoncé Rule**。原書的說法是「If you liked it, you should have put a CI test on it」：如果你在乎某個行為，就該用 CI 測試保護它。LSC 的作者不可能理解每個服務的所有細節，只能依賴每個服務自己的測試來發現遷移造成的破壞。如果某個團隊的重要行為沒有測試、因此被 LSC 改壞了，責任不在 LSC 的作者。這條規則讓集中遷移變得可行，也給了每個團隊寫測試的強烈理由（第 22 章會從測試策略的角度再談它）。
+這個做法有一個前提：第 4 章介紹過的 Beyoncé Rule，也就是「如果你在乎某個行為，就該用 CI 測試保護它」。LSC 的作者不可能理解每個服務的所有細節，只能依賴每個服務自己的測試來發現遷移造成的破壞。如果某個團隊的重要行為沒有測試、因此被 LSC 改壞了，責任不在 LSC 的作者。這條規則讓集中遷移變得可行，也給了每個團隊寫測試的強烈理由（第 22 章會從測試策略的角度再談它）。
 
 ## 21.6 LSC 的流程：從提案到清理
 
@@ -271,8 +271,8 @@ FILES = {
         "    requests.post(SMS_URL, data=msg, **opts)  # 簡訊商\n"
     ),
 }
-OWNERS = {"checkout/": "checkout-team", "inventory/": "seller-team",
-          "search/": "search-team", "notification/": "platform-team"}
+OWNERS = {"checkout/": "checkout-team", "inventory/": "checkout-team",
+          "search/": "search-team", "notification/": "seller-team"}
 HTTP_VERBS = {"get", "post", "put", "delete"}
 
 
@@ -418,10 +418,9 @@ def stock(sku):
    再跑一次 codemod 不產生新 diff：True
 
 == 4. Shard 計畫 ==
-   checkout-team   checkout/pay.py(1)  → 機械性變更，可走 global approver
-   seller-team     inventory/supplier.py(1)  → 機械性變更，可走 global approver
+   checkout-team   checkout/pay.py(1), inventory/supplier.py(1)  → 機械性變更，可走 global approver
    search-team     search/indexer.py:7  → 例外，開 issue 請 owner 決定
-   platform-team   notification/sms.py:4  → 例外，開 issue 請 owner 決定
+   seller-team     notification/sms.py:4  → 例外，開 issue 請 owner 決定
 ```
 
 逐段解讀：

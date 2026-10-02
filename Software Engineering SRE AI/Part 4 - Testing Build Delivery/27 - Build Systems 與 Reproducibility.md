@@ -23,15 +23,15 @@ part: 4
 
 ## 27.1 故事：同一個 tag，兩份不同的 bytes
 
-Harbor 成立第三年，工程師已經四十多人，分成搜尋、交易、賣家平台幾個團隊。交易團隊週一修好了一個 checkout 折扣計算的 bug，CI 建出容器映像 `checkout:1.8.2`，部署到 staging，QA 跑完整套結帳流程，一切正常。上線排在週四。
+Harbor 成立第二年年底，公司已經四十多人，分成 checkout、payments、search、seller、platform 五個團隊。checkout 團隊週一修好了一個 checkout 折扣計算的 bug，CI 建出容器映像 `checkout:1.8.2`，部署到 staging，QA 跑完整套結帳流程，一切正常。上線排在週四。
 
 週三，有人發現 CI pipeline 的某個步驟因為網路抖動失敗過一次，順手按了「重新執行」。pipeline 重新跑了 `pip install -r requirements.txt`，又建了一次映像，推到 registry，標籤一樣是 `checkout:1.8.2`，蓋掉了週一那一份。沒有人注意到，因為 tag 沒變、commit 沒變、pipeline 是綠的。
 
-週四上線後二十分鐘，付款成功率從 99.9% 掉到 96%。值班的志明先懷疑金流商，再懷疑網路，最後才想到「是不是新版本」。但 staging 上的 `1.8.2` 明明測過。直到交易團隊的 tech lead 美華比對兩台機器上的映像 digest（由內容計算出的雜湊值），才發現 staging 跑的和 production 跑的根本不是同一份東西。原因是 `requirements.txt` 只寫了 `httpclient>=2.1`，週二上游發布了 2.3 版，改了連線池的預設行為；週三那次重新建置自動拿到了新版本。
+週四上線後二十分鐘，付款成功率從 99.9% 掉到 96%。值班的 platform 工程師志明先懷疑金流商，再懷疑網路，最後才想到「是不是新版本」。但 staging 上的 `1.8.2` 明明測過。直到 checkout 團隊的 tech lead 美華比對兩台機器上的映像 digest（由內容計算出的雜湊值），才發現 staging 跑的和 production 跑的根本不是同一份東西。原因是 `requirements.txt` 只寫了 `httpclient>=2.1`，週二上游發布了 2.3 版，改了連線池的預設行為；週三那次重新建置自動拿到了新版本。
 
-回滾花了四十分鐘，因為團隊一開始不敢確定 `1.8.1` 這個 tag 有沒有也被重建過。事後檢討時，SRE 志明問了三個問題：production 上現在跑的 bytes 是從哪個 commit 來的？裡面有哪些依賴、各是什麼版本？是哪台機器、用什麼指令做出來的？會議室裡沒有人能用證據回答。
+回滾花了四十分鐘，因為團隊一開始不敢確定 `1.8.1` 這個 tag 有沒有也被重建過。事後檢討時，platform 團隊的志明問了三個問題：production 上現在跑的 bytes 是從哪個 commit 來的？裡面有哪些依賴、各是什麼版本？是哪台機器、用什麼指令做出來的？會議室裡沒有人能用證據回答。
 
-同一場會議上，初階工程師阿凱也提出一個長期的抱怨：CI 每次都要 25 分鐘，因為 build script 不管改了什麼都從頭編譯、從頭安裝依賴。大家為了省時間，常在自己的筆電上 build 好再手動推映像，而每個人的筆電環境都不一樣。
+同一場會議上，seller 團隊的初階工程師阿凱也提出一個長期的抱怨：CI 每次都要 25 分鐘，因為 build script 不管改了什麼都從頭編譯、從頭安裝依賴。大家為了省時間，常在自己的筆電上 build 好再手動推映像，而每個人的筆電環境都不一樣。
 
 這兩件事看起來一個是「慢」、一個是「錯」，其實是同一個問題的兩面：Harbor 的 build 沒有明確知道自己的輸入是什麼。這一章要回答的就是：一個好的 build system 怎麼知道它的輸入、怎麼因此變快、怎麼讓結果可以重現，以及怎麼留下證據，讓任何人都能驗證 production 上的 artifact 是怎麼來的。
 
@@ -39,7 +39,7 @@ Harbor 成立第三年，工程師已經四十多人，分成搜尋、交易、�
 
 ### 從原始碼到 artifact
 
-**Build**（建置）是把原始碼、依賴、工具與設定，轉換成可以執行或部署的東西的過程。轉換出來的東西叫 **artifact**（產出物），例如一個 Java 的 jar 檔、一個 Go 的執行檔、一個 Python wheel，或一個容器映像。Harbor 的 checkout 服務從一堆 `.py` 檔加上 `requirements.txt`，最後變成一個可以在 Kubernetes 上執行的映像，這就是一次 build。
+**Build**（建置）是把原始碼、依賴、工具與設定，轉換成可以執行或部署的東西的過程。轉換出來的東西叫 **建置產物**（artifact），例如一個 Java 的 jar 檔、一個 Go 的執行檔、一個 Python wheel，或一個容器映像。Harbor 的 checkout 服務從一堆 `.py` 檔加上 `requirements.txt`，最後變成一個可以在 Kubernetes 上執行的映像，這就是一次 build。
 
 參與 build 的東西可以分成五類，理解這五類是本章的基礎：
 
@@ -94,7 +94,7 @@ Task-based build 的根本特徵是：**task 是一段任意的指令，build sy
 
 ### 換一個問題問
 
-Google 內部的 Blaze，以及它的開源版本 **Bazel**，代表另一種思路：**artifact-based**（以產出物為中心）的 build。工程師不再寫「要執行哪些指令」，而是宣告「我要哪些 artifact、它們由哪些輸入構成」。怎麼執行、用什麼順序、哪些可以平行、哪些可以跳過，全部交給 build system 決定。同類的工具還有 Buck2、Pants、Please 等。
+Google 內部的 Blaze，以及它的開源版本 **Bazel**，代表另一種思路：**artifact-based**（以建置產物為中心）的 build。工程師不再寫「要執行哪些指令」，而是宣告「我要哪些 artifact、它們由哪些輸入構成」。怎麼執行、用什麼順序、哪些可以平行、哪些可以跳過，全部交給 build system 決定。同類的工具還有 Buck2、Pants、Please 等。
 
 在 Bazel 中，這些宣告寫在每個目錄的 `BUILD` 檔裡，語言是 Python 風格的 **Starlark**。Harbor 若改用 Bazel，checkout 的 BUILD 檔可能長這樣：
 
@@ -178,7 +178,7 @@ Harbor 的部分依賴圖如下：
 
 ### 定義
 
-**Hermetic build**（密封式建置）是指 build 的每一個步驟只能看到它宣告的輸入，看不到機器上其他任何東西。它不能讀使用者家目錄裡的設定、不能用系統上剛好裝了的某個版本的 compiler、不能在 build 途中上網下載東西。第 26 章談過 hermetic test，觀念相同：結果只取決於明確給定的輸入。
+**Hermetic build**（封閉式建置）是指 build 的每一個步驟只能看到它宣告的輸入，看不到機器上其他任何東西。它不能讀使用者家目錄裡的設定、不能用系統上剛好裝了的某個版本的 compiler、不能在 build 途中上網下載東西。第 26 章談過 hermetic test，觀念相同：結果只取決於明確給定的輸入。
 
 Hermeticity 有兩個常被忽略的部分：
 
@@ -221,7 +221,7 @@ CAS:            輸出的 digest ──→  輸出的實際 bytes
 
 ### Local cache、remote cache 與 remote execution
 
-**Local cache** 存在你自己的機器上，讓第二次 build 很快。**Remote cache**（遠端快取）把 action cache 與 CAS 放在團隊共用的服務上：CI 建過的東西，阿凱的筆電可以直接下載，不必自己編譯。對 Harbor 這種四十人、每天上百次 build 的團隊，remote cache 常常是讓 CI 從 25 分鐘降到幾分鐘的最大因素，因為大部分 target 在大部分變更中都沒有變。
+**Local cache** 存在你自己的機器上，讓第二次 build 很快。**Remote cache**（遠端快取）把 action cache 與 CAS 放在團隊共用的服務上：CI 建過的東西，阿凱的筆電可以直接下載，不必自己編譯。對 Harbor 這種四十多人、每天上百次 build 的組織，remote cache 常常是讓 CI 從 25 分鐘降到幾分鐘的最大因素，因為大部分 target 在大部分變更中都沒有變。
 
 再進一步是 **remote execution**（遠端執行）：build system 不只是下載快取結果，連沒命中快取的 action 也送到一群遠端機器上平行執行。開發者的筆電只負責分析依賴圖與發送工作，實際的編譯與測試在幾十或幾百台機器上同時進行。Bazel 使用開放的 Remote Execution API，有多個開源與商業實作；Google 內部的大規模分散式建置正是原書描述的這種模式。Remote execution 天然要求 hermeticity：遠端機器上沒有你筆電的任何狀態，沒宣告的輸入就是不存在。
 
@@ -270,7 +270,7 @@ CAS:            輸出的 digest ──→  輸出的實際 bytes
 
 | 來源 | 例子 | 常見解法 |
 |---|---|---|
-| 時間戳記 | 壓縮檔記錄每個檔案的修改時間；程式碼嵌入「建置於 2026-03-12 14:03」 | 使用 `SOURCE_DATE_EPOCH` 環境變數（通常設為最後一次 commit 的時間）取代目前時間 |
+| 時間戳記 | 壓縮檔記錄每個檔案的修改時間；程式碼嵌入「建置於 2024-12-12 14:03」 | 使用 `SOURCE_DATE_EPOCH` 環境變數（通常設為最後一次 commit 的時間）取代目前時間 |
 | 檔案順序 | 目錄列舉順序依檔案系統而異，打包時順序不同 | 打包前排序檔名 |
 | 使用者與路徑 | 壓縮檔記錄 uid／gid；除錯資訊嵌入 `/home/akai/harbor` 這種絕對路徑 | 正規化擁有者；使用編譯器的路徑重映射選項（例如 Go 的 `-trimpath`） |
 | 浮動依賴 | `>=2.1`、`latest`、`apt-get update` 的結果每天不同 | Lock file 加雜湊；套件來源使用固定的快照或內部 mirror |
@@ -683,7 +683,7 @@ AI coding agent 讓 build system 的重要性變得更高，原因有三個。
 | 比較兩次 build 的 artifact 與 manifest，解釋不可重現的來源（時間戳記、檔案順序、浮動版本） | 新增外部依賴、更換 base image、修改 toolchain 版本，一律需要人類 review，並由 CODEOWNERS 指定的 owner 核准 |
 | 草擬 Dockerfile 最佳化（指令順序、multi-stage、`.dockerignore`），附上 build 時間與映像大小的前後對照 | Agent 不能關閉 sandbox、放寬 hermeticity 設定或修改快取寫入權限來「讓 build 通過」；這類修改視同安全變更 |
 | 依 lock file 與漏洞資料草擬依賴升級 PR，說明影響範圍 | Agent 不持有簽章金鑰，也不能自行推送映像；artifact 只能由受信任的 CI builder 產生並簽章 |
-| 分析 remote cache 命中率，指出哪些 target 因非確定輸出而一再重建 | Provenance 與部署准入規則由人類維護；規則變更需要安全與 SRE 共同核准 |
+| 分析 remote cache 命中率，指出哪些 target 因非確定輸出而一再重建 | Provenance 與部署准入規則由人類維護；規則變更需要安全與 platform 團隊共同核准 |
 
 > [!ai] AI 提醒
 > 當 agent 回報「build 失敗是因為 sandbox 限制太嚴，我已把這個 target 標記為不使用 sandbox」時，要把它當成一個紅旗，而不是一個修復。Sandbox 擋下的通常正是那條沒宣告的依賴邊；關掉它等於讓快取在未來某天給出錯誤結果。正確的回應是請 agent 找出被擋下的檔案或網路存取，並把它變成明確的宣告。
@@ -735,7 +735,7 @@ AI coding agent 讓 build system 的重要性變得更高，原因有三個。
 >
 > Artifact-based build 要求每個 target 宣告完整的輸入與輸出，並用 sandbox 強制執行：步驟只看得到宣告的檔案。因此依賴圖是可信的，圖上沒有路徑相連的兩個 action 就一定互不影響，可以放心同時執行，甚至送到不同的遠端機器上。換句話說，平行化的安全性來自「宣告被強制檢查」，而不是來自工程師的小心。
 
-> [!question]- Q3. 你是 Harbor 的 SRE。一位工程師說：「CI 上 checkout 測試失敗，但我清掉 remote cache 重跑就過了，應該是快取的問題，我們每週清一次快取吧。」你怎麼回應？
+> [!question]- Q3. 你是 Harbor platform 團隊的成員。一位工程師說：「CI 上 checkout 測試失敗，但我清掉 remote cache 重跑就過了，應該是快取的問題，我們每週清一次快取吧。」你怎麼回應？
 > 我會說「清快取讓這次通過」是一個症狀，不是原因，每週清快取只會讓問題更難被發現。快取的正確性取決於 action key 是否涵蓋所有影響輸出的東西；清快取後結果不同，代表有某個輸入（設定檔、環境變數、toolchain 版本、網路下載的內容）影響了輸出卻沒有進入 action key。
 >
 > 具體的調查步驟：先找出前後兩次 build 中相同 action key 但輸出不同的 action；比較兩次執行的環境與實際讀取的檔案（Bazel 這類工具可以輸出執行紀錄），找出沒宣告的輸入；確認是誰寫入了那筆錯誤的快取，如果是開發者機器寫入的，就要收緊寫入權限，只讓受信任的 CI builder 寫。最後把那個輸入加入宣告，或讓 sandbox 擋掉它，並在 postmortem 中記錄。定期清快取還有一個額外成本：每次清完 CI 都會變慢，大家會更想繞過 CI。

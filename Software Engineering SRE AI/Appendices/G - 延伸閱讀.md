@@ -122,7 +122,7 @@ title: 延伸閱讀
 - [Introducing DORA's inaugural AI Capabilities Model](https://cloud.google.com/blog/products/ai-machine-learning/introducing-doras-inaugural-ai-capabilities-model)：DORA 整理哪些組織能力會放大或抵銷 AI 對軟體開發的效益，讀它能把第 14 章的量測方法用在 AI 導入評估。
 - [How Google SRE is using agentic AI to improve operations](https://cloud.google.com/blog/products/devops-sre/how-google-sre-is-using-agentic-ai-to-improve-operations/)：Google SRE 把 AI agent 應用在維運工作的實務觀點，讀它能對照第 31、43、47 章的授權與邊界設計。
 - [OpenAI — Agent evals](https://developers.openai.com/api/docs/guides/agent-evals)：為 agent 設計評估案例與評分方式的官方指南，讀它能把第 25 章「eval 是新型測試」落實成可執行的題組。
-- [OpenAI — Codex Best Practices](https://developers.openai.com/codex/learn/best-practices/)：使用 coding agent 時如何撰寫 repository 說明、設定任務範圍與驗證方式，可以搭配第 16、19、28 章給 agent 的規則一起讀。
+- [OpenAI — Codex Best Practices](https://learn.chatgpt.com/guides/best-practices)：使用 coding agent 時如何撰寫 repository 說明、設定任務範圍與驗證方式，可以搭配第 16、19、28 章給 agent 的規則一起讀。
 - [Google Cloud — Agent observability](https://docs.cloud.google.com/stackdriver/docs/observability/agent-observability)：觀測 AI agent 的 prompt、工具呼叫與 token 用量的實務參考（本書 33.10 節）。
 - [Microsoft — Incident response for AI systems](https://learn.microsoft.com/en-us/security/zero-trust/sfi/incident-response-ai-systems)：AI 系統本身發生事故時的應變考量，包括證據保存與 containment（本書第 44 章）。
 - [OWASP Top 10 for Large Language Model Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)：prompt injection、excessive agency 等 LLM 應用的主要風險清單，讀它能檢查 AI 客服這類 agent 的 guardrails 是否有遺漏（本書第 46、47 章）。
