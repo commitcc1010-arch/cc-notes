@@ -23,7 +23,7 @@ from pygments.formatters import HtmlFormatter
 from aws_architect_book import (
     BOOK_DIR, FRONT, MOCKS, ROOT, load_outline, parse_questions, strip_frontmatter,
 )
-from build_coding_interview_patterns import (
+from book_template import (
     TEMPLATE as BASE_TEMPLATE, convert_callouts, make_search_text, replace_outside_fences,
 )
 

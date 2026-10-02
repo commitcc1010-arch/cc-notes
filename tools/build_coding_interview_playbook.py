@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Build《CS:APP 系統思維學習手冊》into one HTML book.
+"""Build《Coding Interview Pattern Playbook》into one HTML book.
 
-The hand-written Markdown under ``CSAPP 系統思維學習手冊/`` is the source
-of truth and ``tools/csapp_outline.md`` defines order. This builder only
+The hand-written Markdown under ``Coding Interview Pattern Playbook/`` is the source
+of truth and ``tools/coding_interview_outline.md`` defines order. This builder only
 assembles: anchors, part dividers, chapter cross-links, callout styling and a
 search index. ``build_epub.py`` then expands every Q&A for EPUB readers.
 
 Run:
-    PYTHONPATH=tools ./.venv-epub/bin/python tools/build_csapp_systems_book.py
-    ./.venv-epub/bin/python tools/build_epub.py CSAPP_系統思維學習手冊.html
+    PYTHONPATH=tools ./.venv-epub/bin/python tools/build_coding_interview_playbook.py
+    ./.venv-epub/bin/python tools/build_epub.py coding-interview-pattern-playbook.html
 """
 from __future__ import annotations
 
@@ -21,14 +21,14 @@ from pygments.formatters import HtmlFormatter
 
 from build_aws_architect_book import EXTRA_CSS, render
 from book_template import TEMPLATE as BASE_TEMPLATE, make_search_text
-from swe_sre_ai_book import ROOT, load_outline, parse_qas, strip_frontmatter
+from swe_sre_ai_book import ROOT, load_outline, strip_frontmatter
 
-BOOK_DIR = ROOT / "CSAPP 系統思維學習手冊"
-OUTLINE = ROOT / "tools" / "csapp_outline.md"
+BOOK_DIR = ROOT / "Coding Interview Pattern Playbook"
+OUTLINE = ROOT / "tools" / "coding_interview_outline.md"
 FRONT = "00 - 導讀.md"
 
-OUTPUT = ROOT / "CSAPP_系統思維學習手冊.html"
-EPUB = "epub/csapp-系統思維學習手冊.epub"
+OUTPUT = ROOT / "coding-interview-pattern-playbook.html"
+EPUB = "epub/coding-interview-pattern-playbook.epub"
 PARTIAL = "--partial" in sys.argv
 
 BOOK_CSS = EXTRA_CSS + """
@@ -45,7 +45,7 @@ def build() -> None:
     articles: list[str] = []
     search: list[dict] = []
     nav: dict[str, list[tuple[str, str]]] = {}
-    qa_total = 0
+    core = hard = followups = 0
     built = 0
 
     def add(rel: str, base: str, group: str, own: int | None = None, title: str | None = None) -> str:
@@ -79,7 +79,9 @@ def build() -> None:
             raw = add(c.path, ids[f"ch{c.number}"], group, own=c.number)
             if raw:
                 built += 1
-                qa_total += len(parse_qas(raw.split("## 延伸問答", 1)[-1]))
+                core += len(re.findall(r"(?m)^## 核心題 \d｜", raw))
+                hard += len(re.findall(r"(?m)^## 難題 \d｜", raw))
+                followups += len(re.findall(r"(?m)^> \[!question\]- F\d+\. ", raw))
     for rel, _desc in appendices:
         add(rel, "appx-" + rel.split("/")[1][0].lower(), "附錄")
 
@@ -92,10 +94,10 @@ def build() -> None:
     template = BASE_TEMPLATE
     swaps = {
         "<title>Coding Interview Patterns — 20 Patterns, 160 Problems</title>":
-            "<title>CS:APP 系統思維學習手冊</title>",
-        "Coding Interview Field Guide · 2026 Edition": "Computer Systems: A Programmer’s Perspective · 2026 Edition",
-        "<h1>Coding Interview Patterns</h1>": "<h1>CS:APP 系統思維學習手冊</h1>",
-        "搜尋題目、pattern、關鍵字…": "搜尋概念、指令、問答…",
+            "<title>Coding Interview Pattern Playbook — 26 Patterns, 260 Problems</title>",
+        "Coding Interview Field Guide · 2026 Edition": "Coding Interview Playbook · 2026 Edition",
+        "<h1>Coding Interview Patterns</h1>": "<h1>Coding Interview Pattern Playbook</h1>",
+        "搜尋題目、pattern、關鍵字…": "搜尋題號、題名、pattern、技巧…",
         "#note-00-book-index": "#preface",
         "epub/coding-interview-patterns-160.epub": EPUB,
     }
@@ -104,11 +106,11 @@ def build() -> None:
             raise SystemExit(f"Template anchor missing: {old}")
         template = template.replace(old, new)
     template = re.sub(r'<p class="subtitle">.*?</p>',
-                      '<p class="subtitle">從 Hello World 到一台多執行緒 web server：跟著一個用 C 寫的縮圖服務 thumbd，'
-                      '循序讀懂 CS:APP 3e 的資料表示、機器碼、處理器、記憶體階層、連結、例外控制流、虛擬記憶體、I/O、網路與並行，'
-                      '並學會把它們用在工作上的除錯與效能分析。</p>', template, count=1, flags=re.S)
-    badges = [f"{built} 章", "11 個 Part", f"{qa_total} 組延伸問答", "可執行的 C 與 Python 範例",
-              "對應 CS:APP 3e 全 12 章", "9 個 Labs 指南", "5 份附錄"]
+                      '<p class="subtitle">用 2–3 週複習大廠 coding interview 的 26 個 pattern：每個 pattern 5 道必會核心題'
+                      '加 5 道上限難題，全部附 Python 解法、視覺化思路、至少 3 個 follow-up 與答案，難題另有分段提示與心得。</p>',
+                      template, count=1, flags=re.S)
+    badges = ["26 Patterns", f"{core} 核心題", f"{hard} 難題", f"{followups} 個 Follow-ups",
+              "Python 3", "21 天複習計畫", "4 份附錄"]
     template = re.sub(r'<div class="badges">.*?</div>',
                       '<div class="badges">' + "".join(f'<span class="badge">{b}</span>' for b in badges) + "</div>",
                       template, count=1, flags=re.S)
@@ -120,7 +122,8 @@ def build() -> None:
         search_json=json.dumps(search, ensure_ascii=False).replace("</", "<\\/"),
     )
     OUTPUT.write_text(doc, encoding="utf-8")
-    print(f"Built {OUTPUT.name}: {built} chapters, {qa_total} Q&A, {OUTPUT.stat().st_size / 1024:.0f} KB")
+    print(f"Built {OUTPUT.name}: {built} chapters, {core} core + {hard} hard problems, "
+          f"{followups} follow-ups, {OUTPUT.stat().st_size / 1024:.0f} KB")
 
 
 if __name__ == "__main__":

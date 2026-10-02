@@ -108,6 +108,29 @@ epubcheck epub/csapp-系統思維學習手冊.epub
 圖表數量、正文深度、問答，並實際編譯執行範例（標記 `// linux-only` 或 `// not-runnable`
 的除外）。Labs 只提供學習指南，不含解答。
 
+`Coding Interview Pattern Playbook/` 是《Coding Interview Pattern Playbook》的手寫 Markdown
+來源（與舊書 `Coding Interview Patterns/` 互相獨立，舊書的工具與輸出不受影響）：
+
+```bash
+python3 tools/check_coding_interview_book.py          # 品質閘門（會執行每段 Python）
+PYTHONPATH=tools ./.venv-epub/bin/python tools/build_coding_interview_playbook.py
+./.venv-epub/bin/python tools/build_epub.py coding-interview-pattern-playbook.html
+./.venv-epub/bin/python tools/check_epub.py epub/coding-interview-pattern-playbook.epub
+epubcheck epub/coding-interview-pattern-playbook.epub
+```
+
+全書 8 個 Part、31 章，以 Google L5 等級的 coding interview 為標準：3 章面試方法、
+26 個 pattern 章（每章 5 道核心題與 5 道難題，共 260 題，只用 Python）、2 章衝刺與
+模擬面試，另有 4 份附錄（Python 工具箱、複雜度速查、全題索引、21 天讀書計畫）。
+每題都有完整題目重述、從暴力解出發的思路、文字視覺化、附 assert 的可執行解法、
+複雜度與邊界，以及至少 3 個附答案的 follow-up；難題另有三段漸進提示、詳解與心得。
+章節與題目定義在 `tools/coding_interview_outline.md`，寫作規範在
+`tools/coding_interview_style_guide.md`，撰寫 agent 的任務說明在
+`tools/coding_interview_agent_brief.md`。`check_coding_interview_book.py` 會檢查題號與
+大綱一致、每題的小節順序、follow-up 與提示數量、禁用套句、中英文空格，並執行每段
+Python（第一行為 `# not-runnable` 的除外）。四本手寫書共用的 HTML 模板與 Markdown
+工具在 `tools/book_template.py`。
+
 `tools/nginx_source_journey_foundations.py` 提供 114 個零背景術語定義，依各章
 需求在正文首次設計討論前放入至少 4 張「白話定義／具體例子／在 NGINX 中」
 先備概念卡，目前合計 213 張；附錄 H 也會自動產生完整術語表。第 12 章另有

@@ -20,7 +20,7 @@ import sys
 from pygments.formatters import HtmlFormatter
 
 from build_aws_architect_book import EXTRA_CSS, render
-from build_coding_interview_patterns import TEMPLATE as BASE_TEMPLATE, make_search_text
+from book_template import TEMPLATE as BASE_TEMPLATE, make_search_text
 from swe_sre_ai_book import BOOK_DIR, FRONT, ROOT, load_outline, parse_qas, strip_frontmatter
 
 OUTPUT = ROOT / "software-engineering-sre-ai.html"
