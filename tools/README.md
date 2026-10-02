@@ -87,31 +87,26 @@ task ID）、檢查章節結構（本章地圖、節號、考試這樣考、重�
 HTML builder 會自動把「第 N 章」轉成書內連結，EPUB builder 會把所有答案 `<details>`
 展開為常駐內容。
 
-`CSAPP_系統思維學習手冊.html` 的深化內容由可重複執行的 enrichment layer
-產生。它保留原始章節，再逐章加入 context、component contract、先備概念卡、
-Big Picture、完整機制、可執行實驗、錯誤模型、來源與詳細問答：
+`CSAPP 系統思維學習手冊/` 是《CS:APP 系統思維學習手冊》的手寫 Markdown 來源（唯一內容
+來源；builder 只負責組裝）：
 
 ```bash
-./.venv-epub/bin/python tools/enrich_csapp_systems_book.py
-PYTHONPATH=tools ./.venv-epub/bin/python tools/check_csapp_systems_book.py
+python3 tools/check_csapp_systems_book.py            # 品質閘門（會編譯並執行每段 C／Python）
+PYTHONPATH=tools ./.venv-epub/bin/python tools/build_csapp_systems_book.py
 ./.venv-epub/bin/python tools/build_epub.py CSAPP_系統思維學習手冊.html
 ./.venv-epub/bin/python tools/check_epub.py epub/csapp-系統思維學習手冊.epub
 epubcheck epub/csapp-系統思維學習手冊.epub
 ```
 
-Enrichment markers 讓腳本可安全重跑而不重複插入。目前成品先提供一章只假設
-資料結構與演算法背景的 Freshman Systems Primer，從 bit/byte、CPU、記憶體、
-OS/kernel、system call，一路解釋到 executable/process、object format、
-GDB/watchpoint、stack corruption 與 ASan。全書含 49 張零背景定義卡，Chapter
-0–12 每章另有一條 DSA → Systems 橋梁；加上原有章內先備卡共 115 張。
-
-其餘成品包括 13 個引導章、13 個實際執行驗證的 Python 概念模型、168 組折疊
-問答、35 張架構／流程圖，以及完整 coverage、Labs、跨層診斷、公式工具、研究
-方法與術語附錄。每個 Python 模型後都提供逐步 C／CPU／OS 映射、至少三個實際
-應用與三個跨領域同型設計。品質閘門除了原有深度、問答、Python、圖解、連結與
-離線資產檢查，現在也會強制驗證 Primer 位於所有章節之前、49 張基礎卡與 10 組
-Primer 問答齊全、關鍵術語有具名解釋，且 13 章皆有背景橋梁；EPUB 會將全部
-168 組答案轉為常駐展開內容。
+全書 11 個 Part、34 章，對應 CS:APP 3e 全部 12 章，以一個用 C 寫的縮圖服務 `thumbd`
+在 production 遇到的問題貫穿。每章固定包含故事開場、循序的核心概念與手算算例、
+可執行的 C／Python（附實際輸出）、真實編譯器產生的 x86-64 組合語言、「在工作上怎麼用」、
+常見錯誤與除錯表、動手練習、重點整理與 8 組延伸問答，並有大量 ASCII 圖與表格；另有
+5 份附錄（公式與數字速查、工具指令速查、術語表、讀書路線、延伸閱讀）。章節與必須涵蓋的
+知識點定義在 `tools/csapp_outline.md`，寫作規範在 `tools/csapp_style_guide.md`。
+`check_csapp_systems_book.py` 會檢查章節結構、禁用的範本化套句、中英文之間的空格、
+圖表數量、正文深度、問答，並實際編譯執行範例（標記 `// linux-only` 或 `// not-runnable`
+的除外）。Labs 只提供學習指南，不含解答。
 
 `tools/nginx_source_journey_foundations.py` 提供 114 個零背景術語定義，依各章
 需求在正文首次設計討論前放入至少 4 張「白話定義／具體例子／在 NGINX 中」

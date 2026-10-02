@@ -32,12 +32,12 @@ APPX_RE = re.compile(r"^\| ([A-G] - .+?\.md) \| (.+) \|$")
 QA_RE = re.compile(r"^> \[!question\]- Q(\d+)\. (.+)$")
 
 
-def load_outline() -> tuple[list[ChapterSpec], list[tuple[str, str]], dict[int, tuple[str, str]]]:
+def load_outline(outline: Path = OUTLINE) -> tuple[list[ChapterSpec], list[tuple[str, str]], dict[int, tuple[str, str]]]:
     chapters: list[ChapterSpec] = []
     appendices: list[tuple[str, str]] = []
     parts: dict[int, tuple[str, str]] = {}
     part_no, part_title, folder, in_appx = -1, "", "", False
-    for line in OUTLINE.read_text(encoding="utf-8").splitlines():
+    for line in outline.read_text(encoding="utf-8").splitlines():
         m = PART_RE.match(line)
         if m:
             part_no = int(m.group(1).split()[1])

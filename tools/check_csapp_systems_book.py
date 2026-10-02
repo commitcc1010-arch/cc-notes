@@ -1,326 +1,215 @@
 #!/usr/bin/env python3
-"""Content and structure quality gate for the enriched CS:APP book."""
+"""Quality gate for《CS:APP 系統思維學習手冊》Markdown sources.
+
+Usage:
+    python3 tools/check_csapp_systems_book.py            # whole book
+    python3 tools/check_csapp_systems_book.py 23 24      # selected chapters
+    python3 tools/check_csapp_systems_book.py --partial  # skip missing files
+    python3 tools/check_csapp_systems_book.py --no-run   # parse code, don't run it
+
+Every ```c block containing ``int main`` is compiled and run, and every
+```python block is run (10 s timeout), unless its first line is
+``// not-runnable`` / ``// linux-only`` / ``# not-runnable``.
+"""
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 import sys
-from collections import Counter
-from html.parser import HTMLParser
+import tempfile
+from collections import defaultdict
 from pathlib import Path
 
-from csapp_freshman_foundations import BRIDGES, FOUNDATION_TERMS
-from csapp_practical_examples import EXAMPLES
-from csapp_supplement_part01 import SUPPLEMENTS as PART01
-from csapp_supplement_part02 import SUPPLEMENTS as PART02
-from csapp_supplement_part03 import SUPPLEMENTS as PART03
-
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from swe_sre_ai_book import load_outline, parse_frontmatter, parse_qas, strip_frontmatter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-BOOK = ROOT / "CSAPP_系統思維學習手冊.html"
-SUPPLEMENTS = PART01 + PART02 + PART03
-CHAPTER_IDS = [item.section_id for item in SUPPLEMENTS]
+BOOK_DIR = ROOT / "CSAPP 系統思維學習手冊"
+OUTLINE = ROOT / "tools" / "csapp_outline.md"
+FRONT = "00 - 導讀.md"
+URLS = set((ROOT / "tools" / "csapp_reference_urls.txt").read_text().split())
+
+BANNED = [
+    "CORE COMPLETION LAYER", "DSA → SYSTEMS BRIDGE", "進入細節前的三個定位點", "輸入與壓力",
+    "內部責任", "讀完輸出", "術語卡住？回到零背景", "WHY IT MATTERS", "詳見原書", "請參考原書",
+]
+REQUIRED_SECTIONS = ["動手做", "在工作上怎麼用", "常見錯誤與除錯", "動手練習"]
+TAIL = ["本章重點整理", "延伸問答", "延伸閱讀"]
+URL_RE = re.compile(r"\((https?://[^)\s]+)\)")
+CODE_RE = re.compile(r"(?ms)^```(\w*)\n(.*?)^```")
+CJK = r"[一-鿿]"
+GLUE_RE = re.compile(rf"{CJK}[A-Za-z]|[A-Za-z]{CJK}")
+SKIP_MARKS = ("// not-runnable", "// linux-only", "# not-runnable")
 
 
-class Parser(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.ids: list[str] = []
-        self.hrefs: list[str] = []
-        self.external_assets: list[str] = []
-        self.all_text: list[str] = []
-        self.section_stack: list[dict] = []
-        self.section_markers: list[bool] = []
-        self.sections: dict[str, dict] = {}
-        self.details_stack: list[dict] = []
-        self.details: list[dict] = []
-
-    @property
-    def section(self) -> dict | None:
-        return self.section_stack[-1] if self.section_stack else None
-
-    def handle_starttag(self, tag: str, attrs_list: list[tuple[str, str | None]]) -> None:
-        attrs = {key: value or "" for key, value in attrs_list}
-        classes = set(attrs.get("class", "").split())
-        if "id" in attrs:
-            self.ids.append(attrs["id"])
-        if attrs.get("href"):
-            self.hrefs.append(attrs["href"])
-        if attrs.get("src", "").startswith(("http://", "https://", "//")):
-            self.external_assets.append(attrs["src"])
-
-        if tag == "section":
-            has_id = bool(attrs.get("id"))
-            self.section_markers.append(has_id)
-            if has_id:
-                data = {
-                    "id": attrs["id"],
-                    "text": [],
-                    "details": 0,
-                    "deep_qas": 0,
-                    "terms": 0,
-                    "diagrams": 0,
-                    "contracts": 0,
-                    "practical": 0,
-                    "python_examples": 0,
-                    "transfers": 0,
-                    "foundation_terms": 0,
-                    "freshman_bridges": 0,
-                    "freshman_qas": 0,
-                }
-                self.section_stack.append(data)
-                self.sections[attrs["id"]] = data
-
-        if self.section is not None:
-            if tag == "details":
-                self.section["details"] += 1
-                if "deep-qa" in classes:
-                    self.section["deep_qas"] += 1
-                if "freshman-qa" in classes:
-                    self.section["freshman_qas"] += 1
-                detail = {"section": self.section["id"], "text": []}
-                self.details_stack.append(detail)
-                self.details.append(detail)
-            if "deep-term" in classes:
-                self.section["terms"] += 1
-            if "diagram" in classes:
-                self.section["diagrams"] += 1
-            if "chapter-contract" in classes:
-                self.section["contracts"] += 1
-            if "practical-layer" in classes:
-                self.section["practical"] += 1
-            if "python-example" in classes:
-                self.section["python_examples"] += 1
-            if "transfer-card" in classes:
-                self.section["transfers"] += 1
-            if "foundation-term" in classes:
-                self.section["foundation_terms"] += 1
-            if "freshman-bridge" in classes:
-                self.section["freshman_bridges"] += 1
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag == "details" and self.details_stack:
-            self.details_stack.pop()
-        if tag == "section" and self.section_markers:
-            had_id = self.section_markers.pop()
-            if had_id and self.section_stack:
-                self.section_stack.pop()
-
-    def handle_data(self, data: str) -> None:
-        self.all_text.append(data)
-        if self.section is not None:
-            self.section["text"].append(data)
-        if self.details_stack:
-            self.details_stack[-1]["text"].append(data)
+def visible_len(text: str) -> int:
+    text = re.sub(r"(?ms)^```.*?^```", "", text)
+    return len(re.sub(r"\s+", "", text))
 
 
-def main() -> int:
-    problems: list[str] = []
-    notes: list[str] = []
-    if not BOOK.exists():
-        print(f"FAIL: missing {BOOK}")
-        return 1
-    source = BOOK.read_text(encoding="utf-8")
-    parser = Parser()
-    parser.feed(source)
+def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=20, **kw)
 
-    duplicate_ids = [key for key, count in Counter(parser.ids).items() if count > 1]
-    if duplicate_ids:
-        problems.append("duplicate ids: " + ", ".join(duplicate_ids[:10]))
-    ids = set(parser.ids)
-    dangling = sorted(
-        href for href in set(parser.hrefs)
-        if href.startswith("#") and href[1:] not in ids
-    )
-    if dangling:
-        problems.append("dangling anchors: " + ", ".join(dangling[:10]))
-    if parser.external_assets:
-        problems.append("external assets: " + ", ".join(parser.external_assets[:5]))
 
-    for item in SUPPLEMENTS:
-        section = parser.sections.get(item.section_id)
-        if section is None:
-            problems.append(f"missing section #{item.section_id}")
-            continue
-        text = " ".join("".join(section["text"]).split())
-        if len(text) < 6_000:
-            problems.append(
-                f"chapter {item.number} visible text too short: {len(text)} chars"
-            )
-        if section["deep_qas"] < 7:
-            problems.append(f"chapter {item.number} has only {section['deep_qas']} deep Q&A")
-        if section["details"] < 5:
-            problems.append(f"chapter {item.number} has only {section['details']} total Q&A")
-        if section["terms"] < 4:
-            problems.append(f"chapter {item.number} has only {section['terms']} term cards")
-        if section["diagrams"] < 1:
-            problems.append(f"chapter {item.number} has no diagram")
-        if section["contracts"] != 1:
-            problems.append(f"chapter {item.number} has {section['contracts']} contracts")
-        if section["practical"] != 1:
-            problems.append(
-                f"chapter {item.number} has {section['practical']} practical sections"
-            )
-        if section["python_examples"] != 1:
-            problems.append(
-                f"chapter {item.number} has {section['python_examples']} Python examples"
-            )
-        if section["transfers"] < 3:
-            problems.append(
-                f"chapter {item.number} has only {section['transfers']} transfer patterns"
-            )
-        if section["freshman_bridges"] != 1:
-            problems.append(
-                f"chapter {item.number} has {section['freshman_bridges']} DSA-to-systems bridges"
-            )
-
-    for required in (
-        "freshman-primer",
-        "guide",
-        "labs",
-        "work",
-        "coverage",
-        "formula-cards",
-        "research-method",
-        "glossary",
-        "sources",
-    ):
-        if required not in parser.sections:
-            problems.append(f"missing book section #{required}")
-
-    primer = parser.sections.get("freshman-primer")
-    if primer is not None:
-        primer_text = " ".join("".join(primer["text"]).split())
-        if len(primer_text) < 8_000:
-            problems.append(
-                f"freshman primer visible text too short: {len(primer_text)} chars"
-            )
-        if primer["foundation_terms"] != len(FOUNDATION_TERMS):
-            problems.append(
-                "freshman primer has "
-                f"{primer['foundation_terms']}/{len(FOUNDATION_TERMS)} foundation terms"
-            )
-        if primer["freshman_qas"] < 10:
-            problems.append(
-                f"freshman primer has only {primer['freshman_qas']} detailed Q&A"
-            )
-
-    primer_position = source.find('id="freshman-primer"')
-    guide_position = source.find('id="guide"')
-    prereq_position = source.find('id="prereq"')
-    if not (0 <= primer_position < guide_position < prereq_position):
-        problems.append("freshman primer must appear before guide and Chapter 0")
-
-    required_anchors = {
-        "primer-system-call",
-        "primer-build",
-        "primer-stack",
-        "primer-gdb",
-        "primer-asan",
-        "primer-corruption-walkthrough",
-        "term-system-call",
-        "term-gdb",
-        "term-object-format",
-        "term-stack-corruption",
-        "term-asan",
-        "term-watchpoint",
-    }
-    missing_anchors = sorted(required_anchors - ids)
-    if missing_anchors:
-        problems.append(
-            "missing freshman explanations: " + ", ".join(missing_anchors)
-        )
-
-    required_primer_phrases = (
-        "System call是application請kernel代辦工作的正式介面",
-        "GNU Debugger",
-        "Executable and Linkable Format",
-        "第一個壞寫入",
-        "Breakpoint監看執行位置；watchpoint監看資料位置",
-        "Object file不是C語言的object",
-    )
-    normalized_source = re.sub(r"\s+", "", source)
-    for phrase in required_primer_phrases:
-        if re.sub(r"\s+", "", phrase) not in normalized_source:
-            problems.append(f"freshman primer missing required explanation: {phrase}")
-
-    short_answers = []
-    for detail in parser.details:
-        text = " ".join("".join(detail["text"]).split())
-        if len(text) < 90:
-            short_answers.append((detail["section"], len(text), text[:50]))
-    if short_answers:
-        problems.append(
-            f"{len(short_answers)} folded answers shorter than 90 chars; "
-            f"first={short_answers[0]}"
-        )
-
-    if source.count("CSAPP-ENRICHMENT START") != source.count("CSAPP-ENRICHMENT END"):
-        problems.append("unbalanced enrichment markers")
-    if "color:#163d36 !important;" not in source:
-        problems.append("deep-map high-contrast foreground color is missing")
-    encoded_size = len(source.encode("utf-8"))
-    visible_chars = len(" ".join("".join(parser.all_text).split()))
-    if encoded_size < 300_000:
-        problems.append(f"book unexpectedly small: {encoded_size} UTF-8 bytes")
-    if visible_chars < 150_000:
-        problems.append(f"book visible content unexpectedly short: {visible_chars} chars")
-    if re.search(r"(?:^|\n)\s*(?:TODO|TBD|PLACEHOLDER)(?:\s*:|\s*$)", source, re.I):
-        problems.append("placeholder remains")
-
-    runnable = 0
-    for example in EXAMPLES:
+def run_c(source: str) -> str | None:
+    with tempfile.TemporaryDirectory() as tmp:
+        src, exe = Path(tmp) / "x.c", Path(tmp) / "x"
+        src.write_text(source)
+        proc = run(["cc", "-std=c17", "-O1", "-Wall", "-Wextra", "-o", str(exe), str(src), "-lpthread", "-lm"])
+        if proc.returncode != 0:
+            first = next((l for l in proc.stderr.splitlines() if "error" in l), proc.stderr.strip()[:200])
+            return f"C 編譯失敗：{first}"
         try:
-            result = subprocess.run(
-                [sys.executable, "-c", example.code],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
+            proc = subprocess.run([str(exe)], capture_output=True, text=True, timeout=10, cwd=tmp)
         except subprocess.TimeoutExpired:
-            problems.append(f"chapter {example.number} Python example timed out")
-            continue
-        if result.returncode != 0:
-            problems.append(
-                f"chapter {example.number} Python example failed: "
-                f"{result.stderr.strip()[:160]}"
-            )
-        else:
+            return "C 執行超過 10 秒"
+        if proc.returncode != 0:
+            return f"C 執行回傳 {proc.returncode}"
+    return None
+
+
+def run_py(source: str) -> str | None:
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write(source)
+    try:
+        proc = subprocess.run([sys.executable, fh.name], capture_output=True, text=True, timeout=10)
+    except subprocess.TimeoutExpired:
+        return "Python 執行超過 10 秒"
+    if proc.returncode != 0:
+        tail = (proc.stderr.strip().splitlines() or ["(no stderr)"])[-1]
+        return f"Python 執行失敗：{tail}"
+    return None
+
+
+def prose_without_code(text: str) -> str:
+    text = re.sub(r"(?ms)^```.*?^```", "", text)
+    text = re.sub(r"`[^`]*`", "", text)
+    return re.sub(r"\]\([^)]*\)", "]", text)
+
+
+def check_chapter(spec, do_run, errors, warnings, paragraphs):
+    rel = spec.path
+    text = (BOOK_DIR / rel).read_text(encoding="utf-8")
+    meta = parse_frontmatter(text)
+    body = strip_frontmatter(text)
+    nofence = re.sub(r"(?ms)^```.*?^```", "", body)
+    if meta.get("chapter") != str(spec.number):
+        errors.append(f"{rel}: frontmatter chapter 應為 {spec.number}")
+    h1 = re.findall(r"(?m)^# (.+)$", nofence)
+    if len(h1) != 1 or not h1[0].startswith(f"第 {spec.number} 章　"):
+        errors.append(f"{rel}: 必須恰好一個 H1「# 第 {spec.number} 章　標題」")
+    head = body[:1500]
+    if "> [!abstract] 本章地圖" not in head:
+        errors.append(f"{rel}: 開頭缺少 `> [!abstract] 本章地圖`")
+    for label in ("**核心問題**", "**你會學到**", "**對應 CS:APP 3e**"):
+        if label not in head:
+            errors.append(f"{rel}: 本章地圖缺少 {label}")
+    h2 = re.findall(r"(?m)^## (.+)$", nofence)
+    if h2[-3:] != TAIL:
+        errors.append(f"{rel}: 最後三個 H2 必須是 {TAIL}，實際 {h2[-3:]}")
+    numbered = h2[:-3]
+    nums = [int(m.group(1)) for h in numbered if (m := re.match(rf"{spec.number}\.(\d+) ", h))]
+    if len(nums) != len(numbered) or nums != list(range(1, len(nums) + 1)):
+        errors.append(f"{rel}: 節號必須是連續的 {spec.number}.1、{spec.number}.2…")
+    titles = [re.sub(r"^\d+\.\d+ ", "", h) for h in numbered]
+    for req in REQUIRED_SECTIONS:
+        if not any(t.startswith(req) for t in titles):
+            errors.append(f"{rel}: 缺少「{req}」小節")
+    if numbered and "故事" not in numbered[0]:
+        warnings.append(f"{rel}: 第一節不是「故事」開場")
+    for phrase in BANNED:
+        if phrase in body:
+            errors.append(f"{rel}: 出現禁用語「{phrase}」")
+    prose = body.split("\n## 延伸問答", 1)[0]
+    size = visible_len(prose)
+    if size < 12000:
+        errors.append(f"{rel}: 正文可見字元 {size} 低於 12000")
+    n_diagrams = prose.count("```text")
+    n_tables = len(re.findall(r"(?m)^\|[ :]*-{3,}", prose))
+    if n_diagrams < 3:
+        errors.append(f"{rel}: ```text 圖只有 {n_diagrams} 個（至少 3）")
+    if n_tables < 3:
+        errors.append(f"{rel}: 表格只有 {n_tables} 張（至少 3）")
+    glue = GLUE_RE.findall(prose_without_code(body))
+    if len(glue) > 5:
+        errors.append(f"{rel}: 中英文之間缺少空格 {len(glue)} 處（例如「{glue[0]}」）")
+    takeaways = body.split("## 本章重點整理", 1)[-1].split("## 延伸問答", 1)[0]
+    if len(re.findall(r"(?m)^- ", takeaways)) < 8:
+        errors.append(f"{rel}: 本章重點整理少於 8 條")
+    qas = parse_qas(body.split("## 延伸問答", 1)[-1].split("## 延伸閱讀", 1)[0])
+    if len(qas) != spec.qas:
+        errors.append(f"{rel}: 延伸問答 {len(qas)} 題，大綱要求 {spec.qas}")
+    for n, (num, _q, answer) in enumerate(qas, 1):
+        if num != n:
+            errors.append(f"{rel}: 問答編號應為 Q{n}，實際 Q{num}")
+        if visible_len(answer) < 120:
+            errors.append(f"{rel}: Q{num} 答案過短")
+    runnable = 0
+    for m in CODE_RE.finditer(prose):
+        lang, src = m.group(1), m.group(2)
+        line = prose[:m.start()].count("\n") + 1
+        skipped = src.lstrip().startswith(SKIP_MARKS)
+        if lang == "python":
+            try:
+                ast.parse(src)
+            except SyntaxError as exc:
+                errors.append(f"{rel}:{line}: Python 語法錯誤：{exc.msg}")
+                continue
+            if not skipped:
+                runnable += 1
+                if do_run and (problem := run_py(src)):
+                    errors.append(f"{rel}:{line}: {problem}")
+        elif lang == "c" and "int main" in src and not skipped:
             runnable += 1
+            if do_run and (problem := run_c(src)):
+                errors.append(f"{rel}:{line}: {problem}")
+    if not runnable:
+        errors.append(f"{rel}: 「動手做」需要至少一段可執行的 C 或 Python")
+    for url in URL_RE.findall(body):
+        if url not in URLS:
+            warnings.append(f"{rel}: 連結不在已查證清單：{url}")
+    for para in re.split(r"\n\s*\n", prose):
+        para = para.strip()
+        if len(para) >= 60 and not para.startswith(("|", "```", "#", ">")):
+            paragraphs[para].append(rel)
+    return len(qas)
 
-    notes.extend(
-        [
-            f"{len(SUPPLEMENTS)} guided chapters",
-            f"{len(BRIDGES)}/{len(SUPPLEMENTS)} DSA-to-systems chapter bridges",
-            f"{len(FOUNDATION_TERMS)} zero-background foundation cards",
-            f"{runnable}/{len(EXAMPLES)} runnable Python examples",
-            f"{sum(s['deep_qas'] for s in parser.sections.values())} deep Q&A",
-            f"{len(parser.details)} total folded answers",
-            f"{sum(s['terms'] for s in parser.sections.values())} prerequisite cards",
-            f"{sum(s['diagrams'] for s in parser.sections.values())} diagrams",
-            f"{encoded_size / 1024:.0f} KB self-contained HTML",
-            f"{visible_chars:,} visible characters",
-        ]
-    )
 
-    print("CS:APP systems book quality gate")
-    print("-" * 64)
-    for note in notes:
-        print(f"  ✓ {note}")
-    if problems:
-        for problem in problems:
-            print(f"  ✗ {problem}")
-        print("-" * 64)
-        print(f"FAIL: {len(problems)} problems")
-        return 1
-    print("-" * 64)
-    print(
-        "PASS: freshman foundations, coverage, continuity, diagrams, Q&A, "
-        "links, and offline assets"
-    )
-    return 0
+def main(argv):
+    chapters, appendices, _ = load_outline(OUTLINE)
+    partial = "--partial" in argv
+    do_run = "--no-run" not in argv
+    nums = {int(a) for a in argv if a.isdigit()}
+    errors: list[str] = []
+    warnings: list[str] = []
+    paragraphs: dict[str, list[str]] = defaultdict(list)
+    checked = qa_total = 0
+    for spec in chapters:
+        if nums and spec.number not in nums:
+            continue
+        if not (BOOK_DIR / spec.path).exists():
+            if nums or not partial:
+                errors.append(f"缺少章節檔案：{spec.path}")
+            continue
+        qa_total += check_chapter(spec, do_run, errors, warnings, paragraphs)
+        checked += 1
+    if not nums:
+        for rel, _ in appendices:
+            if not (BOOK_DIR / rel).exists() and not partial:
+                errors.append(f"缺少附錄：{rel}")
+        if not (BOOK_DIR / FRONT).exists() and not partial:
+            errors.append(f"缺少導讀：{FRONT}")
+    for para, files in paragraphs.items():
+        if len(files) >= 2:
+            warnings.append(f"重複段落（{sorted(set(files))}）：{para[:50]}…")
+    for w in warnings:
+        print("WARN ", w)
+    for e in errors:
+        print("ERROR", e)
+    print(f"\n檢查 {checked} 章、{qa_total} 組問答：{len(errors)} errors、{len(warnings)} warnings")
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
